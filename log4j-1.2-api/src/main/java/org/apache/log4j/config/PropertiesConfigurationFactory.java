@@ -2,7 +2,7 @@
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.log4j.config;
 
 import org.apache.logging.log4j.core.LoggerContext;
@@ -32,6 +31,7 @@ import org.apache.logging.log4j.util.PropertiesUtil;
 @Order(2)
 public class PropertiesConfigurationFactory extends ConfigurationFactory {
 
+    static final String FILE_EXTENSION = ".properties";
 
     /**
      * File name prefix for test configurations.
@@ -45,15 +45,16 @@ public class PropertiesConfigurationFactory extends ConfigurationFactory {
 
     @Override
     protected String[] getSupportedTypes() {
-        if (!PropertiesUtil.getProperties().getBooleanProperty(ConfigurationFactory.LOG4J1_EXPERIMENTAL, Boolean.FALSE)) {
+        if (!PropertiesUtil.getProperties()
+                .getBooleanProperty(ConfigurationFactory.LOG4J1_EXPERIMENTAL, Boolean.FALSE)) {
             return null;
         }
-        return new String[] {".properties"};
+        return new String[] {FILE_EXTENSION};
     }
 
     @Override
-    public Configuration getConfiguration(LoggerContext loggerContext, ConfigurationSource source) {
-        int interval = PropertiesUtil.getProperties().getIntegerProperty(Log4j1Configuration.MONITOR_INTERVAL, 0);
+    public Configuration getConfiguration(final LoggerContext loggerContext, final ConfigurationSource source) {
+        final int interval = PropertiesUtil.getProperties().getIntegerProperty(Log4j1Configuration.MONITOR_INTERVAL, 0);
         return new PropertiesConfiguration(loggerContext, source, interval);
     }
 

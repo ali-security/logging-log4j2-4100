@@ -1,18 +1,18 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.log4j;
 
@@ -53,7 +53,7 @@ public class Priority {
      * application.
      */
     public static final int DEBUG_INT = 10000;
-    //public final static int FINE_INT = DEBUG_INT;
+    // public final static int FINE_INT = DEBUG_INT;
     /**
      * The <code>ALL</code> has the lowest possible rank and is intended to
      * turn on all logging.
@@ -96,6 +96,7 @@ public class Priority {
     transient int level;
     transient String levelStr;
     transient int syslogEquivalent;
+    transient org.apache.logging.log4j.Level version2Level;
 
     /**
      * Default constructor for deserialization.
@@ -143,11 +144,18 @@ public class Priority {
      * Returns the syslog equivalent of this priority as an integer.
      * @return The equivalent syslog value.
      */
-    public
-    final int getSyslogEquivalent() {
+    public final int getSyslogEquivalent() {
         return syslogEquivalent;
     }
 
+    /**
+     * Gets the Log4j 2.x level associated with this priority
+     *
+     * @return a Log4j 2.x level.
+     */
+    public org.apache.logging.log4j.Level getVersion2Level() {
+        return version2Level;
+    }
 
     /**
      * Returns {@code true} if this level has a higher or equal
@@ -173,10 +181,8 @@ public class Priority {
      */
     @Deprecated
     public static Priority[] getAllPossiblePriorities() {
-        return new Priority[]{Priority.FATAL, Priority.ERROR, Level.WARN,
-            Priority.INFO, Priority.DEBUG};
+        return new Priority[] {Priority.FATAL, Priority.ERROR, Level.WARN, Priority.INFO, Priority.DEBUG};
     }
-
 
     /**
      * Returns the string representation of this priority.

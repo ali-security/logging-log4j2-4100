@@ -1,40 +1,43 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.cassandra;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+
+import com.datastax.driver.core.Row;
+import com.datastax.driver.core.Session;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-
-import com.datastax.driver.core.Row;
-import com.datastax.driver.core.Session;
+import org.apache.commons.lang3.SystemUtils;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.MarkerManager;
 import org.apache.logging.log4j.ThreadContext;
-import org.apache.logging.log4j.categories.Appenders;
-import org.apache.logging.log4j.junit.LoggerContextRule;
+import org.apache.logging.log4j.core.test.categories.Appenders;
+import org.apache.logging.log4j.core.test.junit.LoggerContextRule;
+import org.junit.Assume;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.RuleChain;
-
-import static org.junit.Assert.*;
 
 /**
  * Integration test for CassandraAppender.
@@ -42,17 +45,21 @@ import static org.junit.Assert.*;
 @Category(Appenders.Cassandra.class)
 public class CassandraAppenderIT {
 
-    private static final String DDL = "CREATE TABLE logs (" +
-        "id timeuuid PRIMARY KEY," +
-        "timeid timeuuid," +
-        "message text," +
-        "level text," +
-        "marker text," +
-        "logger text," +
-        "timestamp timestamp," +
-        "mdc map<text,text>," +
-        "ndc list<text>" +
-        ")";
+    @BeforeClass
+    public static void disbaleOnAarch64() {
+        Assume.assumeFalse(SystemUtils.OS_ARCH.equalsIgnoreCase("aarch64"));
+    }
+
+    private static final String DDL = "CREATE TABLE logs (" + "id timeuuid PRIMARY KEY,"
+            + "timeid timeuuid,"
+            + "message text,"
+            + "level text,"
+            + "marker text,"
+            + "logger text,"
+            + "timestamp timestamp,"
+            + "mdc map<text,text>,"
+            + "ndc list<text>"
+            + ")";
 
     private static final LoggerContextRule CTX = new LoggerContextRule("CassandraAppenderTest.xml");
     private static final CassandraRule CASSANDRA = new CassandraRule("test", DDL);

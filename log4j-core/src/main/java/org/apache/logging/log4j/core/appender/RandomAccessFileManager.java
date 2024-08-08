@@ -1,21 +1,22 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.appender;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -24,7 +25,6 @@ import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
-
 import org.apache.logging.log4j.core.Layout;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.Configuration;
@@ -43,15 +43,19 @@ public class RandomAccessFileManager extends OutputStreamManager {
 
     private final String advertiseURI;
     private final RandomAccessFile randomAccessFile;
-    private final ThreadLocal<Boolean> isEndOfBatch = new ThreadLocal<>();
 
-    protected RandomAccessFileManager(final LoggerContext loggerContext, final RandomAccessFile file, final String fileName,
-            final OutputStream os, final int bufferSize, final String advertiseURI,
-            final Layout<? extends Serializable> layout, final boolean writeHeader) {
+    protected RandomAccessFileManager(
+            final LoggerContext loggerContext,
+            final RandomAccessFile file,
+            final String fileName,
+            final OutputStream os,
+            final int bufferSize,
+            final String advertiseURI,
+            final Layout<? extends Serializable> layout,
+            final boolean writeHeader) {
         super(loggerContext, os, fileName, false, layout, writeHeader, ByteBuffer.wrap(new byte[bufferSize]));
         this.randomAccessFile = file;
         this.advertiseURI = advertiseURI;
-        this.isEndOfBatch.set(Boolean.FALSE);
     }
 
     /**
@@ -68,20 +72,39 @@ public class RandomAccessFileManager extends OutputStreamManager {
      * @param configuration The configuration.
      * @return A RandomAccessFileManager for the File.
      */
-	public static RandomAccessFileManager getFileManager(final String fileName, final boolean append,
-			final boolean immediateFlush, final int bufferSize, final String advertiseURI,
-			final Layout<? extends Serializable> layout, final Configuration configuration) {
-		return narrow(RandomAccessFileManager.class, getManager(fileName,
-				new FactoryData(append, immediateFlush, bufferSize, advertiseURI, layout, configuration), FACTORY));
-	}
+    public static RandomAccessFileManager getFileManager(
+            final String fileName,
+            final boolean append,
+            final boolean immediateFlush,
+            final int bufferSize,
+            final String advertiseURI,
+            final Layout<? extends Serializable> layout,
+            final Configuration configuration) {
+        return narrow(
+                RandomAccessFileManager.class,
+                getManager(
+                        fileName,
+                        new FactoryData(append, immediateFlush, bufferSize, advertiseURI, layout, configuration),
+                        FACTORY));
+    }
 
+    /**
+     * No longer used, the {@link org.apache.logging.log4j.core.LogEvent#isEndOfBatch()} attribute is used instead.
+     * @return {@link Boolean#FALSE}.
+     * @deprecated end-of-batch on the event is used instead.
+     */
+    @Deprecated
     public Boolean isEndOfBatch() {
-        return isEndOfBatch.get();
+        return Boolean.FALSE;
     }
 
-    public void setEndOfBatch(final boolean endOfBatch) {
-        this.isEndOfBatch.set(Boolean.valueOf(endOfBatch));
-    }
+    /**
+     * No longer used, the {@link org.apache.logging.log4j.core.LogEvent#isEndOfBatch()} attribute is used instead.
+     * This method is a no-op.
+     * @deprecated end-of-batch on the event is used instead.
+     */
+    @Deprecated
+    public void setEndOfBatch(@SuppressWarnings("unused") final boolean endOfBatch) {}
 
     @Override
     protected void writeToDestination(final byte[] bytes, final int offset, final int length) {
@@ -137,8 +160,7 @@ public class RandomAccessFileManager extends OutputStreamManager {
      */
     @Override
     public Map<String, String> getContentFormat() {
-        final Map<String, String> result = new HashMap<>(
-                super.getContentFormat());
+        final Map<String, String> result = new HashMap<>(super.getContentFormat());
         result.put("fileURI", advertiseURI);
         return result;
     }
@@ -160,8 +182,13 @@ public class RandomAccessFileManager extends OutputStreamManager {
          * @param bufferSize size of the buffer
          * @param configuration The configuration.
          */
-        public FactoryData(final boolean append, final boolean immediateFlush, final int bufferSize,
-                final String advertiseURI, final Layout<? extends Serializable> layout, final Configuration configuration) {
+        public FactoryData(
+                final boolean append,
+                final boolean immediateFlush,
+                final int bufferSize,
+                final String advertiseURI,
+                final Layout<? extends Serializable> layout,
+                final Configuration configuration) {
             super(configuration);
             this.append = append;
             this.immediateFlush = immediateFlush;
@@ -174,8 +201,8 @@ public class RandomAccessFileManager extends OutputStreamManager {
     /**
      * Factory to create a RandomAccessFileManager.
      */
-    private static class RandomAccessFileManagerFactory implements
-            ManagerFactory<RandomAccessFileManager, FactoryData> {
+    private static class RandomAccessFileManagerFactory
+            implements ManagerFactory<RandomAccessFileManager, FactoryData> {
 
         /**
          * Create a RandomAccessFileManager.
@@ -185,6 +212,9 @@ public class RandomAccessFileManager extends OutputStreamManager {
          * @return The RandomAccessFileManager for the File.
          */
         @Override
+        @SuppressFBWarnings(
+                value = "PATH_TRAVERSAL_IN",
+                justification = "The destination file should be specified in the configuration file.")
         public RandomAccessFileManager createManager(final String name, final FactoryData data) {
             final File file = new File(name);
             if (!data.append) {
@@ -202,13 +232,19 @@ public class RandomAccessFileManager extends OutputStreamManager {
                 } else {
                     raf.setLength(0);
                 }
-                return new RandomAccessFileManager(data.getLoggerContext(), raf, name,
-                        os, data.bufferSize, data.advertiseURI, data.layout, writeHeader);
+                return new RandomAccessFileManager(
+                        data.getLoggerContext(),
+                        raf,
+                        name,
+                        os,
+                        data.bufferSize,
+                        data.advertiseURI,
+                        data.layout,
+                        writeHeader);
             } catch (final Exception ex) {
                 LOGGER.error("RandomAccessFileManager (" + name + ") " + ex, ex);
             }
             return null;
         }
     }
-
 }

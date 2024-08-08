@@ -1,27 +1,34 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.layout;
 
+import com.fasterxml.jackson.annotation.JsonAnyGetter;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonRootName;
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
+import com.fasterxml.jackson.core.JsonGenerationException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
 import java.io.IOException;
 import java.io.Writer;
 import java.nio.charset.Charset;
 import java.util.LinkedHashMap;
 import java.util.Map;
-
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.ThreadContext;
@@ -40,21 +47,12 @@ import org.apache.logging.log4j.message.Message;
 import org.apache.logging.log4j.util.ReadOnlyStringMap;
 import org.apache.logging.log4j.util.Strings;
 
-import com.fasterxml.jackson.annotation.JsonAnyGetter;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonRootName;
-import com.fasterxml.jackson.annotation.JsonUnwrapped;
-import com.fasterxml.jackson.core.JsonGenerationException;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectWriter;
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
-
 abstract class AbstractJacksonLayout extends AbstractStringLayout {
 
     protected static final String DEFAULT_EOL = "\r\n";
     protected static final String COMPACT_EOL = Strings.EMPTY;
 
-    public static abstract class Builder<B extends Builder<B>> extends AbstractStringLayout.Builder<B> {
+    public abstract static class Builder<B extends Builder<B>> extends AbstractStringLayout.Builder<B> {
 
         @PluginBuilderAttribute
         private boolean eventEol;
@@ -129,7 +127,9 @@ abstract class AbstractJacksonLayout extends AbstractStringLayout {
             return stacktraceAsString;
         }
 
-        public boolean isIncludeNullDelimiter() { return includeNullDelimiter; }
+        public boolean isIncludeNullDelimiter() {
+            return includeNullDelimiter;
+        }
 
         public boolean isIncludeTimeMillis() {
             return includeTimeMillis;
@@ -228,22 +228,54 @@ abstract class AbstractJacksonLayout extends AbstractStringLayout {
     protected final ResolvableKeyValuePair[] additionalFields;
 
     @Deprecated
-    protected AbstractJacksonLayout(final Configuration config, final ObjectWriter objectWriter, final Charset charset,
-            final boolean compact, final boolean complete, final boolean eventEol, final Serializer headerSerializer,
+    protected AbstractJacksonLayout(
+            final Configuration config,
+            final ObjectWriter objectWriter,
+            final Charset charset,
+            final boolean compact,
+            final boolean complete,
+            final boolean eventEol,
+            final Serializer headerSerializer,
             final Serializer footerSerializer) {
         this(config, objectWriter, charset, compact, complete, eventEol, headerSerializer, footerSerializer, false);
     }
 
     @Deprecated
-    protected AbstractJacksonLayout(final Configuration config, final ObjectWriter objectWriter, final Charset charset,
-            final boolean compact, final boolean complete, final boolean eventEol, final Serializer headerSerializer,
-            final Serializer footerSerializer, final boolean includeNullDelimiter) {
-        this(config, objectWriter, charset, compact, complete, eventEol, null, headerSerializer, footerSerializer, includeNullDelimiter, null);
+    protected AbstractJacksonLayout(
+            final Configuration config,
+            final ObjectWriter objectWriter,
+            final Charset charset,
+            final boolean compact,
+            final boolean complete,
+            final boolean eventEol,
+            final Serializer headerSerializer,
+            final Serializer footerSerializer,
+            final boolean includeNullDelimiter) {
+        this(
+                config,
+                objectWriter,
+                charset,
+                compact,
+                complete,
+                eventEol,
+                null,
+                headerSerializer,
+                footerSerializer,
+                includeNullDelimiter,
+                null);
     }
 
-    protected AbstractJacksonLayout(final Configuration config, final ObjectWriter objectWriter, final Charset charset,
-            final boolean compact, final boolean complete, final boolean eventEol, final String endOfLine, final Serializer headerSerializer,
-            final Serializer footerSerializer, final boolean includeNullDelimiter,
+    protected AbstractJacksonLayout(
+            final Configuration config,
+            final ObjectWriter objectWriter,
+            final Charset charset,
+            final boolean compact,
+            final boolean complete,
+            final boolean eventEol,
+            final String endOfLine,
+            final Serializer headerSerializer,
+            final Serializer footerSerializer,
+            final boolean includeNullDelimiter,
             final KeyValuePair[] additionalFields) {
         super(config, charset, headerSerializer, footerSerializer);
         this.objectWriter = objectWriter;
@@ -258,21 +290,24 @@ abstract class AbstractJacksonLayout extends AbstractStringLayout {
         return value != null && value.contains("${");
     }
 
-    private static ResolvableKeyValuePair[] prepareAdditionalFields(final Configuration config, final KeyValuePair[] additionalFields) {
+    private static ResolvableKeyValuePair[] prepareAdditionalFields(
+            final Configuration config, final KeyValuePair[] additionalFields) {
         if (additionalFields == null || additionalFields.length == 0) {
             // No fields set
-            return new ResolvableKeyValuePair[0];
+            return ResolvableKeyValuePair.EMPTY_ARRAY;
         }
 
         // Convert to specific class which already determines whether values needs lookup during serialization
         final ResolvableKeyValuePair[] resolvableFields = new ResolvableKeyValuePair[additionalFields.length];
 
         for (int i = 0; i < additionalFields.length; i++) {
-            final ResolvableKeyValuePair resolvable = resolvableFields[i] = new ResolvableKeyValuePair(additionalFields[i]);
+            final ResolvableKeyValuePair resolvable =
+                    resolvableFields[i] = new ResolvableKeyValuePair(additionalFields[i]);
 
             // Validate
             if (config == null && resolvable.valueNeedsLookup) {
-                throw new IllegalArgumentException("configuration needs to be set when there are additional fields with variables");
+                throw new IllegalArgumentException(
+                        "configuration needs to be set when there are additional fields with variables");
             }
         }
 
@@ -375,6 +410,11 @@ abstract class AbstractJacksonLayout extends AbstractStringLayout {
 
     protected static class ResolvableKeyValuePair {
 
+        /**
+         * The empty array.
+         */
+        static final ResolvableKeyValuePair[] EMPTY_ARRAY = {};
+
         final String key;
         final String value;
         final boolean valueNeedsLookup;
@@ -391,7 +431,7 @@ abstract class AbstractJacksonLayout extends AbstractStringLayout {
         @JsonIgnore
         private final LogEvent event;
 
-        public ReadOnlyLogEventWrapper(LogEvent event) {
+        public ReadOnlyLogEventWrapper(final LogEvent event) {
             this.event = event;
         }
 
@@ -491,14 +531,10 @@ abstract class AbstractJacksonLayout extends AbstractStringLayout {
         }
 
         @Override
-        public void setEndOfBatch(boolean endOfBatch) {
-
-        }
+        public void setEndOfBatch(final boolean endOfBatch) {}
 
         @Override
-        public void setIncludeLocation(boolean locationRequired) {
-
-        }
+        public void setIncludeLocation(final boolean locationRequired) {}
 
         @Override
         public long getNanoTime() {

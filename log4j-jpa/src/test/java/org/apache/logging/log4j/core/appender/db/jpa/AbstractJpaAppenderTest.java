@@ -1,20 +1,26 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.appender.db.jpa;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintWriter;
@@ -22,20 +28,17 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.categories.Appenders;
 import org.apache.logging.log4j.core.Appender;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.ConfigurationFactory;
 import org.apache.logging.log4j.core.config.DefaultConfiguration;
+import org.apache.logging.log4j.core.test.categories.Appenders;
 import org.apache.logging.log4j.status.StatusLogger;
 import org.apache.logging.log4j.util.PropertiesUtil;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import static org.junit.Assert.*;
 
 @Category(Appenders.Jpa.class)
 public abstract class AbstractJpaAppenderTest {
@@ -51,7 +54,8 @@ public abstract class AbstractJpaAppenderTest {
     public void setUp(final String configFileName) throws SQLException {
         this.connection = this.setUpConnection();
 
-        System.setProperty(ConfigurationFactory.CONFIGURATION_FILE_PROPERTY,
+        System.setProperty(
+                ConfigurationFactory.CONFIGURATION_FILE_PROPERTY,
                 "org/apache/logging/log4j/core/appender/db/jpa/" + configFileName);
         PropertiesUtil.getProperties().reload();
         final LoggerContext context = LoggerContext.getContext(false);
@@ -75,11 +79,12 @@ public abstract class AbstractJpaAppenderTest {
             context.reconfigure();
             StatusLogger.getLogger().reset();
 
-            try (Statement statement = this.connection.createStatement();) {
-                statement.execute("SHUTDOWN");
+            if (this.connection != null) {
+                try (final Statement statement = this.connection.createStatement(); ) {
+                    statement.execute("SHUTDOWN");
+                }
+                this.connection.close();
             }
-
-            this.connection.close();
         }
     }
 
@@ -113,8 +118,8 @@ public abstract class AbstractJpaAppenderTest {
             assertTrue("The date should be earlier than now (1).", date <= System.currentTimeMillis());
             assertEquals("The level column is not correct (1).", "INFO", resultSet.getString("level"));
             assertEquals("The logger column is not correct (1).", logger1.getName(), resultSet.getString("logger"));
-            assertEquals("The message column is not correct (1).", "Test my message 01.",
-                    resultSet.getString("message"));
+            assertEquals(
+                    "The message column is not correct (1).", "Test my message 01.", resultSet.getString("message"));
             assertNull("The exception column is not correct (1).", resultSet.getString("exception"));
 
             assertTrue("There should be at least two rows.", resultSet.next());
@@ -124,7 +129,9 @@ public abstract class AbstractJpaAppenderTest {
             assertTrue("The date should be earlier than now (2).", date <= System.currentTimeMillis());
             assertEquals("The level column is not correct (2).", "ERROR", resultSet.getString("level"));
             assertEquals("The logger column is not correct (2).", logger1.getName(), resultSet.getString("logger"));
-            assertEquals("The message column is not correct (2).", "This is another message 02.",
+            assertEquals(
+                    "The message column is not correct (2).",
+                    "This is another message 02.",
                     resultSet.getString("message"));
             assertEquals("The exception column is not correct (2).", stackTrace, resultSet.getString("exception"));
 
@@ -135,7 +142,9 @@ public abstract class AbstractJpaAppenderTest {
             assertTrue("The date should be earlier than now (3).", date <= System.currentTimeMillis());
             assertEquals("The level column is not correct (3).", "WARN", resultSet.getString("level"));
             assertEquals("The logger column is not correct (3).", logger2.getName(), resultSet.getString("logger"));
-            assertEquals("The message column is not correct (3).", "A final warning has been issued.",
+            assertEquals(
+                    "The message column is not correct (3).",
+                    "A final warning has been issued.",
                     resultSet.getString("message"));
             assertNull("The exception column is not correct (3).", resultSet.getString("exception"));
 
@@ -175,8 +184,7 @@ public abstract class AbstractJpaAppenderTest {
             assertTrue("The date should be earlier than now (1).", date <= System.currentTimeMillis());
             assertEquals("The level column is not correct (1).", "DEBUG", resultSet.getString("level"));
             assertEquals("The logger column is not correct (1).", logger1.getName(), resultSet.getString("loggerName"));
-            assertEquals("The message column is not correct (1).", "Test my debug 01.",
-                    resultSet.getString("message"));
+            assertEquals("The message column is not correct (1).", "Test my debug 01.", resultSet.getString("message"));
             assertNull("The exception column is not correct (1).", resultSet.getString("thrown"));
 
             assertTrue("There should be at least two rows.", resultSet.next());
@@ -186,7 +194,9 @@ public abstract class AbstractJpaAppenderTest {
             assertTrue("The date should be earlier than now (2).", date <= System.currentTimeMillis());
             assertEquals("The level column is not correct (2).", "WARN", resultSet.getString("level"));
             assertEquals("The logger column is not correct (2).", logger1.getName(), resultSet.getString("loggerName"));
-            assertEquals("The message column is not correct (2).", "This is another warning 02.",
+            assertEquals(
+                    "The message column is not correct (2).",
+                    "This is another warning 02.",
                     resultSet.getString("message"));
             assertEquals("The exception column is not correct (2).", stackTrace, resultSet.getString("thrown"));
 
@@ -197,7 +207,9 @@ public abstract class AbstractJpaAppenderTest {
             assertTrue("The date should be earlier than now (3).", date <= System.currentTimeMillis());
             assertEquals("The level column is not correct (3).", "FATAL", resultSet.getString("level"));
             assertEquals("The logger column is not correct (3).", logger2.getName(), resultSet.getString("loggerName"));
-            assertEquals("The message column is not correct (3).", "A fatal warning has been issued.",
+            assertEquals(
+                    "The message column is not correct (3).",
+                    "A fatal warning has been issued.",
                     resultSet.getString("message"));
             assertNull("The exception column is not correct (3).", resultSet.getString("thrown"));
 

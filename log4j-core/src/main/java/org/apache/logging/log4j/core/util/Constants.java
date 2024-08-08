@@ -1,18 +1,18 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.util;
 
@@ -35,13 +35,21 @@ public final class Constants {
 
     /**
      * Property name for the default status (internal log4j logging) level to use if not specified in configuration.
+     * @deprecated since 2.24.0 use
+     * {@link org.apache.logging.log4j.status.StatusLogger#DEFAULT_STATUS_LISTENER_LEVEL} instead.
      */
+    @Deprecated
     public static final String LOG4J_DEFAULT_STATUS_LEVEL = "Log4jDefaultStatusLevel";
 
     /**
      * JNDI context name string literal.
      */
     public static final String JNDI_CONTEXT_NAME = "java:comp/env/log4j/context-name";
+
+    /**
+     * Control which script languages are allowed, if any.
+     */
+    public static final String SCRIPT_LANGUAGES = "log4j2.Script.enableLanguages";
 
     /**
      * Number of milliseconds in a second.
@@ -51,21 +59,25 @@ public final class Constants {
     /**
      * Supports user request LOG4J2-898 to have the option to format a message in the background thread.
      */
-    public static final boolean FORMAT_MESSAGES_IN_BACKGROUND = PropertiesUtil.getProperties().getBooleanProperty(
-            "log4j.format.msg.async", false);
+    public static final boolean FORMAT_MESSAGES_IN_BACKGROUND =
+            PropertiesUtil.getProperties().getBooleanProperty("log4j.format.msg.async", false);
 
     /**
-     * LOG4J2-2109 if {@code true}, MessagePatternConverter will always operate as though
-     * <pre>%m{nolookups}</pre> is configured.
+     * LOG4J2-3198 property which used to globally opt out of lookups in pattern layout message text, however
+     * this is the default and this property is no longer read.
+     *
+     * Deprecated in 2.15.
      *
      * @since 2.10
+     * @deprecated no longer used, lookups are only used when {@code %m{lookups}} is specified
      */
-    public static final boolean FORMAT_MESSAGES_PATTERN_DISABLE_LOOKUPS = PropertiesUtil.getProperties().getBooleanProperty(
-            "log4j2.formatMsgNoLookups", false);
+    @Deprecated
+    public static final boolean FORMAT_MESSAGES_PATTERN_DISABLE_LOOKUPS =
+            PropertiesUtil.getProperties().getBooleanProperty("log4j2.formatMsgNoLookups", true);
 
     /**
      * {@code true} if we think we are running in a web container, based on the boolean value of system property
-     * "log4j2.is.webapp", or (if this system property is not set) whether the  {@code javax.servlet.Servlet} class
+     * "log4j2.isWebapp", or (if this system property is not set) whether the  {@code javax.servlet.Servlet} class
      * is present in the classpath.
      */
     public static final boolean IS_WEB_APP = org.apache.logging.log4j.util.Constants.IS_WEB_APP;
@@ -85,21 +97,21 @@ public final class Constants {
      * {@link org.apache.logging.log4j.core.layout.ByteBufferDestination}s without creating intermediate temporary
      * Objects.
      * <p>
-     * {@code True} by default iff all loggers are asynchronous because system property
-     * {@code Log4jContextSelector} is set to {@code org.apache.logging.log4j.core.async.AsyncLoggerContextSelector}.
-     * Disable by setting system property "log4j2.enable.direct.encoders" to "false".
+     *     This constant is {@code true} by default, but can be disabled using the
+     *     {@code "log4j2.enableDirectEncoders"} system property.
+     * </p>
      *
      * @since 2.6
      */
-    public static final boolean ENABLE_DIRECT_ENCODERS = PropertiesUtil.getProperties().getBooleanProperty(
-            "log4j2.enable.direct.encoders", true); // enable GC-free text encoding by default
-            // the alternative is to enable GC-free encoding only by default only when using all-async loggers:
-            //AsyncLoggerContextSelector.class.getName().equals(PropertiesUtil.getProperties().getStringProperty(LOG4J_CONTEXT_SELECTOR)));
+    public static final boolean ENABLE_DIRECT_ENCODERS = PropertiesUtil.getProperties()
+            .getBooleanProperty("log4j2.enable.direct.encoders", true); // enable GC-free text encoding by default
+    // the alternative is to enable GC-free encoding only by default only when using all-async loggers:
+    // AsyncLoggerContextSelector.class.getName().equals(PropertiesUtil.getProperties().getStringProperty(LOG4J_CONTEXT_SELECTOR)));
 
     /**
      * Initial StringBuilder size used in RingBuffer LogEvents to store the contents of reusable Messages.
      * <p>
-     * The default value is {@value}, users can override with system property "log4j.initialReusableMsgSize".
+     * The default value is 128, users can override with system property "log4j.initialReusableMsgSize".
      * </p>
      * @since 2.6
      */
@@ -109,7 +121,7 @@ public final class Constants {
      * Maximum size of the StringBuilders used in RingBuffer LogEvents to store the contents of reusable Messages.
      * After a large message has been delivered to the appenders, the StringBuilder is trimmed to this size.
      * <p>
-     * The default value is {@value}, which allows the StringBuilder to resize three times from its initial size.
+     * The default value is 518, which allows the StringBuilder to resize three times from its initial size.
      * Users can override with system property "log4j.maxReusableMsgSize".
      * </p>
      * @since 2.6
@@ -119,7 +131,7 @@ public final class Constants {
     /**
      * Size of CharBuffers used by text encoders.
      * <p>
-     * The default value is {@value}, users can override with system property "log4j.encoder.charBufferSize".
+     * The default value is 2048, users can override with system property "log4j.encoder.charBufferSize".
      * </p>
      * @since 2.6
      */
@@ -128,13 +140,12 @@ public final class Constants {
     /**
      * Default size of ByteBuffers used to encode LogEvents without allocating temporary objects.
      * <p>
-     * The default value is {@value}, users can override with system property "log4j.encoder.byteBufferSize".
+     * The default value is 8192, users can override with system property "log4j.encoder.byteBufferSize".
      * </p>
      * @see org.apache.logging.log4j.core.layout.ByteBufferDestination
      * @since 2.6
      */
     public static final int ENCODER_BYTE_BUFFER_SIZE = size("log4j.encoder.byteBufferSize", 8 * 1024);
-
 
     private static int size(final String property, final int defaultValue) {
         return PropertiesUtil.getProperties().getIntegerProperty(property, defaultValue);
@@ -143,6 +154,5 @@ public final class Constants {
     /**
      * Prevent class instantiation.
      */
-    private Constants() {
-    }
+    private Constants() {}
 }

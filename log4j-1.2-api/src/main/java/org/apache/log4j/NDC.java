@@ -1,30 +1,29 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.log4j;
 
 import java.util.Stack;
 
 /**
- *
+ * <em>This class does not use generics to provide better source compatibility.</em>
  */
 public final class NDC {
 
-    private NDC() {
-    }
+    private NDC() {}
 
     /**
      * Clear any nested diagnostic information if any. This method is
@@ -39,7 +38,6 @@ public final class NDC {
         org.apache.logging.log4j.ThreadContext.clearStack();
     }
 
-
     /**
      * Clone the diagnostic context for the current thread.
      * <p>
@@ -52,20 +50,20 @@ public final class NDC {
      * The child thread uses the {@link #inherit inherit} method to
      * inherit the parent's diagnostic context.
      * </p>
-     * @return Stack A clone of the current thread's  diagnostic context.
+     * @return Stack A clone of the current thread's diagnostic context, Stack of Strings.
      */
     @SuppressWarnings("rawtypes")
     public static Stack cloneStack() {
         final Stack<String> stack = new Stack<>();
-        for (final String element : org.apache.logging.log4j.ThreadContext.cloneStack().asList()) {
+        for (final String element :
+                org.apache.logging.log4j.ThreadContext.cloneStack().asList()) {
             stack.push(element);
         }
         return stack;
     }
 
-
     /**
-     * Inherit the diagnostic context of another thread.
+     * Inherit the diagnostic context of another thread, a Stack of Strings.
      * <p>
      * The parent thread can obtain a reference to its diagnostic
      * context using the {@link #cloneStack} method.  It should
@@ -83,12 +81,12 @@ public final class NDC {
      * there is no client-transparent way of inheriting diagnostic
      * contexts. Do you know any solution to this problem?
      * </p>
-     * @param stack The diagnostic context of the parent thread.
+     * @param stack The diagnostic context of the parent thread, a Stack of Strings.
      */
-    public static void inherit(final Stack<String> stack) {
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    public static void inherit(final Stack stack) {
         org.apache.logging.log4j.ThreadContext.setStack(stack);
     }
-
 
     /**
      * <strong style="color:#FF4040">Never use this method directly.</strong>

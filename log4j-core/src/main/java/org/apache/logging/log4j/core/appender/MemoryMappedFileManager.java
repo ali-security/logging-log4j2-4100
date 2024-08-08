@@ -1,66 +1,62 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.appender;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.io.Serializable;
-import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
-import java.security.AccessController;
-import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-
 import org.apache.logging.log4j.core.Layout;
 import org.apache.logging.log4j.core.util.Closer;
 import org.apache.logging.log4j.core.util.FileUtils;
 import org.apache.logging.log4j.core.util.NullOutputStream;
+import org.apache.logging.log4j.core.util.internal.UnsafeUtil;
+import org.apache.logging.log4j.util.Constants;
 
-//Lines too long...
-//CHECKSTYLE:OFF
+// Lines too long...
+// CHECKSTYLE:OFF
 /**
  * Extends OutputStreamManager but instead of using a buffered output stream, this class maps a region of a file into
  * memory and writes to this memory region.
  * <p>
  *
- * @see <a href="http://www.codeproject.com/Tips/683614/Things-to-Know-about-Memory-Mapped-File-in-Java">
- *      http://www.codeproject.com/Tips/683614/Things-to-Know-about-Memory-Mapped-File-in-Java</a>
- * @see <a href="http://bugs.java.com/view_bug.do?bug_id=6893654">http://bugs.java.com/view_bug.do?bug_id=6893654</a>
- * @see <a href="http://bugs.java.com/view_bug.do?bug_id=4724038">http://bugs.java.com/view_bug.do?bug_id=4724038</a>
- * @see <a
- *      href="http://stackoverflow.com/questions/9261316/memory-mapped-mappedbytebuffer-or-direct-bytebuffer-for-db-implementation">
- *      http://stackoverflow.com/questions/9261316/memory-mapped-mappedbytebuffer-or-direct-bytebuffer-for-db-implementation</a>
+ * @see <a href="https://www.codeproject.com/Tips/683614/Things-to-Know-about-Memory-Mapped-File-in-Java">Things to Know about Memory Mapped File in Java</a>
+ * @see <a href="https://bugs.openjdk.org/browse/JDK-6893654">JDK-6893654</a>
+ * @see <a href="https://bugs.openjdk.org/browse/JDK-4724038">JDK-4724038</a>
+ * @see <a href="https://stackoverflow.com/questions/9261316/memory-mapped-mappedbytebuffer-or-direct-bytebuffer-for-db-implementation">Memory-Mapped MappedByteBuffer or Direct ByteBuffer for DB Implementation?</a>
  *
  * @since 2.1
  */
-//CHECKSTYLE:ON
+// CHECKSTYLE:ON
 public class MemoryMappedFileManager extends OutputStreamManager {
     /**
      * Default length of region to map.
      */
     static final int DEFAULT_REGION_LENGTH = 32 * 1024 * 1024;
+
     private static final int MAX_REMAP_COUNT = 10;
     private static final MemoryMappedFileManagerFactory FACTORY = new MemoryMappedFileManagerFactory();
     private static final double NANOS_PER_MILLISEC = 1000.0 * 1000.0;
@@ -69,19 +65,25 @@ public class MemoryMappedFileManager extends OutputStreamManager {
     private final int regionLength;
     private final String advertiseURI;
     private final RandomAccessFile randomAccessFile;
-    private final ThreadLocal<Boolean> isEndOfBatch = new ThreadLocal<>();
     private MappedByteBuffer mappedBuffer;
     private long mappingOffset;
 
-    protected MemoryMappedFileManager(final RandomAccessFile file, final String fileName, final OutputStream os,
-            final boolean immediateFlush, final long position, final int regionLength, final String advertiseURI,
-            final Layout<? extends Serializable> layout, final boolean writeHeader) throws IOException {
-        super(os, fileName, layout, writeHeader, ByteBuffer.wrap(new byte[0]));
+    protected MemoryMappedFileManager(
+            final RandomAccessFile file,
+            final String fileName,
+            final OutputStream os,
+            final boolean immediateFlush,
+            final long position,
+            final int regionLength,
+            final String advertiseURI,
+            final Layout<? extends Serializable> layout,
+            final boolean writeHeader)
+            throws IOException {
+        super(os, fileName, layout, writeHeader, ByteBuffer.wrap(Constants.EMPTY_BYTE_ARRAY));
         this.immediateFlush = immediateFlush;
         this.randomAccessFile = Objects.requireNonNull(file, "RandomAccessFile");
         this.regionLength = regionLength;
         this.advertiseURI = advertiseURI;
-        this.isEndOfBatch.set(Boolean.FALSE);
         this.mappedBuffer = mmap(randomAccessFile.getChannel(), getFileName(), position, regionLength);
         this.byteBuffer = mappedBuffer;
         this.mappingOffset = position;
@@ -98,31 +100,52 @@ public class MemoryMappedFileManager extends OutputStreamManager {
      * @param layout The layout.
      * @return A MemoryMappedFileManager for the File.
      */
-    public static MemoryMappedFileManager getFileManager(final String fileName, final boolean append,
-            final boolean immediateFlush, final int regionLength, final String advertiseURI,
+    public static MemoryMappedFileManager getFileManager(
+            final String fileName,
+            final boolean append,
+            final boolean immediateFlush,
+            final int regionLength,
+            final String advertiseURI,
             final Layout<? extends Serializable> layout) {
-        return narrow(MemoryMappedFileManager.class, getManager(fileName, new FactoryData(append, immediateFlush,
-                regionLength, advertiseURI, layout), FACTORY));
+        return narrow(
+                MemoryMappedFileManager.class,
+                getManager(
+                        fileName,
+                        new FactoryData(append, immediateFlush, regionLength, advertiseURI, layout),
+                        FACTORY));
     }
 
+    /**
+     * No longer used, the {@link org.apache.logging.log4j.core.LogEvent#isEndOfBatch()} attribute is used instead.
+     * @return {@link Boolean#FALSE}.
+     * @deprecated end-of-batch on the event is used instead.
+     */
+    @Deprecated
     public Boolean isEndOfBatch() {
-        return isEndOfBatch.get();
+        return Boolean.FALSE;
     }
 
-    public void setEndOfBatch(final boolean endOfBatch) {
-        this.isEndOfBatch.set(Boolean.valueOf(endOfBatch));
-    }
+    /**
+     * No longer used, the {@link org.apache.logging.log4j.core.LogEvent#isEndOfBatch()} attribute is used instead.
+     * This method is a no-op.
+     * @deprecated end-of-batch on the event is used instead.
+     */
+    @Deprecated
+    public void setEndOfBatch(@SuppressWarnings("unused") final boolean endOfBatch) {}
 
     @Override
-    protected synchronized void write(final byte[] bytes, int offset, int length, final boolean immediateFlush) {
-        while (length > mappedBuffer.remaining()) {
+    protected synchronized void write(
+            final byte[] bytes, final int offset, final int length, final boolean immediateFlush) {
+        int currentOffset = offset;
+        int currentLength = length;
+        while (currentLength > mappedBuffer.remaining()) {
             final int chunk = mappedBuffer.remaining();
-            mappedBuffer.put(bytes, offset, chunk);
-            offset += chunk;
-            length -= chunk;
+            mappedBuffer.put(bytes, currentOffset, chunk);
+            currentOffset += chunk;
+            currentLength -= chunk;
             remap();
         }
-        mappedBuffer.put(bytes, offset, length);
+        mappedBuffer.put(bytes, currentOffset, currentLength);
 
         // no need to call flush() if force is true,
         // already done in AbstractOutputStreamAppender.append
@@ -134,14 +157,19 @@ public class MemoryMappedFileManager extends OutputStreamManager {
         try {
             unsafeUnmap(mappedBuffer);
             final long fileLength = randomAccessFile.length() + regionLength;
-            LOGGER.debug("{} {} extending {} by {} bytes to {}", getClass().getSimpleName(), getName(), getFileName(),
-                    regionLength, fileLength);
+            LOGGER.debug(
+                    "{} {} extending {} by {} bytes to {}",
+                    getClass().getSimpleName(),
+                    getName(),
+                    getFileName(),
+                    regionLength,
+                    fileLength);
 
             final long startNanos = System.nanoTime();
             randomAccessFile.setLength(fileLength);
             final float millis = (float) ((System.nanoTime() - startNanos) / NANOS_PER_MILLISEC);
-            LOGGER.debug("{} {} extended {} OK in {} millis", getClass().getSimpleName(), getName(), getFileName(),
-                    millis);
+            LOGGER.debug(
+                    "{} {} extended {} OK in {} millis", getClass().getSimpleName(), getName(), getFileName(), millis);
 
             mappedBuffer = mmap(randomAccessFile.getChannel(), getFileName(), offset, length);
             this.byteBuffer = mappedBuffer;
@@ -166,8 +194,12 @@ public class MemoryMappedFileManager extends OutputStreamManager {
             logError("Unable to unmap MappedBuffer", ex);
         }
         try {
-            LOGGER.debug("MMapAppender closing. Setting {} length to {} (offset {} + position {})", getFileName(),
-                    length, mappingOffset, position);
+            LOGGER.debug(
+                    "MMapAppender closing. Setting {} length to {} (offset {} + position {})",
+                    getFileName(),
+                    length,
+                    mappingOffset,
+                    position);
             randomAccessFile.setLength(length);
             randomAccessFile.close();
             return true;
@@ -177,9 +209,9 @@ public class MemoryMappedFileManager extends OutputStreamManager {
         }
     }
 
-    public static MappedByteBuffer mmap(final FileChannel fileChannel, final String fileName, final long start,
-            final int size) throws IOException {
-        for (int i = 1;; i++) {
+    public static MappedByteBuffer mmap(
+            final FileChannel fileChannel, final String fileName, final long start, final int size) throws IOException {
+        for (int i = 1; ; i++) {
             try {
                 LOGGER.debug("MMapAppender remapping {} start={}, size={}", fileName, start, size);
 
@@ -210,17 +242,10 @@ public class MemoryMappedFileManager extends OutputStreamManager {
         }
     }
 
-    private static void unsafeUnmap(final MappedByteBuffer mbb) throws PrivilegedActionException {
+    private static void unsafeUnmap(final MappedByteBuffer mbb) throws Exception {
         LOGGER.debug("MMapAppender unmapping old buffer...");
         final long startNanos = System.nanoTime();
-        AccessController.doPrivileged((PrivilegedExceptionAction<Object>) () -> {
-            final Method getCleanerMethod = mbb.getClass().getMethod("cleaner");
-            getCleanerMethod.setAccessible(true);
-            final Object cleaner = getCleanerMethod.invoke(mbb); // sun.misc.Cleaner instance
-            final Method cleanMethod = cleaner.getClass().getMethod("clean");
-            cleanMethod.invoke(cleaner);
-            return null;
-        });
+        UnsafeUtil.clean(mbb);
         final float millis = (float) ((System.nanoTime() - startNanos) / NANOS_PER_MILLISEC);
         LOGGER.debug("MMapAppender unmapped buffer OK in {} millis", millis);
     }
@@ -303,8 +328,12 @@ public class MemoryMappedFileManager extends OutputStreamManager {
          * @param advertiseURI the URI to use when advertising the file
          * @param layout The layout.
          */
-        public FactoryData(final boolean append, final boolean immediateFlush, final int regionLength,
-                final String advertiseURI, final Layout<? extends Serializable> layout) {
+        public FactoryData(
+                final boolean append,
+                final boolean immediateFlush,
+                final int regionLength,
+                final String advertiseURI,
+                final Layout<? extends Serializable> layout) {
             this.append = append;
             this.immediateFlush = immediateFlush;
             this.regionLength = regionLength;
@@ -328,6 +357,9 @@ public class MemoryMappedFileManager extends OutputStreamManager {
          */
         @SuppressWarnings("resource")
         @Override
+        @SuppressFBWarnings(
+                value = "PATH_TRAVERSAL_IN",
+                justification = "The destination file should be specified in the configuration file.")
         public MemoryMappedFileManager createManager(final String name, final FactoryData data) {
             final File file = new File(name);
             if (!data.append) {
@@ -342,8 +374,16 @@ public class MemoryMappedFileManager extends OutputStreamManager {
                 raf = new RandomAccessFile(name, "rw");
                 final long position = (data.append) ? raf.length() : 0;
                 raf.setLength(position + data.regionLength);
-                return new MemoryMappedFileManager(raf, name, os, data.immediateFlush, position, data.regionLength,
-                        data.advertiseURI, data.layout, writeHeader);
+                return new MemoryMappedFileManager(
+                        raf,
+                        name,
+                        os,
+                        data.immediateFlush,
+                        position,
+                        data.regionLength,
+                        data.advertiseURI,
+                        data.layout,
+                        writeHeader);
             } catch (final Exception ex) {
                 LOGGER.error("MemoryMappedFileManager (" + name + ") " + ex, ex);
                 Closer.closeSilently(raf);

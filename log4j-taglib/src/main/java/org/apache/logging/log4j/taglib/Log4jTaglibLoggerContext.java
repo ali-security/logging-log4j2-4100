@@ -1,25 +1,23 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.taglib;
 
 import java.util.WeakHashMap;
-
 import javax.servlet.ServletContext;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.message.MessageFactory;
 import org.apache.logging.log4j.spi.AbstractLogger;
@@ -38,8 +36,8 @@ final class Log4jTaglibLoggerContext implements LoggerContext {
     // important in Servlet containers.
     private static final WeakHashMap<ServletContext, Log4jTaglibLoggerContext> CONTEXTS = new WeakHashMap<>();
 
-    private final LoggerRegistry<Log4jTaglibLogger> loggerRegistry = new LoggerRegistry<>(
-            new LoggerRegistry.WeakMapFactory<Log4jTaglibLogger>());
+    private final LoggerRegistry<Log4jTaglibLogger> loggerRegistry =
+            new LoggerRegistry<>(new LoggerRegistry.WeakMapFactory<Log4jTaglibLogger>());
 
     private final ServletContext servletContext;
 
@@ -70,8 +68,8 @@ final class Log4jTaglibLoggerContext implements LoggerContext {
             logger = this.loggerRegistry.getLogger(name, messageFactory);
             if (logger == null) {
                 final LoggerContext context = LogManager.getContext(false);
-                final ExtendedLogger original = messageFactory == null ?
-                        context.getLogger(name) : context.getLogger(name, messageFactory);
+                final ExtendedLogger original =
+                        messageFactory == null ? context.getLogger(name) : context.getLogger(name, messageFactory);
                 // wrap a logger from an underlying implementation
                 logger = new Log4jTaglibLogger(original, name, original.getMessageFactory());
                 this.loggerRegistry.putIfAbsent(name, messageFactory, logger);

@@ -1,32 +1,32 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.pattern;
 
 import java.util.Arrays;
 import java.util.Date;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.TimeZone;
 import java.util.concurrent.atomic.AtomicReference;
-
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
-import org.apache.logging.log4j.core.util.Constants;
 import org.apache.logging.log4j.core.time.Instant;
 import org.apache.logging.log4j.core.time.MutableInstant;
+import org.apache.logging.log4j.core.util.Constants;
 import org.apache.logging.log4j.core.util.datetime.FastDateFormat;
 import org.apache.logging.log4j.core.util.datetime.FixedDateFormat;
 import org.apache.logging.log4j.core.util.datetime.FixedDateFormat.FixedFormat;
@@ -50,6 +50,10 @@ public final class DatePatternConverter extends LogEventPatternConverter impleme
 
         public String toPattern() {
             return null;
+        }
+
+        public TimeZone getTimeZone() {
+            return TimeZone.getDefault();
         }
     }
 
@@ -82,6 +86,11 @@ public final class DatePatternConverter extends LogEventPatternConverter impleme
         public String toPattern() {
             return fastDateFormat.getPattern();
         }
+
+        @Override
+        public TimeZone getTimeZone() {
+            return fastDateFormat.getTimeZone();
+        }
     }
 
     private static final class FixedFormatter extends Formatter {
@@ -104,7 +113,7 @@ public final class DatePatternConverter extends LogEventPatternConverter impleme
         void formatToBuffer(final Instant instant, final StringBuilder destination) {
             final long epochSecond = instant.getEpochSecond();
             final int nanoOfSecond = instant.getNanoOfSecond();
-            if (previousTime != epochSecond || nanos != nanoOfSecond) {
+            if (!fixedDateFormat.isEquivalent(previousTime, nanos, epochSecond, nanoOfSecond)) {
                 length = fixedDateFormat.formatInstant(instant, cachedBuffer, 0);
                 previousTime = epochSecond;
                 nanos = nanoOfSecond;
@@ -115,6 +124,11 @@ public final class DatePatternConverter extends LogEventPatternConverter impleme
         @Override
         public String toPattern() {
             return fixedDateFormat.getFormat();
+        }
+
+        @Override
+        public TimeZone getTimeZone() {
+            return fixedDateFormat.getTimeZone();
         }
     }
 
@@ -236,8 +250,13 @@ public final class DatePatternConverter extends LogEventPatternConverter impleme
             tz = TimeZone.getTimeZone(options[1]);
         }
 
+        Locale locale = null;
+        if (options.length > 2 && options[2] != null) {
+            locale = Locale.forLanguageTag(options[2]);
+        }
+
         try {
-            final FastDateFormat tempFormat = FastDateFormat.getInstance(pattern, tz);
+            final FastDateFormat tempFormat = FastDateFormat.getInstance(pattern, tz, locale);
             return new PatternFormatter(tempFormat);
         } catch (final IllegalArgumentException e) {
             LOGGER.warn("Could not instantiate FastDateFormat with pattern " + pattern, e);
@@ -305,16 +324,15 @@ public final class DatePatternConverter extends LogEventPatternConverter impleme
     }
 
     private void formatWithoutThreadLocals(final Instant instant, final StringBuilder output) {
-        CachedTime cached = cachedTime.get();
+        final CachedTime effective;
+        final CachedTime cached = cachedTime.get();
         if (instant.getEpochSecond() != cached.epochSecond || instant.getNanoOfSecond() != cached.nanoOfSecond) {
-            final CachedTime newTime = new CachedTime(instant);
-            if (cachedTime.compareAndSet(cached, newTime)) {
-                cached = newTime;
-            } else {
-                cached = cachedTime.get();
-            }
+            effective = new CachedTime(instant);
+            cachedTime.compareAndSet(cached, effective);
+        } else {
+            effective = cached;
         }
-        output.append(cached.formatted);
+        output.append(effective.formatted);
     }
 
     /**
@@ -341,10 +359,18 @@ public final class DatePatternConverter extends LogEventPatternConverter impleme
     /**
      * Gets the pattern string describing this date format.
      *
-     * @return the pattern string describing this date format.
+     * @return the pattern string describing this date format or {@code  null} if the format does not have a pattern.
      */
     public String getPattern() {
         return formatter.toPattern();
     }
 
+    /**
+     * Gets the timezone used by this date format.
+     *
+     * @return the timezone used by this date format.
+     */
+    public TimeZone getTimeZone() {
+        return formatter.getTimeZone();
+    }
 }

@@ -1,18 +1,18 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.util;
 
@@ -20,17 +20,18 @@ import java.net.URL;
 import java.security.Permission;
 import java.util.Collection;
 import java.util.List;
-
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.spi.LoggerContextFactory;
 import org.apache.logging.log4j.spi.Provider;
 import org.apache.logging.log4j.status.StatusLogger;
+import org.osgi.annotation.bundle.Header;
 import org.osgi.framework.AdaptPermission;
 import org.osgi.framework.AdminPermission;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleActivator;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
+import org.osgi.framework.Constants;
 import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.framework.ServiceReference;
 import org.osgi.framework.SynchronousBundleListener;
@@ -44,6 +45,9 @@ import org.osgi.framework.wiring.BundleWiring;
  * {@code META-INF/log4j-provider.properties} files. As with all OSGi BundleActivator classes, this class is not for
  * public use and is only useful in an OSGi framework environment.
  */
+@Header(name = Constants.BUNDLE_ACTIVATOR, value = "${@class}")
+@Header(name = Constants.BUNDLE_ACTIVATIONPOLICY, value = Constants.ACTIVATION_LAZY)
+@InternalApi
 public class Activator implements BundleActivator, SynchronousBundleListener {
 
     private static final SecurityManager SECURITY_MANAGER = System.getSecurityManager();
@@ -69,7 +73,10 @@ public class Activator implements BundleActivator, SynchronousBundleListener {
             checkPermission(new AdaptPermission(BundleWiring.class.getName(), bundle, AdaptPermission.ADAPT));
             final BundleContext bundleContext = bundle.getBundleContext();
             if (bundleContext == null) {
-                LOGGER.debug("Bundle {} has no context (state={}), skipping loading provider", bundle.getSymbolicName(), toStateString(bundle.getState()));
+                LOGGER.debug(
+                        "Bundle {} has no context (state={}), skipping loading provider",
+                        bundle.getSymbolicName(),
+                        toStateString(bundle.getState()));
             } else {
                 loadProvider(bundleContext, bundle.adapt(BundleWiring.class));
             }
@@ -82,27 +89,28 @@ public class Activator implements BundleActivator, SynchronousBundleListener {
 
     private String toStateString(final int state) {
         switch (state) {
-        case Bundle.UNINSTALLED:
-            return "UNINSTALLED";
-        case Bundle.INSTALLED:
-            return "INSTALLED";
-        case Bundle.RESOLVED:
-            return "RESOLVED";
-        case Bundle.STARTING:
-            return "STARTING";
-        case Bundle.STOPPING:
-            return "STOPPING";
-        case Bundle.ACTIVE:
-            return "ACTIVE";
-        default:
-            return Integer.toString(state);
+            case Bundle.UNINSTALLED:
+                return "UNINSTALLED";
+            case Bundle.INSTALLED:
+                return "INSTALLED";
+            case Bundle.RESOLVED:
+                return "RESOLVED";
+            case Bundle.STARTING:
+                return "STARTING";
+            case Bundle.STOPPING:
+                return "STOPPING";
+            case Bundle.ACTIVE:
+                return "ACTIVE";
+            default:
+                return Integer.toString(state);
         }
     }
 
     private void loadProvider(final BundleContext bundleContext, final BundleWiring bundleWiring) {
         final String filter = "(APIVersion>=2.6.0)";
         try {
-            final Collection<ServiceReference<Provider>> serviceReferences = bundleContext.getServiceReferences(Provider.class, filter);
+            final Collection<ServiceReference<Provider>> serviceReferences =
+                    bundleContext.getServiceReferences(Provider.class, filter);
             Provider maxProvider = null;
             for (final ServiceReference<Provider> serviceReference : serviceReferences) {
                 final Provider provider = bundleContext.getService(serviceReference);
@@ -164,5 +172,4 @@ public class Activator implements BundleActivator, SynchronousBundleListener {
                 break;
         }
     }
-
 }

@@ -1,27 +1,27 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core;
 
 import java.util.List;
-
 import org.apache.logging.log4j.core.config.Property;
 import org.apache.logging.log4j.core.impl.ContextDataInjectorFactory;
 import org.apache.logging.log4j.core.impl.ThreadContextDataInjector;
 import org.apache.logging.log4j.util.ReadOnlyStringMap;
+import org.apache.logging.log4j.util.SortedArrayStringMap;
 import org.apache.logging.log4j.util.StringMap;
 
 /**
@@ -106,6 +106,19 @@ public interface ContextDataInjector {
      * the implementation of this method. It is not safe to pass the returned object to another thread.
      * </p>
      * @return a {@code ReadOnlyStringMap} object reflecting the current state of the context, may not return {@code null}
+     * @deprecated - Methods using this have been converted to call getValue(). Will be removed in 3.0.0.
      */
-    ReadOnlyStringMap rawContextData();
+    @Deprecated
+    default ReadOnlyStringMap rawContextData() {
+        return new SortedArrayStringMap();
+    }
+
+    /**
+     * Retrieves a key from the context. This avoids having to construct a composite Map when multiple contexts are available.
+     * @param key the key to retrieve.
+     * @return the String value associated with the key.
+     */
+    default String getValue(String key) {
+        return null;
+    }
 }

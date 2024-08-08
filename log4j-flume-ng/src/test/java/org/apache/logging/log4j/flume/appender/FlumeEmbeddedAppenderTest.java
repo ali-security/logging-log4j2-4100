@@ -1,21 +1,24 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.flume.appender;
 
+import static org.junit.Assert.fail;
+
+import com.google.common.base.Preconditions;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -30,13 +33,10 @@ import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.GZIPInputStream;
-
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
-
-import org.apache.avro.AvroRemoteException;
-import org.apache.avro.ipc.NettyServer;
-import org.apache.avro.ipc.Responder;
+import org.apache.avro.ipc.Server;
+import org.apache.avro.ipc.netty.NettyServer;
 import org.apache.avro.ipc.specific.SpecificResponder;
 import org.apache.flume.Event;
 import org.apache.flume.event.EventBuilder;
@@ -48,17 +48,15 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.ConfigurationFactory;
+import org.apache.logging.log4j.core.test.AvailablePortFinder;
 import org.apache.logging.log4j.message.StructuredDataMessage;
 import org.apache.logging.log4j.status.StatusLogger;
-import org.apache.logging.log4j.test.AvailablePortFinder;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import com.google.common.base.Preconditions;
 
 /**
  *
@@ -92,9 +90,9 @@ public class FlumeEmbeddedAppenderTest {
         deleteFiles(file);
 
         /*
-        * Clear out all other appenders associated with this logger to ensure we're
-        * only hitting the Avro appender.
-        */
+         * Clear out all other appenders associated with this logger to ensure we're
+         * only hitting the Avro appender.
+         */
         final int primaryPort = AvailablePortFinder.getNextAvailable();
         final int altPort = AvailablePortFinder.getNextAvailable();
         System.setProperty("primaryPort", Integer.toString(primaryPort));
@@ -134,8 +132,8 @@ public class FlumeEmbeddedAppenderTest {
         final Event event = primary.poll();
         Assert.assertNotNull("Event should not be null", event);
         final String body = getBody(event);
-        Assert.assertTrue("Channel contained event, but not expected message. Received: " + body,
-            body.endsWith("Test Log4j"));
+        Assert.assertTrue(
+                "Channel contained event, but not expected message. Received: " + body, body.endsWith("Test Log4j"));
     }
 
     @Test
@@ -150,11 +148,10 @@ public class FlumeEmbeddedAppenderTest {
             Assert.assertNotNull("Event should not be null", event);
             final String body = getBody(event);
             final String expected = "Test Multiple " + i;
-            Assert.assertTrue("Channel contained event, but not expected message. Received: " + body,
-                body.endsWith(expected));
+            Assert.assertTrue(
+                    "Channel contained event, but not expected message. Received: " + body, body.endsWith(expected));
         }
     }
-
 
     @Test
     public void testFailover() throws InterruptedException, IOException {
@@ -169,15 +166,14 @@ public class FlumeEmbeddedAppenderTest {
             Assert.assertNotNull("Event should not be null", event);
             final String body = getBody(event);
             final String expected = "Test Primary " + i;
-            Assert.assertTrue("Channel contained event, but not expected message. Received: " + body,
-                body.endsWith(expected));
+            Assert.assertTrue(
+                    "Channel contained event, but not expected message. Received: " + body, body.endsWith(expected));
         }
 
         // Give the AvroSink time to receive notification and notify the channel.
         Thread.sleep(500);
 
         primary.stop();
-
 
         for (int i = 0; i < 10; ++i) {
             final StructuredDataMessage msg = new StructuredDataMessage("Test", "Test Alternate " + i, "Test");
@@ -189,14 +185,15 @@ public class FlumeEmbeddedAppenderTest {
             final String body = getBody(event);
             final String expected = "Test Alternate " + i;
             /* When running in Gump Flume consistently returns the last event from the primary channel after
-               the failover, which fails this test */
-            Assert.assertTrue("Channel contained event, but not expected message. Expected: " + expected +
-                " Received: " + body, body.endsWith(expected));
+            the failover, which fails this test */
+            Assert.assertTrue(
+                    "Channel contained event, but not expected message. Expected: " + expected + " Received: " + body,
+                    body.endsWith(expected));
         }
     }
     /* Flume 1.4.0 does not support interceptors on the embedded agent
     @Test      */
-    public void testHeaderAddedByInterceptor() {
+    private void testHeaderAddedByInterceptor() {
 
         final StructuredDataMessage msg = new StructuredDataMessage("Test", "Test Log4j", "Test");
         EventLogger.logEvent(msg);
@@ -208,7 +205,7 @@ public class FlumeEmbeddedAppenderTest {
     }
 
     /* @Test */
-    public void testPerformance() throws Exception {
+    private void testPerformance() throws Exception {
         final long start = System.currentTimeMillis();
         final int count = 10000;
         for (int i = 0; i < count; ++i) {
@@ -220,51 +217,58 @@ public class FlumeEmbeddedAppenderTest {
         System.out.println("Time to log " + count + " events " + elapsed + "ms");
     }
 
-
     private String getBody(final Event event) throws IOException {
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            final InputStream is = new GZIPInputStream(new ByteArrayInputStream(event.getBody()));
-            int n = 0;
-            while (-1 != (n = is.read())) {
-                baos.write(n);
-            }
-            return new String(baos.toByteArray());
-
+        final InputStream is = new GZIPInputStream(new ByteArrayInputStream(event.getBody()));
+        int n = 0;
+        while (-1 != (n = is.read())) {
+            baos.write(n);
+        }
+        return new String(baos.toByteArray());
     }
 
-	private static boolean deleteFiles(final File file) {
-		boolean result = true;
-		if (file.isDirectory()) {
+    private static boolean deleteFiles(final File file) {
+        boolean result = true;
+        if (file.isDirectory()) {
 
-			final File[] files = file.listFiles();
-			if (files != null) {
-				for (final File child : files) {
-					result &= deleteFiles(child);
-				}
-			}
+            final File[] files = file.listFiles();
+            if (files != null) {
+                for (final File child : files) {
+                    result &= deleteFiles(child);
+                }
+            }
 
-		} else if (!file.exists()) {
-			return true;
-		}
+        } else if (!file.exists()) {
+            return true;
+        }
 
-		return result && file.delete();
-	}
+        return result && file.delete();
+    }
 
     private static class EventCollector implements AvroSourceProtocol {
         private final LinkedBlockingQueue<AvroFlumeEvent> eventQueue = new LinkedBlockingQueue<>();
 
-        private final NettyServer nettyServer;
-
+        private Server server;
 
         public EventCollector(final int port) {
-            final Responder responder = new SpecificResponder(AvroSourceProtocol.class, this);
-            System.out.println("Collector listening on port " + port);
-            nettyServer = new NettyServer(responder, new InetSocketAddress(HOSTNAME, port));
-            nettyServer.start();
+            try {
+                server = createServer(this, port);
+            } catch (InterruptedException ex) {
+                fail("Server creation was interrrupted");
+            }
+            server.start();
+        }
+
+        private Server createServer(final AvroSourceProtocol protocol, final int port) throws InterruptedException {
+
+            server = new NettyServer(
+                    new SpecificResponder(AvroSourceProtocol.class, protocol), new InetSocketAddress(HOSTNAME, port));
+
+            return server;
         }
 
         public void stop() {
-            nettyServer.close();
+            server.close();
         }
 
         public Event poll() {
@@ -283,14 +287,13 @@ public class FlumeEmbeddedAppenderTest {
         }
 
         @Override
-        public Status append(final AvroFlumeEvent event) throws AvroRemoteException {
+        public Status append(final AvroFlumeEvent event) {
             eventQueue.add(event);
             return Status.OK;
         }
 
         @Override
-        public Status appendBatch(final List<AvroFlumeEvent> events)
-            throws AvroRemoteException {
+        public Status appendBatch(final List<AvroFlumeEvent> events) {
             Preconditions.checkState(eventQueue.addAll(events));
             return Status.OK;
         }

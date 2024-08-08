@@ -1,25 +1,24 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.util;
 
 import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
-
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.status.StatusLogger;
 import org.apache.logging.log4j.util.LoaderUtil;
@@ -34,8 +33,7 @@ public final class Loader {
 
     private static final String TSTR = "Caught Exception while in Loader.getResource. This may be innocuous.";
 
-    private Loader() {
-    }
+    private Loader() {}
 
     /**
      * Returns the ClassLoader to use.
@@ -80,7 +78,7 @@ public final class Loader {
      * class ({@code Loader}). Under JDK 1.1, only the class
      * loader that loaded this class ({@code Loader}) is used.</li>
      * <li>Try one last time with
-     * {@code ClassLoader.getSystemResource(resource)}, that is is
+     * {@code ClassLoader.getSystemResource(resource)}, that is
      * using the system class loader in JDK 1.2 and virtual machine's
      * built-in class loader in JDK 1.1.</li>
      * </ol>
@@ -142,7 +140,7 @@ public final class Loader {
      * class ({@code Loader}). Under JDK 1.1, only the class
      * loader that loaded this class ({@code Loader}) is used.</li>
      * <li>Try one last time with
-     * {@code ClassLoader.getSystemResource(resource)}, that is is
+     * {@code ClassLoader.getSystemResource(resource)}, that is
      * using the system class loader in JDK 1.2 and virtual machine's
      * built-in class loader in JDK 1.1.</li>
      * </ol>
@@ -236,8 +234,7 @@ public final class Loader {
      * @return The class, or null if loader is null.
      * @throws ClassNotFoundException if the class could not be found.
      */
-    public static Class<?> loadClass(final String className, final ClassLoader loader)
-            throws ClassNotFoundException {
+    public static Class<?> loadClass(final String className, final ClassLoader loader) throws ClassNotFoundException {
         return loader != null ? loader.loadClass(className) : null;
     }
 
@@ -271,11 +268,8 @@ public final class Loader {
      */
     @SuppressWarnings("unchecked")
     public static <T> T newInstanceOf(final String className)
-        throws ClassNotFoundException,
-        IllegalAccessException,
-        InstantiationException,
-        NoSuchMethodException,
-        InvocationTargetException {
+            throws ClassNotFoundException, IllegalAccessException, InstantiationException, NoSuchMethodException,
+                    InvocationTargetException {
         final ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(getClassLoader());
@@ -300,11 +294,8 @@ public final class Loader {
      * @throws ClassCastException if the constructed object isn't type compatible with {@code T}
      */
     public static <T> T newCheckedInstanceOf(final String className, final Class<T> clazz)
-        throws ClassNotFoundException,
-        NoSuchMethodException,
-        IllegalAccessException,
-        InvocationTargetException,
-        InstantiationException {
+            throws ClassNotFoundException, NoSuchMethodException, IllegalAccessException, InvocationTargetException,
+                    InstantiationException {
         final ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(getClassLoader());
@@ -329,8 +320,8 @@ public final class Loader {
      * @throws ClassCastException        if the constructed object isn't type compatible with {@code T}
      */
     public static <T> T newCheckedInstanceOfProperty(final String propertyName, final Class<T> clazz)
-        throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException, InstantiationException,
-        IllegalAccessException {
+            throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException, InstantiationException,
+                    IllegalAccessException {
         final String className = PropertiesUtil.getProperties().getStringProperty(propertyName);
         final ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
         try {
@@ -362,7 +353,7 @@ public final class Loader {
     }
 
     /**
-     * Loads a class by name. This method respects the {@link #IGNORE_TCCL_PROPERTY} Log4j property. If this property is
+     * Loads a class by name. This method respects the {@link LoaderUtil#IGNORE_TCCL_PROPERTY IGNORE_TCCL_PROPERTY} Log4j property. If this property is
      * specified and set to anything besides {@code false}, then the default ClassLoader will be used.
      *
      * @param className The class name.

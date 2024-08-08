@@ -1,27 +1,30 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.util.java9;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+
+import java.util.Deque;
+import java.util.Stack;
 import org.apache.logging.log4j.util.StackLocator;
 import org.junit.jupiter.api.Test;
-
-import java.util.Stack;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 public class StackLocatorTest {
 
@@ -43,11 +46,11 @@ public class StackLocatorTest {
     @Test
     public void testGetCurrentStackTrace() {
         final StackLocator stackLocator = StackLocator.getInstance();
-        final Stack<Class<?>> classes = stackLocator.getCurrentStackTrace();
+        final Deque<Class<?>> classes = stackLocator.getCurrentStackTrace();
         final Stack<Class<?>> reversed = new Stack<>();
         reversed.ensureCapacity(classes.size());
-        while (!classes.empty()) {
-            reversed.push(classes.pop());
+        while (!classes.isEmpty()) {
+            reversed.push(classes.removeLast());
         }
         while (reversed.peek() != StackLocator.class) {
             reversed.pop();
@@ -84,8 +87,8 @@ public class StackLocatorTest {
 
     @Test
     public void testLocateClass() {
-        ClassLocator locator = new ClassLocator();
-        Class<?> clazz = locator.locateClass();
+        final ClassLocator locator = new ClassLocator();
+        final Class<?> clazz = locator.locateClass();
         assertNotNull(clazz, "Could not locate class");
         assertEquals(this.getClass(), clazz, "Incorrect class");
     }
@@ -95,7 +98,6 @@ public class StackLocatorTest {
         private StackTraceElement foo() {
             return new Bar().bar(); // <--- testCalcLocation() line
         }
-
     }
 
     private final class Bar {
@@ -107,7 +109,6 @@ public class StackLocatorTest {
         private StackTraceElement baz() {
             return quux();
         }
-
     }
 
     private StackTraceElement quux() {
@@ -129,7 +130,15 @@ public class StackLocatorTest {
          */
         final StackTraceElement element = new Foo().foo();
         assertEquals("org.apache.logging.log4j.util.java9.StackLocatorTest$Foo", element.getClassName());
-        assertEquals(96, element.getLineNumber());
+        // The line number below may need adjustment if this file is changed.
+        assertEquals(99, element.getLineNumber());
+    }
+
+    @Test
+    public void testTopElementInStackTrace() {
+        final StackLocator stackLocator = StackLocator.getInstance();
+        final Deque<Class<?>> classes = stackLocator.getCurrentStackTrace();
+        assertSame(StackLocator.class, classes.getFirst());
     }
 
     @Test
@@ -146,5 +155,4 @@ public class StackLocatorTest {
             return stackLocator.getCallerClass(ClassLocator.class);
         }
     }
-
 }

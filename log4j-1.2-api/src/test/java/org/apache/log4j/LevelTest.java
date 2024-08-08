@@ -2,7 +2,7 @@
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
@@ -14,16 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.log4j;
 
-import java.util.Locale;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
+import java.util.Locale;
 import org.apache.log4j.util.SerializationTestHelper;
 import org.junit.Test;
-
-import static org.junit.Assert.*;
-
 
 /**
  * Tests of Level.
@@ -39,10 +37,9 @@ public class LevelTest {
      */
     @Test
     public void testSerializeINFO() throws Exception {
-        final int[] skip = new int[]{};
+        final int[] skip = new int[] {};
         SerializationTestHelper.assertSerializationEquals(
-            "target/test-classes/witness/serialization/info.bin",
-            Level.INFO, skip, Integer.MAX_VALUE);
+                "target/test-classes/witness/serialization/info.bin", Level.INFO, skip, Integer.MAX_VALUE);
     }
 
     /**
@@ -53,8 +50,7 @@ public class LevelTest {
     @Test
     public void testDeserializeINFO() throws Exception {
         final Object obj =
-            SerializationTestHelper.deserializeStream(
-                "target/test-classes/witness/serialization/info.bin");
+                SerializationTestHelper.deserializeStream("target/test-classes/witness/serialization/info.bin");
         assertTrue(obj instanceof Level);
         final Level info = (Level) obj;
         assertEquals("INFO", info.toString());
@@ -97,8 +93,7 @@ public class LevelTest {
          * Create an instance of CustomLevel.
          */
         public CustomLevel() {
-            super(
-                Level.INFO.level, Level.INFO.levelStr, Level.INFO.syslogEquivalent);
+            super(Level.INFO.level, Level.INFO.levelStr, Level.INFO.syslogEquivalent);
         }
     }
 
@@ -228,7 +223,6 @@ public class LevelTest {
         assertEquals("FATAL", level.toString());
     }
 
-
     /**
      * Tests Level.toLevel(Level.OFF_INT).
      */
@@ -278,7 +272,4 @@ public class LevelTest {
         Locale.setDefault(defaultLocale);
         assertEquals("INFO", level.toString());
     }
-
-
 }
-

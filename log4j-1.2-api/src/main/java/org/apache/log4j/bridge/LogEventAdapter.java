@@ -1,35 +1,35 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.log4j.bridge;
 
+import java.lang.reflect.Method;
+import java.util.Map;
+import java.util.Set;
 import org.apache.log4j.Category;
 import org.apache.log4j.Level;
+import org.apache.log4j.helpers.OptionConverter;
 import org.apache.log4j.spi.LocationInfo;
 import org.apache.log4j.spi.LoggingEvent;
 import org.apache.log4j.spi.ThrowableInformation;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.util.Loader;
 import org.apache.logging.log4j.core.util.Throwables;
-import org.apache.logging.log4j.spi.StandardLevel;
 import org.apache.logging.log4j.status.StatusLogger;
-
-import java.lang.reflect.Method;
-import java.util.Map;
-import java.util.Set;
+import org.apache.logging.log4j.util.Strings;
 
 /**
  * Converts a Log4j 2 LogEvent into the components needed by a Log4j 1.x LoggingEvent.
@@ -41,7 +41,7 @@ public class LogEventAdapter extends LoggingEvent {
 
     private final LogEvent event;
 
-    public LogEventAdapter(LogEvent event) {
+    public LogEventAdapter(final LogEvent event) {
         this.event = event;
     }
 
@@ -73,8 +73,11 @@ public class LogEventAdapter extends LoggingEvent {
             final Method getStartTime = runtimeMXBeanClass.getMethod("getStartTime");
             return (Long) getStartTime.invoke(runtimeMXBean);
         } catch (final Throwable t) {
-            StatusLogger.getLogger().error("Unable to call ManagementFactory.getRuntimeMXBean().getStartTime(), "
-                    + "using system time for OnStartupTriggeringPolicy", t);
+            StatusLogger.getLogger()
+                    .error(
+                            "Unable to call ManagementFactory.getRuntimeMXBean().getStartTime(), "
+                                    + "using system time for OnStartupTriggeringPolicy",
+                            t);
             // We have little option but to declare "now" as the beginning of time.
             return System.currentTimeMillis();
         }
@@ -99,24 +102,7 @@ public class LogEventAdapter extends LoggingEvent {
      */
     @Override
     public Level getLevel() {
-        switch (StandardLevel.getStandardLevel(event.getLevel().intLevel())) {
-            case TRACE:
-                return Level.TRACE;
-            case DEBUG:
-                return Level.DEBUG;
-            case INFO:
-                return Level.INFO;
-            case WARN:
-                return Level.WARN;
-            case FATAL:
-                return Level.FATAL;
-            case OFF:
-                return Level.OFF;
-            case ALL:
-                return Level.ALL;
-            default:
-                return Level.ERROR;
-        }
+        return OptionConverter.convertLevel(event.getLevel());
     }
 
     /**
@@ -126,6 +112,11 @@ public class LogEventAdapter extends LoggingEvent {
     @Override
     public String getLoggerName() {
         return event.getLoggerName();
+    }
+
+    @Override
+    public long getTimeStamp() {
+        return event.getTimeMillis();
     }
 
     /**
@@ -153,10 +144,10 @@ public class LogEventAdapter extends LoggingEvent {
     }
 
     /*
-     Returns the context corresponding to the <code>key</code> parameter.
-     */
+    Returns the context corresponding to the <code>key</code> parameter.
+    */
     @Override
-    public Object getMDC(String key) {
+    public Object getMDC(final String key) {
         if (event.getContextData() != null) {
             return event.getContextData().getValue(key);
         }
@@ -168,8 +159,7 @@ public class LogEventAdapter extends LoggingEvent {
      * asynchronous logging.
      */
     @Override
-    public void getMDCCopy() {
-    }
+    public void getMDCCopy() {}
 
     @Override
     public String getRenderedMessage() {
@@ -204,7 +194,7 @@ public class LogEventAdapter extends LoggingEvent {
     @Override
     public String[] getThrowableStrRep() {
         if (event.getThrown() != null) {
-            return Throwables.toStringList(event.getThrown()).toArray(new String[0]);
+            return Throwables.toStringList(event.getThrown()).toArray(Strings.EMPTY_ARRAY);
         }
         return null;
     }

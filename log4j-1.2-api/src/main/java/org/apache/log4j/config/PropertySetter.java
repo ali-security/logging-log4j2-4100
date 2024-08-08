@@ -2,7 +2,7 @@
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
@@ -14,19 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-// Contributors:  Georg Lundesgaard
-
 package org.apache.log4j.config;
-
-import org.apache.log4j.Appender;
-import org.apache.log4j.Level;
-import org.apache.log4j.Priority;
-import org.apache.log4j.spi.ErrorHandler;
-import org.apache.log4j.spi.OptionHandler;
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.core.util.OptionConverter;
-import org.apache.logging.log4j.status.StatusLogger;
 
 import java.beans.BeanInfo;
 import java.beans.IntrospectionException;
@@ -36,6 +24,13 @@ import java.io.InterruptedIOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Properties;
+import org.apache.log4j.Appender;
+import org.apache.log4j.Priority;
+import org.apache.log4j.spi.ErrorHandler;
+import org.apache.log4j.spi.OptionHandler;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.util.OptionConverter;
+import org.apache.logging.log4j.status.StatusLogger;
 
 /**
  * General purpose Object property setter. Clients repeatedly invokes
@@ -56,17 +51,18 @@ import java.util.Properties;
  * Otherwise an {@link IntrospectionException} are thrown.
  */
 public class PropertySetter {
-    private static Logger LOGGER = StatusLogger.getLogger();
+    private static final PropertyDescriptor[] EMPTY_PROPERTY_DESCRIPTOR_ARRAY = {};
+    private static final Logger LOGGER = StatusLogger.getLogger();
     protected Object obj;
     protected PropertyDescriptor[] props;
 
     /**
      * Create a new PropertySetter for the specified Object. This is done
-     * in prepartion for invoking {@link #setProperty} one or more times.
+     * in preparation for invoking {@link #setProperty} one or more times.
      *
      * @param obj the object for which to set properties
      */
-    public PropertySetter(Object obj) {
+    public PropertySetter(final Object obj) {
         this.obj = obj;
     }
 
@@ -79,7 +75,7 @@ public class PropertySetter {
      * @param properties A java.util.Properties containing keys and values.
      * @param prefix     Only keys having the specified prefix will be set.
      */
-    public static void setProperties(Object obj, Properties properties, String prefix) {
+    public static void setProperties(final Object obj, final Properties properties, final String prefix) {
         new PropertySetter(obj).setProperties(properties, prefix);
     }
 
@@ -89,35 +85,34 @@ public class PropertySetter {
      */
     protected void introspect() {
         try {
-            BeanInfo bi = Introspector.getBeanInfo(obj.getClass());
+            final BeanInfo bi = Introspector.getBeanInfo(obj.getClass());
             props = bi.getPropertyDescriptors();
         } catch (IntrospectionException ex) {
             LOGGER.error("Failed to introspect {}: {}", obj, ex.getMessage());
-            props = new PropertyDescriptor[0];
+            props = EMPTY_PROPERTY_DESCRIPTOR_ARRAY;
         }
     }
 
     /**
-     * Set the properites for the object that match the
+     * Set the properties for the object that match the
      * <code>prefix</code> passed as parameter.
      * @param properties The properties.
      * @param prefix The prefix of the properties to use.
      */
-    public void setProperties(Properties properties, String prefix) {
-        int len = prefix.length();
+    public void setProperties(final Properties properties, final String prefix) {
+        final int len = prefix.length();
 
         for (String key : properties.stringPropertyNames()) {
 
             // handle only properties that start with the desired prefix.
             if (key.startsWith(prefix)) {
 
-
                 // ignore key if it contains dots after the prefix
                 if (key.indexOf('.', len + 1) > 0) {
                     continue;
                 }
 
-                String value = OptionConverter.findAndSubst(key, properties);
+                final String value = OptionConverter.findAndSubst(key, properties);
                 key = key.substring(len);
                 if (("layout".equals(key) || "errorhandler".equals(key)) && obj instanceof Appender) {
                     continue;
@@ -125,15 +120,13 @@ public class PropertySetter {
                 //
                 //   if the property type is an OptionHandler
                 //     (for example, triggeringPolicy of org.apache.log4j.rolling.RollingFileAppender)
-                PropertyDescriptor prop = getPropertyDescriptor(Introspector.decapitalize(key));
+                final PropertyDescriptor prop = getPropertyDescriptor(Introspector.decapitalize(key));
                 if (prop != null
                         && OptionHandler.class.isAssignableFrom(prop.getPropertyType())
                         && prop.getWriteMethod() != null) {
-                    OptionHandler opt = (OptionHandler)
-                            OptionConverter.instantiateByKey(properties, prefix + key,
-                                    prop.getPropertyType(),
-                                    null);
-                    PropertySetter setter = new PropertySetter(opt);
+                    final OptionHandler opt = (OptionHandler)
+                            OptionConverter.instantiateByKey(properties, prefix + key, prop.getPropertyType(), null);
+                    final PropertySetter setter = new PropertySetter(opt);
                     setter.setProperties(properties, prefix + key + ".");
                     try {
                         prop.getWriteMethod().invoke(this.obj, opt);
@@ -176,13 +169,12 @@ public class PropertySetter {
         }
 
         name = Introspector.decapitalize(name);
-        PropertyDescriptor prop = getPropertyDescriptor(name);
+        final PropertyDescriptor prop = getPropertyDescriptor(name);
 
-        //LOGGER.debug("---------Key: "+name+", type="+prop.getPropertyType());
+        // LOGGER.debug("---------Key: "+name+", type="+prop.getPropertyType());
 
         if (prop == null) {
-            LOGGER.warn("No such property [" + name + "] in " +
-                    obj.getClass().getName() + ".");
+            LOGGER.warn("No such property [" + name + "] in " + obj.getClass().getName() + ".");
         } else {
             try {
                 setProperty(prop, name, value);
@@ -201,13 +193,12 @@ public class PropertySetter {
      * @param value The value of the property.
      * @throws PropertySetterException if no setter is available.
      */
-    public void setProperty(PropertyDescriptor prop, String name, String value)
-            throws PropertySetterException {
-        Method setter = prop.getWriteMethod();
+    public void setProperty(PropertyDescriptor prop, String name, String value) throws PropertySetterException {
+        final Method setter = prop.getWriteMethod();
         if (setter == null) {
             throw new PropertySetterException("No setter for property [" + name + "].");
         }
-        Class<?>[] paramTypes = setter.getParameterTypes();
+        final Class<?>[] paramTypes = setter.getParameterTypes();
         if (paramTypes.length != 1) {
             throw new PropertySetterException("#params for setter != 1");
         }
@@ -216,12 +207,10 @@ public class PropertySetter {
         try {
             arg = convertArg(value, paramTypes[0]);
         } catch (Throwable t) {
-            throw new PropertySetterException("Conversion to type [" + paramTypes[0] +
-                    "] failed. Reason: " + t);
+            throw new PropertySetterException("Conversion to type [" + paramTypes[0] + "] failed. Reason: " + t);
         }
         if (arg == null) {
-            throw new PropertySetterException(
-                    "Conversion to type [" + paramTypes[0] + "] failed.");
+            throw new PropertySetterException("Conversion to type [" + paramTypes[0] + "] failed.");
         }
         LOGGER.debug("Setting property [" + name + "] to [" + arg + "].");
         try {
@@ -237,7 +226,6 @@ public class PropertySetter {
         }
     }
 
-
     /**
      * Convert <code>val</code> a String parameter to an object of a
      * given type.
@@ -245,12 +233,12 @@ public class PropertySetter {
      * @param type The type of the value to convert to.
      * @return The result of the conversion.
      */
-    protected Object convertArg(String val, Class<?> type) {
+    protected Object convertArg(final String val, final Class<?> type) {
         if (val == null) {
             return null;
         }
 
-        String v = val.trim();
+        final String v = val.trim();
         if (String.class.isAssignableFrom(type)) {
             return val;
         } else if (Integer.TYPE.isAssignableFrom(type)) {
@@ -264,14 +252,12 @@ public class PropertySetter {
                 return Boolean.FALSE;
             }
         } else if (Priority.class.isAssignableFrom(type)) {
-            return org.apache.log4j.helpers.OptionConverter.toLevel(v, Level.DEBUG);
+            return org.apache.log4j.helpers.OptionConverter.toLevel(v, Log4j1Configuration.DEFAULT_LEVEL);
         } else if (ErrorHandler.class.isAssignableFrom(type)) {
-            return OptionConverter.instantiateByClassName(v,
-                    ErrorHandler.class, null);
+            return OptionConverter.instantiateByClassName(v, ErrorHandler.class, null);
         }
         return null;
     }
-
 
     protected PropertyDescriptor getPropertyDescriptor(String name) {
         if (props == null) {

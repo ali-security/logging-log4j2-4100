@@ -1,18 +1,18 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.selector;
 
@@ -25,7 +25,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import javax.naming.NamingException;
-
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.impl.ContextAnchor;
 import org.apache.logging.log4j.core.net.JndiManager;
@@ -41,6 +40,7 @@ import org.apache.logging.log4j.status.StatusLogger;
  * context to look up the value of the entry. The logging context of the web-application will depend on the value the
  * env-entry. The JNDI context which is looked up by this class is <code>java:comp/env/log4j/context-name</code>.
  *
+ * <p>For security reasons, JNDI must be enabled by setting system property <code>log4j2.enableJndiContextSelector=true</code>.</p>
  * <p>
  * Here is an example of an <code>env-entry</code>:
  * </p>
@@ -88,16 +88,22 @@ public class JndiContextSelector implements NamedContextSelector {
 
     private static final LoggerContext CONTEXT = new LoggerContext("Default");
 
-    private static final ConcurrentMap<String, LoggerContext> CONTEXT_MAP =
-        new ConcurrentHashMap<>();
+    private static final ConcurrentMap<String, LoggerContext> CONTEXT_MAP = new ConcurrentHashMap<>();
 
     private static final StatusLogger LOGGER = StatusLogger.getLogger();
 
+    public JndiContextSelector() {
+        if (!JndiManager.isJndiContextSelectorEnabled()) {
+            throw new IllegalStateException("JNDI must be enabled by setting log4j2.enableJndiContextSelector=true");
+        }
+    }
+
     @Override
-    public void shutdown(String fqcn, ClassLoader loader, boolean currentContext, boolean allContexts) {
+    public void shutdown(
+            final String fqcn, final ClassLoader loader, final boolean currentContext, final boolean allContexts) {
         LoggerContext ctx = ContextAnchor.THREAD_CONTEXT.get();
         if (ctx == null) {
-            String loggingContextName = getContextName();
+            final String loggingContextName = getContextName();
             if (loggingContextName != null) {
                 ctx = CONTEXT_MAP.get(loggingContextName);
             }
@@ -108,10 +114,10 @@ public class JndiContextSelector implements NamedContextSelector {
     }
 
     @Override
-    public boolean hasContext(String fqcn, ClassLoader loader, boolean currentContext) {
+    public boolean hasContext(final String fqcn, final ClassLoader loader, final boolean currentContext) {
         LoggerContext ctx = ContextAnchor.THREAD_CONTEXT.get();
         if (ctx == null) {
-            String loggingContextName = getContextName();
+            final String loggingContextName = getContextName();
             if (loggingContextName == null) {
                 return false;
             }
@@ -126,26 +132,20 @@ public class JndiContextSelector implements NamedContextSelector {
     }
 
     @Override
-    public LoggerContext getContext(final String fqcn, final ClassLoader loader, final boolean currentContext,
-                                    final URI configLocation) {
+    public LoggerContext getContext(
+            final String fqcn, final ClassLoader loader, final boolean currentContext, final URI configLocation) {
 
         final LoggerContext lc = ContextAnchor.THREAD_CONTEXT.get();
         if (lc != null) {
             return lc;
         }
 
-        String loggingContextName = null;
-
-        try (final JndiManager jndiManager = JndiManager.getDefaultManager()) {
-            loggingContextName = jndiManager.lookup(Constants.JNDI_CONTEXT_NAME);
-        } catch (final NamingException ne) {
-            LOGGER.error("Unable to lookup {}", Constants.JNDI_CONTEXT_NAME, ne);
-        }
+        String loggingContextName = getContextName();
 
         return loggingContextName == null ? CONTEXT : locateContext(loggingContextName, null, configLocation);
     }
 
-    private String getContextName() {
+    private static String getContextName() {
         String loggingContextName = null;
 
         try (final JndiManager jndiManager = JndiManager.getDefaultManager()) {
@@ -180,6 +180,11 @@ public class JndiContextSelector implements NamedContextSelector {
     }
 
     @Override
+    public boolean isClassLoaderDependent() {
+        return false;
+    }
+
+    @Override
     public LoggerContext removeContext(final String name) {
         return CONTEXT_MAP.remove(name);
     }
@@ -188,5 +193,4 @@ public class JndiContextSelector implements NamedContextSelector {
     public List<LoggerContext> getLoggerContexts() {
         return Collections.unmodifiableList(new ArrayList<>(CONTEXT_MAP.values()));
     }
-
 }

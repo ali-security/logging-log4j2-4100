@@ -1,34 +1,33 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.pattern;
+
+import static org.apache.logging.log4j.util.Strings.toRootUpperCase;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
-
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
 import org.apache.logging.log4j.core.layout.PatternLayout;
 import org.apache.logging.log4j.util.PerformanceSensitive;
-import org.apache.logging.log4j.util.Strings;
 
 /**
  * Highlight pattern converter. Formats the result of a pattern using a color appropriate for the Level in the LogEvent.
@@ -72,11 +71,11 @@ import org.apache.logging.log4j.util.Strings;
  * disable ANSI output if no console is detected, specify option <code>noConsoleNoAnsi=true</code> e.g..
  * </p>
  * <pre>
-  * %highlight{%d{ ISO8601 } [%t] %-5level: %msg%n%throwable}{STYLE=DEFAULT, noConsoleNoAnsi=true}
-  * </pre>
+ * %highlight{%d{ ISO8601 } [%t] %-5level: %msg%n%throwable}{STYLE=DEFAULT, noConsoleNoAnsi=true}
+ * </pre>
  */
 @Plugin(name = "highlight", category = PatternConverter.CATEGORY)
-@ConverterKeys({ "highlight" })
+@ConverterKeys({"highlight"})
 @PerformanceSensitive("allocation")
 public final class HighlightConverter extends LogEventPatternConverter implements AnsiConverter {
 
@@ -85,6 +84,10 @@ public final class HighlightConverter extends LogEventPatternConverter implement
     private static final Map<String, String> LOGBACK_STYLES = new HashMap<>();
 
     private static final String STYLE_KEY = "STYLE";
+
+    private static final String DISABLE_ANSI_KEY = "DISABLEANSI";
+
+    private static final String NO_CONSOLE_NO_ANSI_KEY = "NOCONSOLENOANSI";
 
     private static final String STYLE_KEY_DEFAULT = "DEFAULT";
 
@@ -145,24 +148,21 @@ public final class HighlightConverter extends LogEventPatternConverter implement
             return DEFAULT_STYLES;
         }
         // Feels like a hack. Should String[] options change to a Map<String,String>?
-        final String string = options[1]
-                .replaceAll(PatternParser.DISABLE_ANSI + "=(true|false)", Strings.EMPTY)
-                .replaceAll(PatternParser.NO_CONSOLE_NO_ANSI + "=(true|false)", Strings.EMPTY);
-        //
-        final Map<String, String> styles = AnsiEscape.createMap(string, new String[] {STYLE_KEY});
+        final Map<String, String> styles =
+                AnsiEscape.createMap(options[1], new String[] {STYLE_KEY, DISABLE_ANSI_KEY, NO_CONSOLE_NO_ANSI_KEY});
         final Map<String, String> levelStyles = new HashMap<>(DEFAULT_STYLES);
         for (final Map.Entry<String, String> entry : styles.entrySet()) {
-            final String key = entry.getKey().toUpperCase(Locale.ENGLISH);
+            final String key = toRootUpperCase(entry.getKey());
             final String value = entry.getValue();
             if (STYLE_KEY.equalsIgnoreCase(key)) {
-                final Map<String, String> enumMap = STYLES.get(value.toUpperCase(Locale.ENGLISH));
+                final Map<String, String> enumMap = STYLES.get(toRootUpperCase(value));
                 if (enumMap == null) {
-                    LOGGER.error("Unknown level style: " + value + ". Use one of " +
-                        Arrays.toString(STYLES.keySet().toArray()));
+                    LOGGER.error("Unknown level style: " + value + ". Use one of "
+                            + Arrays.toString(STYLES.keySet().toArray()));
                 } else {
                     levelStyles.putAll(enumMap);
                 }
-            } else {
+            } else if (!DISABLE_ANSI_KEY.equalsIgnoreCase(key) && !NO_CONSOLE_NO_ANSI_KEY.equalsIgnoreCase(key)) {
                 final Level level = Level.toLevel(key, null);
                 if (level == null) {
                     LOGGER.warn("Setting style for yet unknown level name {}", key);
@@ -216,7 +216,10 @@ public final class HighlightConverter extends LogEventPatternConverter implement
      * @param noAnsi
      *            If true, do not output ANSI escape codes.
      */
-    private HighlightConverter(final List<PatternFormatter> patternFormatters, final Map<String, String> levelStyles, final boolean noAnsi) {
+    private HighlightConverter(
+            final List<PatternFormatter> patternFormatters,
+            final Map<String, String> levelStyles,
+            final boolean noAnsi) {
         super("style", "style");
         this.patternFormatters = patternFormatters;
         this.levelStyles = levelStyles;
@@ -263,11 +266,10 @@ public final class HighlightConverter extends LogEventPatternConverter implement
     @Override
     public boolean handlesThrowable() {
         for (final PatternFormatter formatter : patternFormatters) {
-            if (formatter .handlesThrowable()) {
+            if (formatter.handlesThrowable()) {
                 return true;
             }
         }
         return false;
     }
-
 }

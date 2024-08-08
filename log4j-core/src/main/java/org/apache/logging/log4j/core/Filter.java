@@ -1,25 +1,25 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package org.apache.logging.log4j.core;
 
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.message.Message;
+import org.apache.logging.log4j.util.Constants;
 import org.apache.logging.log4j.util.EnglishEnums;
 
 /**
@@ -33,6 +33,11 @@ import org.apache.logging.log4j.util.EnglishEnums;
 public interface Filter extends LifeCycle {
 
     /**
+     * The empty array.
+     */
+    Filter[] EMPTY_ARRAY = {};
+
+    /**
      * Main {@linkplain org.apache.logging.log4j.core.config.plugins.Plugin#elementType() plugin element type} for
      * Filter plugins.
      *
@@ -43,7 +48,7 @@ public interface Filter extends LifeCycle {
     /**
      * The result that can returned from a filter method call.
      */
-     enum Result {
+    enum Result {
         /**
          * The event will be processed without further filtering based on the log Level.
          */
@@ -72,12 +77,12 @@ public interface Filter extends LifeCycle {
          *
          * @param name The Result enum name, case-insensitive. If null, returns, defaultResult
          * @param defaultResult the Result to return if name is null
-         * @return a Result enum value or null if name is null
+         * @return a Result enum value ({@code defaultResult} if name is null)
          */
         public static Result toResult(final String name, final Result defaultResult) {
             return EnglishEnums.valueOf(Result.class, name, defaultResult);
         }
-}
+    }
 
     /**
      * Returns the result that should be returned when the filter does not match the event.
@@ -153,7 +158,8 @@ public interface Filter extends LifeCycle {
      * @param p3 the message parameters
      * @return the Result.
      */
-    Result filter(Logger logger, Level level, Marker marker, String message, Object p0, Object p1, Object p2, Object p3);
+    Result filter(
+            Logger logger, Level level, Marker marker, String message, Object p0, Object p1, Object p2, Object p3);
 
     /**
      * Filter an event.
@@ -169,7 +175,15 @@ public interface Filter extends LifeCycle {
      * @param p4 the message parameters
      * @return the Result.
      */
-    Result filter(Logger logger, Level level, Marker marker, String message, Object p0, Object p1, Object p2, Object p3,
+    Result filter(
+            Logger logger,
+            Level level,
+            Marker marker,
+            String message,
+            Object p0,
+            Object p1,
+            Object p2,
+            Object p3,
             Object p4);
 
     /**
@@ -187,8 +201,17 @@ public interface Filter extends LifeCycle {
      * @param p5 the message parameters
      * @return the Result.
      */
-    Result filter(Logger logger, Level level, Marker marker, String message, Object p0, Object p1, Object p2, Object p3,
-            Object p4, Object p5);
+    Result filter(
+            Logger logger,
+            Level level,
+            Marker marker,
+            String message,
+            Object p0,
+            Object p1,
+            Object p2,
+            Object p3,
+            Object p4,
+            Object p5);
 
     /**
      * Filter an event.
@@ -206,8 +229,18 @@ public interface Filter extends LifeCycle {
      * @param p6 the message parameters
      * @return the Result.
      */
-    Result filter(Logger logger, Level level, Marker marker, String message, Object p0, Object p1, Object p2, Object p3,
-            Object p4, Object p5, Object p6);
+    Result filter(
+            Logger logger,
+            Level level,
+            Marker marker,
+            String message,
+            Object p0,
+            Object p1,
+            Object p2,
+            Object p3,
+            Object p4,
+            Object p5,
+            Object p6);
 
     /**
      * Filter an event.
@@ -226,8 +259,19 @@ public interface Filter extends LifeCycle {
      * @param p7 the message parameters
      * @return the Result.
      */
-    Result filter(Logger logger, Level level, Marker marker, String message, Object p0, Object p1, Object p2, Object p3,
-            Object p4, Object p5, Object p6, Object p7);
+    Result filter(
+            Logger logger,
+            Level level,
+            Marker marker,
+            String message,
+            Object p0,
+            Object p1,
+            Object p2,
+            Object p3,
+            Object p4,
+            Object p5,
+            Object p6,
+            Object p7);
 
     /**
      * Filter an event.
@@ -247,8 +291,20 @@ public interface Filter extends LifeCycle {
      * @param p8 the message parameters
      * @return the Result.
      */
-    Result filter(Logger logger, Level level, Marker marker, String message, Object p0, Object p1, Object p2, Object p3,
-            Object p4, Object p5, Object p6, Object p7, Object p8);
+    Result filter(
+            Logger logger,
+            Level level,
+            Marker marker,
+            String message,
+            Object p0,
+            Object p1,
+            Object p2,
+            Object p3,
+            Object p4,
+            Object p5,
+            Object p6,
+            Object p7,
+            Object p8);
 
     /**
      * Filter an event.
@@ -269,8 +325,21 @@ public interface Filter extends LifeCycle {
      * @param p9 the message parameters
      * @return the Result.
      */
-    Result filter(Logger logger, Level level, Marker marker, String message, Object p0, Object p1, Object p2, Object p3,
-            Object p4, Object p5, Object p6, Object p7, Object p8, Object p9);
+    Result filter(
+            Logger logger,
+            Level level,
+            Marker marker,
+            String message,
+            Object p0,
+            Object p1,
+            Object p2,
+            Object p3,
+            Object p4,
+            Object p5,
+            Object p6,
+            Object p7,
+            Object p8,
+            Object p9);
 
     /**
      * Filter an event.
@@ -296,9 +365,20 @@ public interface Filter extends LifeCycle {
 
     /**
      * Filter an event.
+     * @param logger The Logger.
+     * @param level The event logging Level.
+     * @param marker The Marker for the event or null.
+     * @param msg The Message
+     * @return the Result.
+     */
+    default Result filter(Logger logger, Level level, Marker marker, String msg) {
+        return filter(logger, level, marker, msg, Constants.EMPTY_OBJECT_ARRAY);
+    }
+
+    /**
+     * Filter an event.
      * @param event The Event to filter on.
      * @return the Result.
      */
     Result filter(LogEvent event);
-
 }

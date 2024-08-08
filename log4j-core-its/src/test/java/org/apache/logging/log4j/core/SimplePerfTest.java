@@ -1,31 +1,30 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core;
 
 import static org.junit.Assert.assertTrue;
 
 import java.util.Random;
-
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.util.Timer;
-import org.apache.logging.log4j.categories.PerformanceTests;
 import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.DefaultConfiguration;
+import org.apache.logging.log4j.core.test.categories.PerformanceTests;
+import org.apache.logging.log4j.util.Timer;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -48,20 +47,20 @@ public class SimplePerfTest {
     @BeforeClass
     public static void setupClass() {
 
-		final Configuration config = LoggerContext.getContext().getConfiguration();
+        final Configuration config = LoggerContext.getContext().getConfiguration();
 
-		if (!DefaultConfiguration.DEFAULT_NAME.equals(config.getName())) {
-			System.out.println("Configuration was " + config.getName());
-			LoggerContext.getContext().start(new DefaultConfiguration());
-		}
+        if (!DefaultConfiguration.DEFAULT_NAME.equals(config.getName())) {
+            System.out.println("Configuration was " + config.getName());
+            LoggerContext.getContext().start(new DefaultConfiguration());
+        }
 
-        for (int i=0; i < WARMUP; ++i) {
+        for (int i = 0; i < WARMUP; ++i) {
             overhead();
         }
         System.gc();
         final Timer timer = new Timer("Setup", LOOP_CNT);
         timer.start();
-        for (int i=0; i < (LOOP_CNT / 150); ++i) {
+        for (int i = 0; i < (LOOP_CNT / 150); ++i) {
             overhead();
         }
         timer.stop();
@@ -71,11 +70,12 @@ public class SimplePerfTest {
     }
 
     @Test
-    public void debugDisabled() {
+    public void debugDisabled() throws Exception {
         System.gc();
+        Thread.sleep(100);
         final Timer timer = new Timer("DebugDisabled", LOOP_CNT);
         timer.start();
-        for (int i=0; i < LOOP_CNT; ++i) {
+        for (int i = 0; i < LOOP_CNT; ++i) {
             logger.isDebugEnabled();
         }
         timer.stop();
@@ -84,11 +84,12 @@ public class SimplePerfTest {
     }
 
     @Test
-    public void debugDisabledByLevel() {
+    public void debugDisabledByLevel() throws Exception {
         System.gc();
-        final Timer timer = new Timer("DebugDisabled", LOOP_CNT);
+        Thread.sleep(100);
+        final Timer timer = new Timer("IsEnabled", LOOP_CNT);
         timer.start();
-        for (int i=0; i < LOOP_CNT; ++i) {
+        for (int i = 0; i < LOOP_CNT; ++i) {
             logger.isEnabled(Level.DEBUG);
         }
         timer.stop();
@@ -97,12 +98,13 @@ public class SimplePerfTest {
     }
 
     @Test
-    public void debugLogger() {
+    public void debugLogger() throws Exception {
         System.gc();
+        Thread.sleep(100);
         final Timer timer = new Timer("DebugLogger", LOOP_CNT);
         final String msg = "This is a test";
         timer.start();
-        for (int i=0; i < LOOP_CNT; ++i) {
+        for (int i = 0; i < LOOP_CNT; ++i) {
             logger.debug(msg);
         }
         timer.stop();
@@ -140,6 +142,7 @@ public class SimplePerfTest {
          * Generated serial version ID.
          */
         private static final long serialVersionUID = 3517002855516031846L;
+
         private int low = 5;
         private int high = 55;
 
@@ -158,10 +161,10 @@ public class SimplePerfTest {
     private static void bubbleSort(final int array[]) {
         final int length = array.length;
         for (int i = 0; i < length; i++) {
-            for (int j = 1; j > length - i; j++) {
-                if (array[j-1] > array[j]) {
-                    final int temp = array[j-1];
-                    array[j-1] = array[j];
+            for (int j = 1; j < length - i; j++) {
+                if (array[j - 1] > array[j]) {
+                    final int temp = array[j - 1];
+                    array[j - 1] = array[j];
                     array[j] = temp;
                 }
             }

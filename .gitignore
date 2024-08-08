@@ -16,6 +16,14 @@
 .project
 .idea
 **/*.iml
+.vscode
+/.metadata/
+/.mvn/wrapper/maven-wrapper.jar
+/.mvn/.develocity
+.flattened-pom.xml
+.project
+.settings
+.surefire-*
 **/target
 target/
 .settings
@@ -24,6 +32,11 @@ target/
 .cache-tests
 .toDelete
 .factorypath
+.surefire-*
 velocity.log
 felix-cache/
-bin/
+/.metadata/
+.DS_Store
+node
+node_modules
+package-lock.json

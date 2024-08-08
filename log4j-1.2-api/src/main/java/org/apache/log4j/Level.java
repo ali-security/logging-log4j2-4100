@@ -1,28 +1,29 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.log4j;
+
+import static org.apache.logging.log4j.util.Strings.toRootUpperCase;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.ObjectStreamException;
 import java.io.Serializable;
-import java.util.Locale;
-
+import org.apache.log4j.helpers.OptionConverter;
 import org.apache.logging.log4j.util.Strings;
 
 /**
@@ -48,50 +49,50 @@ public class Level extends Priority implements Serializable {
      * The <code>OFF</code> has the highest possible rank and is
      * intended to turn off logging.
      */
-    public static final Level OFF = new Level(OFF_INT, "OFF", 0);
+    public static final Level OFF = new Level(OFF_INT, "OFF", 0, org.apache.logging.log4j.Level.OFF);
 
     /**
      * The <code>FATAL</code> level designates very severe error
      * events that will presumably lead the application to abort.
      */
-    public static final Level FATAL = new Level(FATAL_INT, "FATAL", 0);
+    public static final Level FATAL = new Level(FATAL_INT, "FATAL", 0, org.apache.logging.log4j.Level.FATAL);
 
     /**
      * The <code>ERROR</code> level designates error events that
      * might still allow the application to continue running.
      */
-    public static final Level ERROR = new Level(ERROR_INT, "ERROR", 3);
+    public static final Level ERROR = new Level(ERROR_INT, "ERROR", 3, org.apache.logging.log4j.Level.ERROR);
 
     /**
      * The <code>WARN</code> level designates potentially harmful situations.
      */
-    public static final Level WARN = new Level(WARN_INT, "WARN", 4);
+    public static final Level WARN = new Level(WARN_INT, "WARN", 4, org.apache.logging.log4j.Level.WARN);
 
     /**
      * The <code>INFO</code> level designates informational messages
      * that highlight the progress of the application at coarse-grained
      * level.
      */
-    public static final Level INFO = new Level(INFO_INT, "INFO", 6);
+    public static final Level INFO = new Level(INFO_INT, "INFO", 6, org.apache.logging.log4j.Level.INFO);
 
     /**
      * The <code>DEBUG</code> Level designates fine-grained
      * informational events that are most useful to debug an
      * application.
      */
-    public static final Level DEBUG = new Level(DEBUG_INT, "DEBUG", 7);
+    public static final Level DEBUG = new Level(DEBUG_INT, "DEBUG", 7, org.apache.logging.log4j.Level.DEBUG);
 
     /**
      * The <code>TRACE</code> Level designates finer-grained
      * informational events than the <code>DEBUG</code> level.
      */
-    public static final Level TRACE = new Level(TRACE_INT, "TRACE", 7);
+    public static final Level TRACE = new Level(TRACE_INT, "TRACE", 7, org.apache.logging.log4j.Level.TRACE);
 
     /**
      * The <code>ALL</code> has the lowest possible rank and is intended to
      * turn on all logging.
      */
-    public static final Level ALL = new Level(ALL_INT, "ALL", 7);
+    public static final Level ALL = new Level(ALL_INT, "ALL", 7, org.apache.logging.log4j.Level.ALL);
 
     /**
      * Serialization version id.
@@ -99,16 +100,24 @@ public class Level extends Priority implements Serializable {
     private static final long serialVersionUID = 3491141966387921974L;
 
     /**
-     * Instantiate a Level object.
+     * Instantiate a Level object. A corresponding Log4j 2.x level is also created.
      *
      * @param level            The logging level.
      * @param levelStr         The level name.
      * @param syslogEquivalent The matching syslog level.
      */
     protected Level(final int level, final String levelStr, final int syslogEquivalent) {
-        super(level, levelStr, syslogEquivalent);
+        this(level, levelStr, syslogEquivalent, null);
     }
 
+    protected Level(
+            final int level,
+            final String levelStr,
+            final int syslogEquivalent,
+            final org.apache.logging.log4j.Level version2Equivalent) {
+        super(level, levelStr, syslogEquivalent);
+        this.version2Level = version2Equivalent != null ? version2Equivalent : OptionConverter.createLevel(this);
+    }
 
     /**
      * Convert the string passed as argument to a level. If the
@@ -175,26 +184,26 @@ public class Level extends Priority implements Serializable {
         if (sArg == null) {
             return defaultLevel;
         }
-        final String s = sArg.toUpperCase(Locale.ROOT);
+        final String s = toRootUpperCase(sArg);
         switch (s) {
-        case "ALL":
-            return Level.ALL;
-        case "DEBUG":
-            return Level.DEBUG;
-        case "INFO":
-            return Level.INFO;
-        case "WARN":
-            return Level.WARN;
-        case "ERROR":
-            return Level.ERROR;
-        case "FATAL":
-            return Level.FATAL;
-        case "OFF":
-            return Level.OFF;
-        case "TRACE":
-            return Level.TRACE;
-        default:
-            return defaultLevel;
+            case "ALL":
+                return Level.ALL;
+            case "DEBUG":
+                return Level.DEBUG;
+            case "INFO":
+                return Level.INFO;
+            case "WARN":
+                return Level.WARN;
+            case "ERROR":
+                return Level.ERROR;
+            case "FATAL":
+                return Level.FATAL;
+            case "OFF":
+                return Level.OFF;
+            case "TRACE":
+                return Level.TRACE;
+            default:
+                return defaultLevel;
         }
     }
 
@@ -247,6 +256,4 @@ public class Level extends Priority implements Serializable {
         //
         return this;
     }
-
 }
-

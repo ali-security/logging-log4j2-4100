@@ -1,18 +1,18 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.message;
 
@@ -22,14 +22,15 @@ import java.io.ObjectOutputStream;
 import java.util.Arrays;
 import java.util.IllegalFormatException;
 import java.util.Locale;
-
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.status.StatusLogger;
 
 /**
  * Handles messages that consist of a format string conforming to {@link java.util.Formatter}.
- * 
- * <h4>Note to implementors</h4>
+ *
+ * <p>
+ * <strong>Note to implementors:</strong>
+ * </p>
  * <p>
  * This class implements the unrolled args API even though StringFormattedMessage does not. This leaves the room for
  * StringFormattedMessage to unroll itself later.
@@ -49,15 +50,15 @@ public class StringFormattedMessage implements Message {
     private transient String formattedMessage;
     private transient Throwable throwable;
     private final Locale locale;
-    
-   /**
-    * Constructs a message.
-    * 
-    * @param locale the locale for this message format
-    * @param messagePattern the pattern for this message format
-    * @param arguments The objects to format
-    * @since 2.6
-    */
+
+    /**
+     * Constructs a message.
+     *
+     * @param locale the locale for this message format
+     * @param messagePattern the pattern for this message format
+     * @param arguments The objects to format
+     * @since 2.6
+     */
     public StringFormattedMessage(final Locale locale, final String messagePattern, final Object... arguments) {
         this.locale = locale;
         this.messagePattern = messagePattern;
@@ -69,7 +70,7 @@ public class StringFormattedMessage implements Message {
 
     /**
      * Constructs a message.
-     * 
+     *
      * @param messagePattern the pattern for this message format
      * @param arguments The objects to format
      * @since 2.6
@@ -112,10 +113,14 @@ public class StringFormattedMessage implements Message {
     }
 
     protected String formatMessage(final String msgPattern, final Object... args) {
+        if (args != null && args.length == 0) {
+            // Avoids some exceptions for LOG4J2-3458
+            return msgPattern;
+        }
         try {
             return String.format(locale, msgPattern, args);
         } catch (final IllegalFormatException ife) {
-            LOGGER.error("Unable to format msg: " + msgPattern, ife);
+            LOGGER.error("Unable to format msg: {}", msgPattern, ife);
             return msgPattern;
         }
     }
@@ -125,7 +130,7 @@ public class StringFormattedMessage implements Message {
         if (this == o) {
             return true;
         }
-        if (o == null || getClass() != o.getClass()) {
+        if (!(o instanceof StringFormattedMessage)) {
             return false;
         }
 
@@ -144,7 +149,6 @@ public class StringFormattedMessage implements Message {
         result = HASHVAL * result + (stringArgs != null ? Arrays.hashCode(stringArgs) : 0);
         return result;
     }
-
 
     @Override
     public String toString() {

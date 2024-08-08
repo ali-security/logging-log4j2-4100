@@ -1,18 +1,18 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.selector;
 
@@ -27,36 +27,38 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.impl.ContextAnchor;
 import org.apache.logging.log4j.spi.LoggerContextShutdownAware;
 import org.apache.logging.log4j.status.StatusLogger;
+import org.apache.logging.log4j.util.Lazy;
 import org.apache.logging.log4j.util.StackLocatorUtil;
 
 /**
  * This ContextSelector chooses a LoggerContext based upon the ClassLoader of the caller. This allows Loggers assigned
- * to static variables to be released along with the classes that own then. Other ContextSelectors will generally cause
+ * to static variables to be released along with the classes that own them. Other ContextSelectors will generally cause
  * Loggers associated with classes loaded from different ClassLoaders to be co-mingled. This is a problem if, for
  * example, a web application is undeployed as some of the Loggers being released may be associated with a Class in a
  * parent ClassLoader, which will generally have negative consequences.
- *
+ * <p>
  * The main downside to this ContextSelector is that Configuration is more challenging.
- *
+ * </p>
+ * <p>
  * This ContextSelector should not be used with a Servlet Filter such as the Log4jServletFilter.
+ * </p>
  */
 public class ClassLoaderContextSelector implements ContextSelector, LoggerContextShutdownAware {
-
-    private static final AtomicReference<LoggerContext> DEFAULT_CONTEXT = new AtomicReference<>();
 
     protected static final StatusLogger LOGGER = StatusLogger.getLogger();
 
     protected static final ConcurrentMap<String, AtomicReference<WeakReference<LoggerContext>>> CONTEXT_MAP =
             new ConcurrentHashMap<>();
 
+    private final Lazy<LoggerContext> defaultLoggerContext = Lazy.lazy(() -> createContext(defaultContextName(), null));
+
     @Override
-    public void shutdown(final String fqcn, final ClassLoader loader, final boolean currentContext,
-                         final boolean allContexts) {
+    public void shutdown(
+            final String fqcn, final ClassLoader loader, final boolean currentContext, final boolean allContexts) {
         LoggerContext ctx = null;
         if (currentContext) {
             ctx = ContextAnchor.THREAD_CONTEXT.get();
@@ -77,7 +79,7 @@ public class ClassLoaderContextSelector implements ContextSelector, LoggerContex
     }
 
     @Override
-    public void contextShutdown(org.apache.logging.log4j.spi.LoggerContext loggerContext) {
+    public void contextShutdown(final org.apache.logging.log4j.spi.LoggerContext loggerContext) {
         if (loggerContext instanceof LoggerContext) {
             removeContext((LoggerContext) loggerContext);
         }
@@ -101,10 +103,10 @@ public class ClassLoaderContextSelector implements ContextSelector, LoggerContex
         return ctx != null && ctx.isStarted();
     }
 
-    private LoggerContext findContext(ClassLoader loaderOrNull) {
+    private LoggerContext findContext(final ClassLoader loaderOrNull) {
         final ClassLoader loader = loaderOrNull != null ? loaderOrNull : ClassLoader.getSystemClassLoader();
         final String name = toContextMapKey(loader);
-        AtomicReference<WeakReference<LoggerContext>> ref = CONTEXT_MAP.get(name);
+        final AtomicReference<WeakReference<LoggerContext>> ref = CONTEXT_MAP.get(name);
         if (ref != null) {
             final WeakReference<LoggerContext> weakRef = ref.get();
             return weakRef.get();
@@ -118,14 +120,18 @@ public class ClassLoaderContextSelector implements ContextSelector, LoggerContex
     }
 
     @Override
-    public LoggerContext getContext(final String fqcn, final ClassLoader loader, final boolean currentContext,
-            final URI configLocation) {
+    public LoggerContext getContext(
+            final String fqcn, final ClassLoader loader, final boolean currentContext, final URI configLocation) {
         return getContext(fqcn, loader, null, currentContext, configLocation);
     }
 
     @Override
-    public LoggerContext getContext(final String fqcn, final ClassLoader loader, final Map.Entry<String, Object> entry,
-            final boolean currentContext, final URI configLocation) {
+    public LoggerContext getContext(
+            final String fqcn,
+            final ClassLoader loader,
+            final Map.Entry<String, Object> entry,
+            final boolean currentContext,
+            final URI configLocation) {
         if (currentContext) {
             final LoggerContext ctx = ContextAnchor.THREAD_CONTEXT.get();
             if (ctx != null) {
@@ -158,6 +164,12 @@ public class ClassLoaderContextSelector implements ContextSelector, LoggerContex
     }
 
     @Override
+    public boolean isClassLoaderDependent() {
+        // By definition the ClassLoaderContextSelector depends on the callers class loader.
+        return true;
+    }
+
+    @Override
     public List<LoggerContext> getLoggerContexts() {
         final List<LoggerContext> list = new ArrayList<>();
         final Collection<AtomicReference<WeakReference<LoggerContext>>> coll = CONTEXT_MAP.values();
@@ -170,8 +182,8 @@ public class ClassLoaderContextSelector implements ContextSelector, LoggerContex
         return Collections.unmodifiableList(list);
     }
 
-    private LoggerContext locateContext(final ClassLoader loaderOrNull, final Map.Entry<String, Object> entry,
-            final URI configLocation) {
+    private LoggerContext locateContext(
+            final ClassLoader loaderOrNull, final Map.Entry<String, Object> entry, final URI configLocation) {
         // LOG4J2-477: class loader may be null
         final ClassLoader loader = loaderOrNull != null ? loaderOrNull : ClassLoader.getSystemClassLoader();
         final String name = toContextMapKey(loader);
@@ -209,12 +221,14 @@ public class ClassLoaderContextSelector implements ContextSelector, LoggerContex
                     } */
                 }
             }
-            LoggerContext ctx = createContext(name, configLocation);
+            final LoggerContext ctx = createContext(name, configLocation);
             if (entry != null) {
                 ctx.putObject(entry.getKey(), entry.getValue());
             }
-            LoggerContext newContext = CONTEXT_MAP.computeIfAbsent(name,
-                    k -> new AtomicReference<>(new WeakReference<>(ctx))).get().get();
+            final LoggerContext newContext = CONTEXT_MAP
+                    .computeIfAbsent(name, k -> new AtomicReference<>(new WeakReference<>(ctx)))
+                    .get()
+                    .get();
             if (newContext == ctx) {
                 ctx.addShutdownListener(this);
             }
@@ -229,9 +243,12 @@ public class ClassLoaderContextSelector implements ContextSelector, LoggerContex
             if (ctx.getConfigLocation() == null && configLocation != null) {
                 LOGGER.debug("Setting configuration to {}", configLocation);
                 ctx.setConfigLocation(configLocation);
-            } else if (ctx.getConfigLocation() != null && configLocation != null
+            } else if (ctx.getConfigLocation() != null
+                    && configLocation != null
                     && !ctx.getConfigLocation().equals(configLocation)) {
-                LOGGER.warn("locateContext called with URI {}. Existing LoggerContext has URI {}", configLocation,
+                LOGGER.warn(
+                        "locateContext called with URI {}. Existing LoggerContext has URI {}",
+                        configLocation,
                         ctx.getConfigLocation());
             }
             return ctx;
@@ -253,12 +270,7 @@ public class ClassLoaderContextSelector implements ContextSelector, LoggerContex
     }
 
     protected LoggerContext getDefault() {
-        final LoggerContext ctx = DEFAULT_CONTEXT.get();
-        if (ctx != null) {
-            return ctx;
-        }
-        DEFAULT_CONTEXT.compareAndSet(null, createContext(defaultContextName(), null));
-        return DEFAULT_CONTEXT.get();
+        return defaultLoggerContext.get();
     }
 
     protected String defaultContextName() {

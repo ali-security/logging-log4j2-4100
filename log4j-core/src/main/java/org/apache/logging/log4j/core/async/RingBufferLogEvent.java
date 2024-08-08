@@ -1,25 +1,25 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.async;
 
+import com.lmax.disruptor.EventFactory;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Map;
-
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.ThreadContext.ContextStack;
@@ -28,16 +28,21 @@ import org.apache.logging.log4j.core.impl.ContextDataFactory;
 import org.apache.logging.log4j.core.impl.Log4jLogEvent;
 import org.apache.logging.log4j.core.impl.MementoMessage;
 import org.apache.logging.log4j.core.impl.ThrowableProxy;
-import org.apache.logging.log4j.core.util.*;
 import org.apache.logging.log4j.core.time.Instant;
 import org.apache.logging.log4j.core.time.MutableInstant;
-import org.apache.logging.log4j.message.*;
+import org.apache.logging.log4j.core.util.Clock;
+import org.apache.logging.log4j.core.util.Constants;
+import org.apache.logging.log4j.core.util.NanoClock;
+import org.apache.logging.log4j.message.Message;
+import org.apache.logging.log4j.message.ParameterConsumer;
+import org.apache.logging.log4j.message.ParameterVisitable;
+import org.apache.logging.log4j.message.ReusableMessage;
+import org.apache.logging.log4j.message.SimpleMessage;
+import org.apache.logging.log4j.message.TimestampMessage;
 import org.apache.logging.log4j.util.ReadOnlyStringMap;
 import org.apache.logging.log4j.util.StringBuilders;
 import org.apache.logging.log4j.util.StringMap;
 import org.apache.logging.log4j.util.Strings;
-
-import com.lmax.disruptor.EventFactory;
 
 /**
  * When the Disruptor is started, the RingBuffer is populated with event objects. These objects are then re-used during
@@ -62,6 +67,7 @@ public class RingBufferLogEvent implements LogEvent, ReusableMessage, CharSequen
         }
     }
 
+    private boolean populated;
     private int threadPriority;
     private long threadId;
     private final MutableInstant instant = new MutableInstant();
@@ -86,11 +92,22 @@ public class RingBufferLogEvent implements LogEvent, ReusableMessage, CharSequen
 
     private transient AsyncLogger asyncLogger;
 
-    public void setValues(final AsyncLogger anAsyncLogger, final String aLoggerName, final Marker aMarker,
-                          final String theFqcn, final Level aLevel, final Message msg, final Throwable aThrowable,
-                          final StringMap mutableContextData, final ContextStack aContextStack, final long threadId,
-                          final String threadName, final int threadPriority, final StackTraceElement aLocation,
-                          final Clock clock, final NanoClock nanoClock) {
+    public void setValues(
+            final AsyncLogger anAsyncLogger,
+            final String aLoggerName,
+            final Marker aMarker,
+            final String theFqcn,
+            final Level aLevel,
+            final Message msg,
+            final Throwable aThrowable,
+            final StringMap mutableContextData,
+            final ContextStack aContextStack,
+            final long threadId,
+            final String threadName,
+            final int threadPriority,
+            final StackTraceElement aLocation,
+            final Clock clock,
+            final NanoClock nanoClock) {
         this.threadPriority = threadPriority;
         this.threadId = threadId;
         this.level = aLevel;
@@ -104,9 +121,12 @@ public class RingBufferLogEvent implements LogEvent, ReusableMessage, CharSequen
         this.marker = aMarker;
         this.fqcn = theFqcn;
         this.location = aLocation;
-        this.contextData = mutableContextData;
+        if (mutableContextData != null) {
+            this.contextData = mutableContextData;
+        }
         this.contextStack = aContextStack;
         this.asyncLogger = anAsyncLogger;
+        this.populated = true;
     }
 
     private void initTime(final Clock clock) {
@@ -152,6 +172,13 @@ public class RingBufferLogEvent implements LogEvent, ReusableMessage, CharSequen
     public void execute(final boolean endOfBatch) {
         this.endOfBatch = endOfBatch;
         asyncLogger.actualAsyncLog(this);
+    }
+
+    /**
+     * @return {@code true} if this event is populated with data, {@code false} otherwise
+     */
+    public boolean isPopulated() {
+        return populated;
     }
 
     /**
@@ -329,7 +356,6 @@ public class RingBufferLogEvent implements LogEvent, ReusableMessage, CharSequen
         return this.thrownProxy;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public ReadOnlyStringMap getContextData() {
         return contextData;
@@ -339,7 +365,6 @@ public class RingBufferLogEvent implements LogEvent, ReusableMessage, CharSequen
         this.contextData = contextData;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public Map<String, String> getContextMap() {
         return contextData.toMap();
@@ -372,7 +397,9 @@ public class RingBufferLogEvent implements LogEvent, ReusableMessage, CharSequen
 
     @Override
     public long getTimeMillis() {
-        return message instanceof TimestampMessage ? ((TimestampMessage) message).getTimestamp() : instant.getEpochMillisecond();
+        return message instanceof TimestampMessage
+                ? ((TimestampMessage) message).getTimestamp()
+                : instant.getEpochMillisecond();
     }
 
     @Override
@@ -389,25 +416,24 @@ public class RingBufferLogEvent implements LogEvent, ReusableMessage, CharSequen
      * Release references held by ring buffer to allow objects to be garbage-collected.
      */
     public void clear() {
-        this.asyncLogger = null;
-        this.loggerName = null;
-        this.marker = null;
-        this.fqcn = null;
+        this.populated = false;
         this.level = null;
-        this.message = null;
-        this.messageFormat = null;
+        this.threadName = null;
+        this.loggerName = null;
+        clearMessage();
         this.thrown = null;
         this.thrownProxy = null;
-        this.contextStack = null;
+        clearContextData();
+        this.marker = null;
+        this.fqcn = null;
         this.location = null;
-        if (contextData != null) {
-            if (contextData.isFrozen()) { // came from CopyOnWrite thread context
-                contextData = null;
-            } else {
-                contextData.clear();
-            }
-        }
+        this.contextStack = null;
+        this.asyncLogger = null;
+    }
 
+    private void clearMessage() {
+        message = null;
+        messageFormat = null;
         // ensure that excessively long char[] arrays are not kept in memory forever
         if (Constants.ENABLE_THREADLOCALS) {
             StringBuilders.trimToMaxSize(messageText, Constants.MAX_REUSABLE_MESSAGE_SIZE);
@@ -424,6 +450,16 @@ public class RingBufferLogEvent implements LogEvent, ReusableMessage, CharSequen
         }
     }
 
+    private void clearContextData() {
+        if (contextData != null) {
+            if (contextData.isFrozen()) { // came from CopyOnWrite thread context
+                contextData = null;
+            } else {
+                contextData.clear();
+            }
+        }
+    }
+
     private void writeObject(final java.io.ObjectOutputStream out) throws IOException {
         getThrownProxy(); // initialize the ThrowableProxy before serializing
         out.defaultWriteObject();
@@ -435,8 +471,9 @@ public class RingBufferLogEvent implements LogEvent, ReusableMessage, CharSequen
      * @return a new immutable copy of the data in this {@code RingBufferLogEvent}
      */
     public LogEvent createMemento() {
-        return new Log4jLogEvent.Builder(this).build();
-
+        final Log4jLogEvent.Builder builder = new Log4jLogEvent.Builder();
+        initializeBuilder(builder);
+        return builder.build();
     }
 
     /**
@@ -444,6 +481,15 @@ public class RingBufferLogEvent implements LogEvent, ReusableMessage, CharSequen
      * @param builder the builder whose fields to populate
      */
     public void initializeBuilder(final Log4jLogEvent.Builder builder) {
+        // If the data is not frozen, make a copy of it.
+        final StringMap oldContextData = this.contextData;
+        final StringMap contextData;
+        if (oldContextData != null && !oldContextData.isFrozen()) {
+            contextData = ContextDataFactory.createContextData();
+            contextData.putAll(oldContextData);
+        } else {
+            contextData = oldContextData;
+        }
         builder.setContextData(contextData) //
                 .setContextStack(contextStack) //
                 .setEndOfBatch(endOfBatch) //
@@ -463,5 +509,4 @@ public class RingBufferLogEvent implements LogEvent, ReusableMessage, CharSequen
                 .setInstant(instant) //
         ;
     }
-
 }

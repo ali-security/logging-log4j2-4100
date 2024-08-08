@@ -1,21 +1,22 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.util;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.File;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
@@ -25,9 +26,10 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
-
+import java.util.List;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.status.StatusLogger;
 
@@ -127,12 +129,11 @@ public final class NetUtils {
     public static String getMacAddressString() {
         final byte[] macAddr = getMacAddress();
         if (!ArrayUtils.isEmpty(macAddr)) {
-            StringBuilder sb = new StringBuilder(String.format("%02x", macAddr[0]));
+            final StringBuilder sb = new StringBuilder(String.format("%02x", macAddr[0]));
             for (int i = 1; i < macAddr.length; ++i) {
                 sb.append(":").append(String.format("%02x", macAddr[i]));
             }
             return sb.toString();
-
         }
         return null;
     }
@@ -147,6 +148,9 @@ public final class NetUtils {
      * @param path the URI string or path
      * @return the URI object
      */
+    @SuppressFBWarnings(
+            value = "PATH_TRAVERSAL_IN",
+            justification = "Currently `path` comes from a configuration file.")
     public static URI toURI(final String path) {
         try {
             // Resolves absolute URI
@@ -163,4 +167,17 @@ public final class NetUtils {
         }
     }
 
+    public static List<URI> toURIs(final String path) {
+        final String[] parts = path.split(",");
+        String scheme = null;
+        final List<URI> uris = new ArrayList<>(parts.length);
+        for (final String part : parts) {
+            final URI uri = NetUtils.toURI(scheme != null ? scheme + ":" + part.trim() : part.trim());
+            if (scheme == null && uri.getScheme() != null) {
+                scheme = uri.getScheme();
+            }
+            uris.add(uri);
+        }
+        return uris;
+    }
 }

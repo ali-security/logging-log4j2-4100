@@ -1,18 +1,18 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.pattern;
 
@@ -22,9 +22,7 @@ import java.text.NumberFormat;
 import java.text.ParsePosition;
 import java.util.Date;
 import java.util.TimeZone;
-
 import org.apache.logging.log4j.core.util.Constants;
-
 
 /**
  * CachedDateFormat optimizes the performance of a wrapped
@@ -207,14 +205,10 @@ final class CachedDateFormat extends DateFormat {
 
                 //   If the next 3 characters match the magic
                 //      string and the expected string
-                if (
-                    (plusZero.length() == formatted.length())
-                        && magicString.regionMatches(
-                        0, plusMagic, i, magicString.length())
-                        && formattedMillis.toString().regionMatches(
-                        0, formatted, i, magicString.length())
-                        && ZERO_STRING.regionMatches(
-                        0, plusZero, i, ZERO_STRING.length())) {
+                if ((plusZero.length() == formatted.length())
+                        && magicString.regionMatches(0, plusMagic, i, magicString.length())
+                        && formattedMillis.toString().regionMatches(0, formatted, i, magicString.length())
+                        && ZERO_STRING.regionMatches(0, plusZero, i, ZERO_STRING.length())) {
                     return i;
                 }
                 return UNRECOGNIZED_MILLISECONDS;
@@ -261,11 +255,14 @@ final class CachedDateFormat extends DateFormat {
         //   If millisecond pattern was not unrecognized
         //     (that is if it was found or milliseconds did not appear)
         //
-        if (millisecondStart != UNRECOGNIZED_MILLISECONDS &&
-            //    Check if the cache is still valid.
-            //    If the requested time is within the same integral second
-            //       as the last request and a shorter expiration was not requested.
-            (now < (slotBegin + expiration)) && (now >= slotBegin) && (now < (slotBegin + SLOTS))) {
+        if (millisecondStart != UNRECOGNIZED_MILLISECONDS
+                &&
+                //    Check if the cache is still valid.
+                //    If the requested time is within the same integral second
+                //       as the last request and a shorter expiration was not requested.
+                (now < (slotBegin + expiration))
+                && (now >= slotBegin)
+                && (now < (slotBegin + SLOTS))) {
             //
             //    if there was a millisecond field then update it
             //
@@ -301,8 +298,7 @@ final class CachedDateFormat extends DateFormat {
         //       then reevaluate in case it moved.
         //
         if (millisecondStart >= 0) {
-            millisecondStart =
-                findMillisecondStart(now, cache.toString(), formatter);
+            millisecondStart = findMillisecondStart(now, cache.toString(), formatter);
         }
 
         return buf;
@@ -316,8 +312,7 @@ final class CachedDateFormat extends DateFormat {
      * @param offset Starting position in buffer, the length of the
      *               buffer must be at least offset + 3.
      */
-    private static void millisecondFormat(
-        final int millis, final StringBuffer buf, final int offset) {
+    private static void millisecondFormat(final int millis, final StringBuffer buf, final int offset) {
         buf.setCharAt(offset, DIGITS.charAt(millis / THREE_DIGITS));
         buf.setCharAt(offset + 1, DIGITS.charAt((millis / TWO_DIGITS) % TWO_DIGITS));
         buf.setCharAt(offset + 2, DIGITS.charAt(millis % TWO_DIGITS));

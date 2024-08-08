@@ -1,27 +1,25 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package org.apache.logging.log4j.core.appender.mom;
 
 import java.io.Serializable;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-
 import javax.jms.Connection;
 import javax.jms.ConnectionFactory;
 import javax.jms.Destination;
@@ -32,7 +30,6 @@ import javax.jms.MessageConsumer;
 import javax.jms.MessageProducer;
 import javax.jms.Session;
 import javax.naming.NamingException;
-
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.appender.AbstractManager;
 import org.apache.logging.log4j.core.appender.AppenderLoggingException;
@@ -61,8 +58,13 @@ public class JmsManager extends AbstractManager {
         private final boolean retry;
         private final long reconnectIntervalMillis;
 
-        JmsManagerConfiguration(final Properties jndiProperties, final String connectionFactoryName,
-                final String destinationName, final String userName, final char[] password, final boolean immediateFail,
+        JmsManagerConfiguration(
+                final Properties jndiProperties,
+                final String connectionFactoryName,
+                final String destinationName,
+                final String userName,
+                final char[] password,
+                final boolean immediateFail,
                 final long reconnectIntervalMillis) {
             this.jndiProperties = jndiProperties;
             this.connectionFactoryName = connectionFactoryName;
@@ -117,26 +119,29 @@ public class JmsManager extends AbstractManager {
                     + ", immediateFail=" + immediateFail + ", retry=" + retry + ", reconnectIntervalMillis="
                     + reconnectIntervalMillis + "]";
         }
-
     }
 
     private static class JmsManagerFactory implements ManagerFactory<JmsManager, JmsManagerConfiguration> {
 
         @Override
         public JmsManager createManager(final String name, final JmsManagerConfiguration data) {
-            try {
-                return new JmsManager(name, data);
-            } catch (final Exception e) {
-                logger().error("Error creating JmsManager using JmsManagerConfiguration [{}]", data, e);
-                return null;
+            if (JndiManager.isJndiJmsEnabled()) {
+                try {
+                    return new JmsManager(name, data);
+                } catch (final Exception e) {
+                    logger().error("Error creating JmsManager using JmsManagerConfiguration [{}]", data, e);
+                    return null;
+                }
             }
+            logger().error("JNDI must be enabled by setting log4j2.enableJndiJms=true");
+            return null;
         }
     }
 
     /**
      * Handles reconnecting to JMS on a Thread.
      */
-    private class Reconnector extends Log4jThread {
+    private final class Reconnector extends Log4jThread {
 
         private final CountDownLatch latch = new CountDownLatch(1);
 
@@ -183,8 +188,11 @@ public class JmsManager extends AbstractManager {
                     sleep(configuration.getReconnectIntervalMillis());
                     reconnect();
                 } catch (final InterruptedException | JMSException | NamingException e) {
-                    logger().debug("Cannot reestablish JMS connection to {}: {}", configuration, e.getLocalizedMessage(),
-                            e);
+                    logger().debug(
+                                    "Cannot reestablish JMS connection to {}: {}",
+                                    configuration,
+                                    e.getLocalizedMessage(),
+                                    e);
                 } finally {
                     latch.countDown();
                 }
@@ -194,7 +202,6 @@ public class JmsManager extends AbstractManager {
         public void shutdown() {
             shutdown = true;
         }
-
     }
 
     static final JmsManagerFactory FACTORY = new JmsManagerFactory();
@@ -221,11 +228,23 @@ public class JmsManager extends AbstractManager {
      *            JNDI properties.
      * @return The JmsManager as configured.
      */
-    public static JmsManager getJmsManager(final String name, final Properties jndiProperties,
-            final String connectionFactoryName, final String destinationName, final String userName,
-            final char[] password, final boolean immediateFail, final long reconnectIntervalMillis) {
-        final JmsManagerConfiguration configuration = new JmsManagerConfiguration(jndiProperties, connectionFactoryName,
-                destinationName, userName, password, immediateFail, reconnectIntervalMillis);
+    public static JmsManager getJmsManager(
+            final String name,
+            final Properties jndiProperties,
+            final String connectionFactoryName,
+            final String destinationName,
+            final String userName,
+            final char[] password,
+            final boolean immediateFail,
+            final long reconnectIntervalMillis) {
+        final JmsManagerConfiguration configuration = new JmsManagerConfiguration(
+                jndiProperties,
+                connectionFactoryName,
+                destinationName,
+                userName,
+                password,
+                immediateFail,
+                reconnectIntervalMillis);
         return getManager(name, FACTORY, configuration);
     }
 
@@ -264,9 +283,12 @@ public class JmsManager extends AbstractManager {
             temp.close();
             return true;
         } catch (final JMSException e) {
-            StatusLogger.getLogger().debug(
-                    "Caught exception closing JMS Connection: {} ({}); continuing JMS manager shutdown",
-                    e.getLocalizedMessage(), temp, e);
+            StatusLogger.getLogger()
+                    .debug(
+                            "Caught exception closing JMS Connection: {} ({}); continuing JMS manager shutdown",
+                            e.getLocalizedMessage(),
+                            temp,
+                            e);
             return false;
         }
     }
@@ -291,9 +313,12 @@ public class JmsManager extends AbstractManager {
             temp.close();
             return true;
         } catch (final JMSException e) {
-            StatusLogger.getLogger().debug(
-                    "Caught exception closing JMS MessageProducer: {} ({}); continuing JMS manager shutdown",
-                    e.getLocalizedMessage(), temp, e);
+            StatusLogger.getLogger()
+                    .debug(
+                            "Caught exception closing JMS MessageProducer: {} ({}); continuing JMS manager shutdown",
+                            e.getLocalizedMessage(),
+                            temp,
+                            e);
             return false;
         }
     }
@@ -308,9 +333,12 @@ public class JmsManager extends AbstractManager {
             temp.close();
             return true;
         } catch (final JMSException e) {
-            StatusLogger.getLogger().debug(
-                    "Caught exception closing JMS Session: {} ({}); continuing JMS manager shutdown",
-                    e.getLocalizedMessage(), temp, e);
+            StatusLogger.getLogger()
+                    .debug(
+                            "Caught exception closing JMS Session: {} ({}); continuing JMS manager shutdown",
+                            e.getLocalizedMessage(),
+                            temp,
+                            e);
             return false;
         }
     }
@@ -318,11 +346,11 @@ public class JmsManager extends AbstractManager {
     private Connection createConnection(final JndiManager jndiManager) throws NamingException, JMSException {
         final ConnectionFactory connectionFactory = jndiManager.lookup(configuration.getConnectionFactoryName());
         if (configuration.getUserName() != null && configuration.getPassword() != null) {
-            return connectionFactory.createConnection(configuration.getUserName(),
+            return connectionFactory.createConnection(
+                    configuration.getUserName(),
                     configuration.getPassword() == null ? null : String.valueOf(configuration.getPassword()));
         }
         return connectionFactory.createConnection();
-
     }
 
     private Destination createDestination(final JndiManager jndiManager) throws NamingException {
@@ -348,7 +376,7 @@ public class JmsManager extends AbstractManager {
      * @param object
      *            The LogEvent or String message to wrap.
      * @return A new JMS message containing the provided object.
-     * @throws JMSException
+     * @throws JMSException if the JMS provider fails to create this message due to some internal error.
      */
     public Message createMessage(final Serializable object) throws JMSException {
         if (object instanceof String) {
@@ -369,7 +397,7 @@ public class JmsManager extends AbstractManager {
      * Creates a MessageConsumer on this Destination using the current Session.
      *
      * @return A MessageConsumer on this Destination.
-     * @throws JMSException
+     * @throws JMSException if the session fails to create a consumer due to some internal error.
      */
     public MessageConsumer createMessageConsumer() throws JMSException {
         return this.session.createConsumer(this.destination);
@@ -383,7 +411,7 @@ public class JmsManager extends AbstractManager {
      * @param destination
      *            The JMS Destination for the MessageProducer
      * @return A MessageProducer on this Destination.
-     * @throws JMSException
+     * @throws JMSException if the session fails to create a MessageProducer due to some internal error.
      */
     public MessageProducer createMessageProducer(final Session session, final Destination destination)
             throws JMSException {
@@ -413,15 +441,18 @@ public class JmsManager extends AbstractManager {
         return this.jndiManager.lookup(destinationName);
     }
 
-    private MapMessage map(final org.apache.logging.log4j.message.MapMessage<?, ?> log4jMapMessage,
-            final MapMessage jmsMapMessage) {
+    private MapMessage map(
+            final org.apache.logging.log4j.message.MapMessage<?, ?> log4jMapMessage, final MapMessage jmsMapMessage) {
         // Map without calling org.apache.logging.log4j.message.MapMessage#getData() which makes a copy of the map.
         log4jMapMessage.forEach((key, value) -> {
             try {
                 jmsMapMessage.setObject(key, value);
             } catch (final JMSException e) {
-                throw new IllegalArgumentException(String.format("%s mapping key '%s' to value '%s': %s",
-                        e.getClass(), key, value, e.getLocalizedMessage()), e);
+                throw new IllegalArgumentException(
+                        String.format(
+                                "%s mapping key '%s' to value '%s': %s",
+                                e.getClass(), key, value, e.getLocalizedMessage()),
+                        e);
             }
         });
         return jmsMapMessage;
@@ -462,8 +493,12 @@ public class JmsManager extends AbstractManager {
                         closeJndiManager();
                         reconnector.reconnect();
                     } catch (NamingException | JMSException reconnEx) {
-                        logger().debug("Cannot reestablish JMS connection to {}: {}; starting reconnector thread {}",
-                                configuration, reconnEx.getLocalizedMessage(), reconnector.getName(), reconnEx);
+                        logger().debug(
+                                        "Cannot reestablish JMS connection to {}: {}; starting reconnector thread {}",
+                                        configuration,
+                                        reconnEx.getLocalizedMessage(),
+                                        reconnector.getName(),
+                                        reconnEx);
                         reconnector.start();
                         throw new AppenderLoggingException(
                                 String.format("JMS exception sending to %s for %s", getName(), configuration), causeEx);
@@ -472,7 +507,8 @@ public class JmsManager extends AbstractManager {
                         createMessageAndSend(event, serializable);
                     } catch (final JMSException e) {
                         throw new AppenderLoggingException(
-                                String.format("Error sending to %s after reestablishing JMS connection for %s",
+                                String.format(
+                                        "Error sending to %s after reestablishing JMS connection for %s",
                                         getName(), configuration),
                                 causeEx);
                     }
@@ -480,5 +516,4 @@ public class JmsManager extends AbstractManager {
             }
         }
     }
-
 }

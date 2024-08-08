@@ -1,23 +1,22 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.message;
 
 import java.io.Serializable;
-
 import org.apache.logging.log4j.util.PerformanceSensitive;
 
 /**
@@ -30,6 +29,11 @@ import org.apache.logging.log4j.util.PerformanceSensitive;
  * @since 2.6
  */
 @PerformanceSensitive("allocation")
+/*
+ * https://errorprone.info/bugpattern/ThreadLocalUsage
+ * Instance thread locals are not a problem here, since this class is almost a singleton.
+ */
+@SuppressWarnings("ThreadLocalUsage")
 public final class ReusableMessageFactory implements MessageFactory2, Serializable {
 
     /**
@@ -37,18 +41,17 @@ public final class ReusableMessageFactory implements MessageFactory2, Serializab
      */
     public static final ReusableMessageFactory INSTANCE = new ReusableMessageFactory();
 
-    private static final long serialVersionUID = -8970940216592525651L;
-    private static ThreadLocal<ReusableParameterizedMessage> threadLocalParameterized = new ThreadLocal<>();
-    private static ThreadLocal<ReusableSimpleMessage> threadLocalSimpleMessage = new ThreadLocal<>();
-    private static ThreadLocal<ReusableObjectMessage> threadLocalObjectMessage = new ThreadLocal<>();
+    private static final long serialVersionUID = 1L;
+    private final transient ThreadLocal<ReusableParameterizedMessage> threadLocalParameterized = new ThreadLocal<>();
+    private final transient ThreadLocal<ReusableSimpleMessage> threadLocalSimpleMessage = new ThreadLocal<>();
+    private final transient ThreadLocal<ReusableObjectMessage> threadLocalObjectMessage = new ThreadLocal<>();
 
     /**
      * Constructs a message factory.
      */
-    public ReusableMessageFactory() {
-    }
+    public ReusableMessageFactory() {}
 
-    private static ReusableParameterizedMessage getParameterized() {
+    private ReusableParameterizedMessage getParameterized() {
         ReusableParameterizedMessage result = threadLocalParameterized.get();
         if (result == null) {
             result = new ReusableParameterizedMessage();
@@ -57,7 +60,7 @@ public final class ReusableMessageFactory implements MessageFactory2, Serializab
         return result.reserved ? new ReusableParameterizedMessage().reserve() : result.reserve();
     }
 
-    private static ReusableSimpleMessage getSimple() {
+    private ReusableSimpleMessage getSimple() {
         ReusableSimpleMessage result = threadLocalSimpleMessage.get();
         if (result == null) {
             result = new ReusableSimpleMessage();
@@ -66,7 +69,7 @@ public final class ReusableMessageFactory implements MessageFactory2, Serializab
         return result;
     }
 
-    private static ReusableObjectMessage getObject() {
+    private ReusableObjectMessage getObject() {
         ReusableObjectMessage result = threadLocalObjectMessage.get();
         if (result == null) {
             result = new ReusableObjectMessage();
@@ -125,44 +128,84 @@ public final class ReusableMessageFactory implements MessageFactory2, Serializab
     }
 
     @Override
-    public Message newMessage(final String message, final Object p0, final Object p1, final Object p2,
-            final Object p3) {
+    public Message newMessage(
+            final String message, final Object p0, final Object p1, final Object p2, final Object p3) {
         return getParameterized().set(message, p0, p1, p2, p3);
     }
 
     @Override
-    public Message newMessage(final String message, final Object p0, final Object p1, final Object p2, final Object p3,
-            final Object p4) {
+    public Message newMessage(
+            final String message, final Object p0, final Object p1, final Object p2, final Object p3, final Object p4) {
         return getParameterized().set(message, p0, p1, p2, p3, p4);
     }
 
     @Override
-    public Message newMessage(final String message, final Object p0, final Object p1, final Object p2, final Object p3,
-            final Object p4, final Object p5) {
+    public Message newMessage(
+            final String message,
+            final Object p0,
+            final Object p1,
+            final Object p2,
+            final Object p3,
+            final Object p4,
+            final Object p5) {
         return getParameterized().set(message, p0, p1, p2, p3, p4, p5);
     }
 
     @Override
-    public Message newMessage(final String message, final Object p0, final Object p1, final Object p2, final Object p3,
-            final Object p4, final Object p5, final Object p6) {
+    public Message newMessage(
+            final String message,
+            final Object p0,
+            final Object p1,
+            final Object p2,
+            final Object p3,
+            final Object p4,
+            final Object p5,
+            final Object p6) {
         return getParameterized().set(message, p0, p1, p2, p3, p4, p5, p6);
     }
 
     @Override
-    public Message newMessage(final String message, final Object p0, final Object p1, final Object p2, final Object p3,
-            final Object p4, final Object p5, final Object p6, final Object p7) {
+    public Message newMessage(
+            final String message,
+            final Object p0,
+            final Object p1,
+            final Object p2,
+            final Object p3,
+            final Object p4,
+            final Object p5,
+            final Object p6,
+            final Object p7) {
         return getParameterized().set(message, p0, p1, p2, p3, p4, p5, p6, p7);
     }
 
     @Override
-    public Message newMessage(final String message, final Object p0, final Object p1, final Object p2, final Object p3,
-            final Object p4, final Object p5, final Object p6, final Object p7, final Object p8) {
+    public Message newMessage(
+            final String message,
+            final Object p0,
+            final Object p1,
+            final Object p2,
+            final Object p3,
+            final Object p4,
+            final Object p5,
+            final Object p6,
+            final Object p7,
+            final Object p8) {
         return getParameterized().set(message, p0, p1, p2, p3, p4, p5, p6, p7, p8);
     }
 
     @Override
-    public Message newMessage(final String message, final Object p0, final Object p1, final Object p2, final Object p3,
-            final Object p4, final Object p5, final Object p6, final Object p7, final Object p8, final Object p9) {
+    public Message newMessage(
+            final String message,
+            final Object p0,
+            final Object p1,
+            final Object p2,
+            final Object p3,
+            final Object p4,
+            final Object p5,
+            final Object p6,
+            final Object p7,
+            final Object p8,
+            final Object p9) {
         return getParameterized().set(message, p0, p1, p2, p3, p4, p5, p6, p7, p8, p9);
     }
 
@@ -181,7 +224,6 @@ public final class ReusableMessageFactory implements MessageFactory2, Serializab
         return result;
     }
 
-
     /**
      * Creates {@link ReusableObjectMessage} instances.
      *
@@ -195,5 +237,17 @@ public final class ReusableMessageFactory implements MessageFactory2, Serializab
         final ReusableObjectMessage result = getObject();
         result.set(message);
         return result;
+    }
+
+    private Object writeReplace() {
+        return new SerializationProxy();
+    }
+
+    private static class SerializationProxy implements Serializable {
+        private static final long serialVersionUID = 1L;
+
+        private Object readResolve() {
+            return INSTANCE;
+        }
     }
 }

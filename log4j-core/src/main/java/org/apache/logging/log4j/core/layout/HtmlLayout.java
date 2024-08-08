@@ -1,21 +1,22 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.layout;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.LineNumberReader;
@@ -26,7 +27,6 @@ import java.lang.management.ManagementFactory;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.core.Layout;
 import org.apache.logging.log4j.core.LogEvent;
@@ -75,8 +75,15 @@ public final class HtmlLayout extends AbstractStringLayout {
 
     /**Possible font sizes */
     public static enum FontSize {
-        SMALLER("smaller"), XXSMALL("xx-small"), XSMALL("x-small"), SMALL("small"), MEDIUM("medium"), LARGE("large"),
-        XLARGE("x-large"), XXLARGE("xx-large"),  LARGER("larger");
+        SMALLER("smaller"),
+        XXSMALL("xx-small"),
+        XSMALL("x-small"),
+        SMALL("small"),
+        MEDIUM("medium"),
+        LARGE("large"),
+        XLARGE("x-large"),
+        XXLARGE("xx-large"),
+        LARGER("larger");
 
         private final String size;
 
@@ -102,8 +109,16 @@ public final class HtmlLayout extends AbstractStringLayout {
         }
     }
 
-    private HtmlLayout(final boolean locationInfo, final String title, final String contentType, final Charset charset,
-        final String font, final String fontSize, final String headerSize, String datePattern, String timezone) {
+    private HtmlLayout(
+            final boolean locationInfo,
+            final String title,
+            final String contentType,
+            final Charset charset,
+            final String font,
+            final String fontSize,
+            final String headerSize,
+            String datePattern,
+            String timezone) {
         super(charset);
         this.locationInfo = locationInfo;
         this.title = title;
@@ -111,8 +126,9 @@ public final class HtmlLayout extends AbstractStringLayout {
         this.font = font;
         this.fontSize = fontSize;
         this.headerSize = headerSize;
-        this.datePatternConverter = DEFAULT_DATE_PATTERN.equals(datePattern) ? null
-            : DatePatternConverter.newInstance(new String[] {datePattern, timezone});
+        this.datePatternConverter = DEFAULT_DATE_PATTERN.equals(datePattern)
+                ? null
+                : DatePatternConverter.newInstance(new String[] {datePattern, timezone});
     }
 
     /**
@@ -199,7 +215,8 @@ public final class HtmlLayout extends AbstractStringLayout {
         }
 
         sbuf.append("<td title=\"Message\">");
-        sbuf.append(Transform.escapeHtmlTags(event.getMessage().getFormattedMessage()).replaceAll(REGEXP, "<br />"));
+        sbuf.append(Transform.escapeHtmlTags(event.getMessage().getFormattedMessage())
+                .replaceAll(REGEXP, "<br />"));
         sbuf.append("</td>").append(Strings.LINE_SEPARATOR);
         sbuf.append("</tr>").append(Strings.LINE_SEPARATOR);
 
@@ -207,7 +224,8 @@ public final class HtmlLayout extends AbstractStringLayout {
             sbuf.append("<tr><td bgcolor=\"#EEEEEE\" style=\"font-size : ").append(fontSize);
             sbuf.append(";\" colspan=\"6\" ");
             sbuf.append("title=\"Nested Diagnostic Context\">");
-            sbuf.append("NDC: ").append(Transform.escapeHtmlTags(event.getContextStack().toString()));
+            sbuf.append("NDC: ")
+                    .append(Transform.escapeHtmlTags(event.getContextStack().toString()));
             sbuf.append("</td></tr>").append(Strings.LINE_SEPARATOR);
         }
 
@@ -215,13 +233,16 @@ public final class HtmlLayout extends AbstractStringLayout {
             sbuf.append("<tr><td bgcolor=\"#EEEEEE\" style=\"font-size : ").append(fontSize);
             sbuf.append(";\" colspan=\"6\" ");
             sbuf.append("title=\"Mapped Diagnostic Context\">");
-            sbuf.append("MDC: ").append(Transform.escapeHtmlTags(event.getContextData().toMap().toString()));
+            sbuf.append("MDC: ")
+                    .append(Transform.escapeHtmlTags(
+                            event.getContextData().toMap().toString()));
             sbuf.append("</td></tr>").append(Strings.LINE_SEPARATOR);
         }
 
         final Throwable throwable = event.getThrown();
         if (throwable != null) {
-            sbuf.append("<tr><td bgcolor=\"#993300\" style=\"color:White; font-size : ").append(fontSize);
+            sbuf.append("<tr><td bgcolor=\"#993300\" style=\"color:White; font-size : ")
+                    .append(fontSize);
             sbuf.append(";\" colspan=\"6\">");
             appendThrowableAsHtml(throwable, sbuf);
             sbuf.append("</td></tr>").append(Strings.LINE_SEPARATOR);
@@ -238,6 +259,9 @@ public final class HtmlLayout extends AbstractStringLayout {
         return contentType;
     }
 
+    @SuppressFBWarnings(
+            value = "INFORMATION_EXPOSURE_THROUGH_AN_ERROR_MESSAGE",
+            justification = "Log4j prints stacktraces only to logs, which should be private.")
     private void appendThrowableAsHtml(final Throwable throwable, final StringBuilder sbuf) {
         final StringWriter sw = new StringWriter();
         final PrintWriter pw = new PrintWriter(sw);
@@ -250,11 +274,11 @@ public final class HtmlLayout extends AbstractStringLayout {
         final LineNumberReader reader = new LineNumberReader(new StringReader(sw.toString()));
         final ArrayList<String> lines = new ArrayList<>();
         try {
-          String line = reader.readLine();
-          while (line != null) {
-            lines.add(line);
-            line = reader.readLine();
-          }
+            String line = reader.readLine();
+            while (line != null) {
+                lines.add(line);
+                line = reader.readLine();
+            }
         } catch (final IOException ex) {
             if (ex instanceof InterruptedIOException) {
                 Thread.currentThread().interrupt();
@@ -311,7 +335,8 @@ public final class HtmlLayout extends AbstractStringLayout {
         appendLs(sbuf, "<hr size=\"1\" noshade=\"noshade\">");
         appendLs(sbuf, "Log session start time " + new java.util.Date() + "<br>");
         appendLs(sbuf, "<br>");
-        appendLs(sbuf,
+        appendLs(
+                sbuf,
                 "<table cellspacing=\"0\" cellpadding=\"4\" border=\"1\" bordercolor=\"#224466\" width=\"100%\">");
         appendLs(sbuf, "<tr>");
         appendLs(sbuf, "<th>Time</th>");
@@ -364,8 +389,8 @@ public final class HtmlLayout extends AbstractStringLayout {
         if (contentType == null) {
             contentType = DEFAULT_CONTENT_TYPE + "; charset=" + charset;
         }
-        return new HtmlLayout(locationInfo, title, contentType, charset, font, fontSize, headerSize, DEFAULT_DATE_PATTERN,
-                null);
+        return new HtmlLayout(
+                locationInfo, title, contentType, charset, font, fontSize, headerSize, DEFAULT_DATE_PATTERN, null);
     }
 
     /**
@@ -408,8 +433,7 @@ public final class HtmlLayout extends AbstractStringLayout {
         @PluginBuilderAttribute
         private String timezone = null; // null means default timezone
 
-        private Builder() {
-        }
+        private Builder() {}
 
         public Builder withLocationInfo(final boolean locationInfo) {
             this.locationInfo = locationInfo;
@@ -457,8 +481,16 @@ public final class HtmlLayout extends AbstractStringLayout {
             if (contentType == null) {
                 contentType = DEFAULT_CONTENT_TYPE + "; charset=" + charset;
             }
-            return new HtmlLayout(locationInfo, title, contentType, charset, fontName, fontSize.getFontSize(),
-                fontSize.larger().getFontSize(), datePattern, timezone);
+            return new HtmlLayout(
+                    locationInfo,
+                    title,
+                    contentType,
+                    charset,
+                    fontName,
+                    fontSize.getFontSize(),
+                    fontSize.larger().getFontSize(),
+                    datePattern,
+                    timezone);
         }
     }
 }

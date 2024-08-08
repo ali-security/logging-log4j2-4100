@@ -1,25 +1,25 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j;
 
+import com.google.errorprone.annotations.InlineMe;
 import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-
 import org.apache.logging.log4j.util.PerformanceSensitive;
 import org.apache.logging.log4j.util.StringBuilderFormattable;
 
@@ -83,7 +83,7 @@ public final class MarkerManager {
         if (parentMarker == null) {
             throw new IllegalArgumentException("Parent Marker " + parent + " has not been defined");
         }
-        return getMarker(name, parentMarker);
+        return getMarker(name).addParents(parentMarker);
     }
 
     /**
@@ -95,6 +95,9 @@ public final class MarkerManager {
      * @throws IllegalArgumentException if any argument is {@code null}
      * @deprecated Use the Marker add or set methods to add parent Markers. Will be removed by final GA release.
      */
+    @InlineMe(
+            replacement = "MarkerManager.getMarker(name).addParents(parent)",
+            imports = "org.apache.logging.log4j.MarkerManager")
     @Deprecated
     public static Marker getMarker(final String name, final Marker parent) {
         return getMarker(name).addParents(parent);
@@ -231,10 +234,11 @@ public final class MarkerManager {
 
         @Override
         public Marker[] getParents() {
-            if (this.parents == null) {
+            final Marker[] parentsSnapshot = parents;
+            if (parentsSnapshot == null) {
                 return null;
             }
-            return Arrays.copyOf(this.parents, this.parents.length);
+            return Arrays.copyOf(parentsSnapshot, parentsSnapshot.length);
         }
 
         @Override
@@ -308,8 +312,8 @@ public final class MarkerManager {
             if (parent == marker) {
                 return true;
             }
-            final Marker[] localParents = parent instanceof Log4jMarker ? ((Log4jMarker) parent).parents : parent
-                    .getParents();
+            final Marker[] localParents =
+                    parent instanceof Log4jMarker ? ((Log4jMarker) parent).parents : parent.getParents();
             if (localParents != null) {
                 final int localParentsLength = localParents.length;
                 if (localParentsLength == 1) {

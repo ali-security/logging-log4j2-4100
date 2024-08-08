@@ -1,39 +1,39 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.config;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.List;
-
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
 import org.apache.logging.log4j.core.config.plugins.PluginAliases;
-import org.apache.logging.log4j.core.net.UrlConnectionFactory;
 import org.apache.logging.log4j.core.net.ssl.SslConfiguration;
 import org.apache.logging.log4j.core.net.ssl.SslConfigurationFactory;
 import org.apache.logging.log4j.core.util.AbstractWatcher;
+import org.apache.logging.log4j.core.util.AuthorizationProvider;
 import org.apache.logging.log4j.core.util.Source;
 import org.apache.logging.log4j.core.util.Watcher;
+import org.apache.logging.log4j.core.util.internal.HttpInputStreamUtil;
+import org.apache.logging.log4j.core.util.internal.LastModifiedSource;
 import org.apache.logging.log4j.status.StatusLogger;
+import org.apache.logging.log4j.util.PropertiesUtil;
 
 /**
  *
@@ -42,19 +42,20 @@ import org.apache.logging.log4j.status.StatusLogger;
 @PluginAliases("https")
 public class HttpWatcher extends AbstractWatcher {
 
-    private Logger LOGGER = StatusLogger.getLogger();
+    private final Logger LOGGER = StatusLogger.getLogger();
 
-    private SslConfiguration sslConfiguration;
+    private final SslConfiguration sslConfiguration;
+    private AuthorizationProvider authorizationProvider;
     private URL url;
     private volatile long lastModifiedMillis;
-    private static final int NOT_MODIFIED = 304;
-    private static final int OK = 200;
-    private static final int BUF_SIZE = 1024;
     private static final String HTTP = "http";
     private static final String HTTPS = "https";
 
-    public HttpWatcher(final Configuration configuration, final Reconfigurable reconfigurable,
-        final List<ConfigurationListener> configurationListeners, long lastModifiedMillis) {
+    public HttpWatcher(
+            final Configuration configuration,
+            final Reconfigurable reconfigurable,
+            final List<ConfigurationListener> configurationListeners,
+            final long lastModifiedMillis) {
         super(configuration, reconfigurable, configurationListeners);
         sslConfiguration = SslConfigurationFactory.getSslConfiguration();
         this.lastModifiedMillis = lastModifiedMillis;
@@ -71,23 +72,27 @@ public class HttpWatcher extends AbstractWatcher {
     }
 
     @Override
-    public void watching(Source source) {
-        if (!source.getURI().getScheme().equals(HTTP) && !source.getURI().getScheme().equals(HTTPS)) {
-            throw new IllegalArgumentException(
-                "HttpWatcher requires a url using the HTTP or HTTPS protocol, not " + source.getURI().getScheme());
+    public void watching(final Source source) {
+        if (!source.getURI().getScheme().equals(HTTP)
+                && !source.getURI().getScheme().equals(HTTPS)) {
+            throw new IllegalArgumentException("HttpWatcher requires a url using the HTTP or HTTPS protocol, not "
+                    + source.getURI().getScheme());
         }
         try {
             url = source.getURI().toURL();
-        } catch (MalformedURLException ex) {
+            authorizationProvider = ConfigurationFactory.authorizationProvider(PropertiesUtil.getProperties());
+        } catch (final MalformedURLException ex) {
             throw new IllegalArgumentException("Invalid URL for HttpWatcher " + source.getURI(), ex);
         }
         super.watching(source);
     }
 
     @Override
-    public Watcher newWatcher(Reconfigurable reconfigurable, List<ConfigurationListener> listeners,
-        long lastModifiedMillis) {
-        HttpWatcher watcher = new HttpWatcher(getConfiguration(), reconfigurable, listeners, lastModifiedMillis);
+    public Watcher newWatcher(
+            final Reconfigurable reconfigurable,
+            final List<ConfigurationListener> listeners,
+            final long lastModifiedMillis) {
+        final HttpWatcher watcher = new HttpWatcher(getConfiguration(), reconfigurable, listeners, lastModifiedMillis);
         if (getSource() != null) {
             watcher.watching(getSource());
         }
@@ -96,59 +101,37 @@ public class HttpWatcher extends AbstractWatcher {
 
     private boolean refreshConfiguration() {
         try {
-            final HttpURLConnection urlConnection = UrlConnectionFactory.createConnection(url, lastModifiedMillis,
-                sslConfiguration);
-            urlConnection.connect();
-
-            try {
-                int code = urlConnection.getResponseCode();
-                switch (code) {
-                    case NOT_MODIFIED: {
-                        LOGGER.debug("Configuration Not Modified");
-                        return false;
-                    }
-                    case OK: {
-                        try (InputStream is = urlConnection.getInputStream()) {
-                            ConfigurationSource configSource = getConfiguration().getConfigurationSource();
-                            configSource.setData(readStream(is));
-                            lastModifiedMillis = urlConnection.getLastModified();
-                            configSource.setModifiedMillis(lastModifiedMillis);
-                            LOGGER.debug("Content was modified for {}", url.toString());
-                            return true;
-                        } catch (final IOException e) {
-                            try (InputStream es = urlConnection.getErrorStream()) {
-                                LOGGER.info("Error accessing configuration at {}: {}", url, readStream(es));
-                            } catch (final IOException ioe) {
-                                LOGGER.error("Error accessing configuration at {}: {}", url, e.getMessage());
-                            }
-                            return false;
-                        }
-                    }
-                    default: {
-                        if (code < 0) {
-                            LOGGER.info("Invalid response code returned");
-                        } else {
-                            LOGGER.info("Unexpected response code returned {}", code);
-                        }
+            final LastModifiedSource source = new LastModifiedSource(url.toURI(), lastModifiedMillis);
+            final HttpInputStreamUtil.Result result = HttpInputStreamUtil.getInputStream(source, authorizationProvider);
+            switch (result.getStatus()) {
+                case NOT_MODIFIED: {
+                    LOGGER.debug("Configuration Not Modified");
+                    return false;
+                }
+                case SUCCESS: {
+                    final ConfigurationSource configSource = getConfiguration().getConfigurationSource();
+                    try {
+                        configSource.setData(HttpInputStreamUtil.readStream(result.getInputStream()));
+                        configSource.setModifiedMillis(source.getLastModified());
+                        LOGGER.debug("Content was modified for {}", url.toString());
+                        return true;
+                    } catch (final IOException e) {
+                        LOGGER.error("Error accessing configuration at {}: {}", url, e.getMessage());
                         return false;
                     }
                 }
-            } catch (final IOException ioe) {
-                LOGGER.error("Error accessing configuration at {}: {}", url, ioe.getMessage());
+                case NOT_FOUND: {
+                    LOGGER.info("Unable to locate configuration at {}", url.toString());
+                    return false;
+                }
+                default: {
+                    LOGGER.warn("Unexpected error accessing configuration at {}", url.toString());
+                    return false;
+                }
             }
-        } catch (final IOException ioe) {
-            LOGGER.error("Error connecting to configuration at {}: {}", url, ioe.getMessage());
+        } catch (final URISyntaxException ex) {
+            LOGGER.error("Bad configuration URL: {}, {}", url.toString(), ex.getMessage());
+            return false;
         }
-        return false;
-    }
-
-    private byte[] readStream(InputStream is) throws IOException {
-        ByteArrayOutputStream result = new ByteArrayOutputStream();
-        byte[] buffer = new byte[BUF_SIZE];
-        int length;
-        while ((length = is.read(buffer)) != -1) {
-            result.write(buffer, 0, length);
-        }
-        return result.toByteArray();
     }
 }

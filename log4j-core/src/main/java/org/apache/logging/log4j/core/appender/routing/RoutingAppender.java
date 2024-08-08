@@ -1,18 +1,18 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.appender.routing;
 
@@ -23,9 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import javax.script.Bindings;
-
 import org.apache.logging.log4j.core.Appender;
 import org.apache.logging.log4j.core.Core;
 import org.apache.logging.log4j.core.Filter;
@@ -42,6 +40,7 @@ import org.apache.logging.log4j.core.config.plugins.PluginBuilderFactory;
 import org.apache.logging.log4j.core.config.plugins.PluginElement;
 import org.apache.logging.log4j.core.script.AbstractScript;
 import org.apache.logging.log4j.core.script.ScriptManager;
+import org.apache.logging.log4j.core.script.ScriptRef;
 import org.apache.logging.log4j.core.util.Booleans;
 
 /**
@@ -84,8 +83,27 @@ public final class RoutingAppender extends AbstractAppender {
                 LOGGER.error("No routes defined for RoutingAppender {}", name);
                 return null;
             }
-            return new RoutingAppender(name, getFilter(), isIgnoreExceptions(), routes, rewritePolicy,
-                    getConfiguration(), purgePolicy, defaultRouteScript, getPropertyArray());
+            if (defaultRouteScript != null) {
+                if (getConfiguration().getScriptManager() == null) {
+                    LOGGER.error("Script support is not enabled");
+                    return null;
+                }
+                if (!(defaultRouteScript instanceof ScriptRef)) {
+                    if (!getConfiguration().getScriptManager().addScript(defaultRouteScript)) {
+                        return null;
+                    }
+                }
+            }
+            return new RoutingAppender(
+                    name,
+                    getFilter(),
+                    isIgnoreExceptions(),
+                    routes,
+                    rewritePolicy,
+                    getConfiguration(),
+                    purgePolicy,
+                    defaultRouteScript,
+                    getPropertyArray());
         }
 
         public Routes getRoutes() {
@@ -122,7 +140,6 @@ public final class RoutingAppender extends AbstractAppender {
         public void withPurgePolicy(@SuppressWarnings("hiding") final PurgePolicy purgePolicy) {
             this.purgePolicy = purgePolicy;
         }
-
     }
 
     @PluginBuilderFactory
@@ -136,17 +153,24 @@ public final class RoutingAppender extends AbstractAppender {
     private Route defaultRoute;
     private final Configuration configuration;
     private final ConcurrentMap<String, CreatedRouteAppenderControl> createdAppenders = new ConcurrentHashMap<>();
-    private final Map<String, AppenderControl> createdAppendersUnmodifiableView  = Collections.unmodifiableMap(
-            (Map<String, AppenderControl>) (Map<String, ?>) createdAppenders);
+    private final Map<String, AppenderControl> createdAppendersUnmodifiableView =
+            Collections.unmodifiableMap((Map<String, AppenderControl>) (Map<String, ?>) createdAppenders);
     private final ConcurrentMap<String, RouteAppenderControl> referencedAppenders = new ConcurrentHashMap<>();
     private final RewritePolicy rewritePolicy;
     private final PurgePolicy purgePolicy;
     private final AbstractScript defaultRouteScript;
     private final ConcurrentMap<Object, Object> scriptStaticVariables = new ConcurrentHashMap<>();
 
-    private RoutingAppender(final String name, final Filter filter, final boolean ignoreExceptions, final Routes routes,
-            final RewritePolicy rewritePolicy, final Configuration configuration, final PurgePolicy purgePolicy,
-            final AbstractScript defaultRouteScript, final Property[] properties) {
+    private RoutingAppender(
+            final String name,
+            final Filter filter,
+            final boolean ignoreExceptions,
+            final Routes routes,
+            final RewritePolicy rewritePolicy,
+            final Configuration configuration,
+            final PurgePolicy purgePolicy,
+            final AbstractScript defaultRouteScript,
+            final Property[] properties) {
         super(name, filter, null, ignoreExceptions, properties);
         this.routes = routes;
         this.configuration = configuration;
@@ -176,7 +200,6 @@ public final class RoutingAppender extends AbstractAppender {
                 error("No Configuration defined for RoutingAppender; required for Script element.");
             } else {
                 final ScriptManager scriptManager = configuration.getScriptManager();
-                scriptManager.addScript(defaultRouteScript);
                 final Bindings bindings = scriptManager.createBindings(defaultRouteScript);
                 bindings.put(STATIC_VARIABLES_KEY, scriptStaticVariables);
                 final Object object = scriptManager.execute(defaultRouteScript.getName(), bindings);
@@ -224,8 +247,9 @@ public final class RoutingAppender extends AbstractAppender {
             event = rewritePolicy.rewrite(event);
         }
         final String pattern = routes.getPattern(event, scriptStaticVariables);
-        final String key = pattern != null ? configuration.getStrSubstitutor().replace(event, pattern) :
-                defaultRoute.getKey() != null ? defaultRoute.getKey() : DEFAULT_KEY;
+        final String key = pattern != null
+                ? configuration.getStrSubstitutor().replace(event, pattern)
+                : defaultRoute.getKey() != null ? defaultRoute.getKey() : DEFAULT_KEY;
         final RouteAppenderControl control = getControl(key, event);
         if (control != null) {
             try {
@@ -272,7 +296,7 @@ public final class RoutingAppender extends AbstractAppender {
             if (app == null) {
                 return null;
             }
-            CreatedRouteAppenderControl created = new CreatedRouteAppenderControl(app);
+            final CreatedRouteAppenderControl created = new CreatedRouteAppenderControl(app);
             control = created;
             createdAppenders.put(key, created);
         }
@@ -338,8 +362,10 @@ public final class RoutingAppender extends AbstractAppender {
             // to disk.
             control.tryStopAppender();
         } else if (referencedAppenders.containsKey(key)) {
-            LOGGER.debug("Route {} using an appender reference may not be removed because " +
-                    "the appender may be used outside of the RoutingAppender", key);
+            LOGGER.debug(
+                    "Route {} using an appender reference may not be removed because "
+                            + "the appender may be used outside of the RoutingAppender",
+                    key);
         } else {
             LOGGER.debug("Route with {} key already deleted", key);
         }
@@ -376,7 +402,8 @@ public final class RoutingAppender extends AbstractAppender {
             LOGGER.error("No routes defined for RoutingAppender");
             return null;
         }
-        return new RoutingAppender(name, filter, ignoreExceptions, routes, rewritePolicy, config, purgePolicy, null, null);
+        return new RoutingAppender(
+                name, filter, ignoreExceptions, routes, rewritePolicy, config, purgePolicy, null, null);
     }
 
     public Route getDefaultRoute() {
@@ -411,7 +438,7 @@ public final class RoutingAppender extends AbstractAppender {
      * LOG4J2-2629: PurgePolicy implementations can invoke {@link #deleteAppender(String)} after we have looked up
      * an instance of a target appender but before events are appended, which could result in events not being
      * recorded to any appender.
-     * This extension of {@link AppenderControl} allows to to mark usage of an appender, allowing deferral of
+     * This extension of {@link AppenderControl} allows to mark usage of an appender, allowing deferral of
      * {@link Appender#stop()} until events have successfully been recorded.
      * Alternative approaches considered:
      * - More aggressive synchronization: Appenders may do expensive I/O that shouldn't block routing.
@@ -420,9 +447,9 @@ public final class RoutingAppender extends AbstractAppender {
      *   to remove an appender that doesn't exist yet. It's counterintuitive to get an event that a route has been
      *   used at a point when we expect the route doesn't exist in {@link #getAppenders()}.
      */
-    private static abstract class RouteAppenderControl extends AppenderControl {
+    private abstract static class RouteAppenderControl extends AppenderControl {
 
-        RouteAppenderControl(Appender appender) {
+        RouteAppenderControl(final Appender appender) {
             super(appender, null, null);
         }
 
@@ -436,15 +463,15 @@ public final class RoutingAppender extends AbstractAppender {
         private volatile boolean pendingDeletion;
         private final AtomicInteger depth = new AtomicInteger();
 
-        CreatedRouteAppenderControl(Appender appender) {
+        CreatedRouteAppenderControl(final Appender appender) {
             super(appender);
         }
 
         @Override
         void checkout() {
             if (pendingDeletion) {
-                LOGGER.warn("CreatedRouteAppenderControl.checkout invoked on a " +
-                        "RouteAppenderControl that is pending deletion");
+                LOGGER.warn("CreatedRouteAppenderControl.checkout invoked on a "
+                        + "RouteAppenderControl that is pending deletion");
             }
             depth.incrementAndGet();
         }
@@ -461,7 +488,7 @@ public final class RoutingAppender extends AbstractAppender {
                     // 1. Another invocation of tryStopAppender has succeeded, or
                     // 2. Events are being appended, and will trigger stop when they complete
                     && depth.compareAndSet(0, -100_000)) {
-                Appender appender = getAppender();
+                final Appender appender = getAppender();
                 LOGGER.debug("Stopping appender {}", appender);
                 appender.stop();
             }
@@ -470,7 +497,7 @@ public final class RoutingAppender extends AbstractAppender {
 
     private static final class ReferencedRouteAppenderControl extends RouteAppenderControl {
 
-        ReferencedRouteAppenderControl(Appender appender) {
+        ReferencedRouteAppenderControl(final Appender appender) {
             super(appender);
         }
 

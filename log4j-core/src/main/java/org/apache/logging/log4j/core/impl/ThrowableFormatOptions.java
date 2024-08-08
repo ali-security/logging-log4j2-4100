@@ -1,28 +1,28 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.impl;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
-
 import org.apache.logging.log4j.core.pattern.JAnsiTextRenderer;
 import org.apache.logging.log4j.core.pattern.PlainTextRenderer;
 import org.apache.logging.log4j.core.pattern.TextRenderer;
+import org.apache.logging.log4j.core.util.Integers;
 import org.apache.logging.log4j.core.util.Loader;
 import org.apache.logging.log4j.core.util.Patterns;
 import org.apache.logging.log4j.status.StatusLogger;
@@ -88,17 +88,21 @@ public final class ThrowableFormatOptions {
      * Constructs the options for printing stack trace.
      *
      * @param lines
-     *            The number of lines.
+     *            the number of lines
      * @param separator
-     *            The stack trace separator.
+     *            the stack trace separator
      * @param ignorePackages
-     *            The packages to filter.
+     *            the packages to filter
      * @param textRenderer
-     *            The ANSI renderer
-     * @param suffix
+     *            the ANSI renderer
+     * @param suffix Append this to the end of each stack frame.
      */
-    protected ThrowableFormatOptions(final int lines, final String separator, final List<String> ignorePackages,
-            final TextRenderer textRenderer, final String suffix) {
+    protected ThrowableFormatOptions(
+            final int lines,
+            final String separator,
+            final List<String> ignorePackages,
+            final TextRenderer textRenderer,
+            final String suffix) {
         this.lines = lines;
         this.separator = separator == null ? Strings.LINE_SEPARATOR : separator;
         this.ignorePackages = ignorePackages;
@@ -239,9 +243,12 @@ public final class ThrowableFormatOptions {
             final String[] opts = options[0].split(Patterns.COMMA_SEPARATOR, 2);
             final String first = opts[0].trim();
             try (final Scanner scanner = new Scanner(first)) {
-                if (opts.length > 1 && (first.equalsIgnoreCase(FULL) || first.equalsIgnoreCase(SHORT)
-                        || first.equalsIgnoreCase(NONE) || scanner.hasNextInt())) {
-                    options = new String[] { first, opts[1].trim() };
+                if (opts.length > 1
+                        && (first.equalsIgnoreCase(FULL)
+                                || first.equalsIgnoreCase(SHORT)
+                                || first.equalsIgnoreCase(NONE)
+                                || scanner.hasNextInt())) {
+                    options = new String[] {first, opts[1].trim()};
                 }
             }
         }
@@ -274,27 +281,32 @@ public final class ThrowableFormatOptions {
                     }
                 } else if (option.equalsIgnoreCase(NONE)) {
                     lines = 0;
-                } else if (option.equalsIgnoreCase(SHORT) || option.equalsIgnoreCase(CLASS_NAME)
-                        || option.equalsIgnoreCase(METHOD_NAME) || option.equalsIgnoreCase(LINE_NUMBER)
-                        || option.equalsIgnoreCase(FILE_NAME) || option.equalsIgnoreCase(MESSAGE)
+                } else if (option.equalsIgnoreCase(SHORT)
+                        || option.equalsIgnoreCase(CLASS_NAME)
+                        || option.equalsIgnoreCase(METHOD_NAME)
+                        || option.equalsIgnoreCase(LINE_NUMBER)
+                        || option.equalsIgnoreCase(FILE_NAME)
+                        || option.equalsIgnoreCase(MESSAGE)
                         || option.equalsIgnoreCase(LOCALIZED_MESSAGE)) {
                     lines = 2;
                 } else if (option.startsWith("ansi(") && option.endsWith(")") || option.equals("ansi")) {
                     if (Loader.isJansiAvailable()) {
-                        final String styleMapStr = option.equals("ansi") ? Strings.EMPTY
+                        final String styleMapStr = option.equals("ansi")
+                                ? Strings.EMPTY
                                 : option.substring("ansi(".length(), option.length() - 1);
-                        ansiRenderer = new JAnsiTextRenderer(new String[] { null, styleMapStr },
-                                JAnsiTextRenderer.DefaultExceptionStyleMap);
+                        ansiRenderer = new JAnsiTextRenderer(
+                                new String[] {null, styleMapStr}, JAnsiTextRenderer.DefaultExceptionStyleMap);
                     } else {
-                        StatusLogger.getLogger().warn(
-                                "You requested ANSI exception rendering but JANSI is not on the classpath. Please see https://logging.apache.org/log4j/2.x/runtime-dependencies.html");
+                        StatusLogger.getLogger()
+                                .warn(
+                                        "You requested ANSI exception rendering but JANSI is not on the classpath. Please see https://logging.apache.org/log4j/2.x/runtime-dependencies.html");
                     }
-                } else if (option.startsWith("S(") && option.endsWith(")")){
+                } else if (option.startsWith("S(") && option.endsWith(")")) {
                     suffix = option.substring("S(".length(), option.length() - 1);
-                } else if (option.startsWith("suffix(") && option.endsWith(")")){
+                } else if (option.startsWith("suffix(") && option.endsWith(")")) {
                     suffix = option.substring("suffix(".length(), option.length() - 1);
                 } else if (!option.equalsIgnoreCase(FULL)) {
-                    lines = Integer.parseInt(option);
+                    lines = Integers.parseInt(option);
                 }
             }
         }
@@ -304,5 +316,4 @@ public final class ThrowableFormatOptions {
     public String getSuffix() {
         return suffix;
     }
-
 }

@@ -1,18 +1,18 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.appender.rolling.action;
 
@@ -21,7 +21,6 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.Core;
 import org.apache.logging.log4j.core.appender.rolling.FileSize;
@@ -41,13 +40,12 @@ public final class IfAccumulatedFileSize implements PathCondition {
     private long accumulatedSize;
     private final PathCondition[] nestedConditions;
 
-    private IfAccumulatedFileSize(final long thresholdSize, final PathCondition[] nestedConditions) {
+    private IfAccumulatedFileSize(final long thresholdSize, final PathCondition... nestedConditions) {
         if (thresholdSize <= 0) {
             throw new IllegalArgumentException("Count must be a positive integer but was " + thresholdSize);
         }
         this.thresholdBytes = thresholdSize;
-        this.nestedConditions = nestedConditions == null ? new PathCondition[0] : Arrays.copyOf(nestedConditions,
-                nestedConditions.length);
+        this.nestedConditions = PathCondition.copy(nestedConditions);
     }
 
     public long getThresholdBytes() {
@@ -70,8 +68,13 @@ public final class IfAccumulatedFileSize implements PathCondition {
         final boolean result = accumulatedSize > thresholdBytes;
         final String match = result ? ">" : "<=";
         final String accept = result ? "ACCEPTED" : "REJECTED";
-        LOGGER.trace("IfAccumulatedFileSize {}: {} accumulated size '{}' {} thresholdBytes '{}'", accept, relativePath,
-                accumulatedSize, match, thresholdBytes);
+        LOGGER.trace(
+                "IfAccumulatedFileSize {}: {} accumulated size '{}' {} thresholdBytes '{}'",
+                accept,
+                relativePath,
+                accumulatedSize,
+                match,
+                thresholdBytes);
         if (result) {
             return IfAll.accept(nestedConditions, basePath, relativePath, attrs);
         }
@@ -92,7 +95,7 @@ public final class IfAccumulatedFileSize implements PathCondition {
     /**
      * Create an IfAccumulatedFileSize condition.
      *
-     * @param threshold The threshold accumulated file size from which files will be deleted.
+     * @param size The threshold accumulated file size from which files will be deleted.
      * @return An IfAccumulatedFileSize condition.
      */
     @PluginFactory
@@ -100,7 +103,7 @@ public final class IfAccumulatedFileSize implements PathCondition {
             // @formatter:off
             @PluginAttribute("exceeds") final String size,
             @PluginElement("PathConditions") final PathCondition... nestedConditions) {
-            // @formatter:on
+        // @formatter:on
 
         if (size == null) {
             LOGGER.error("IfAccumulatedFileSize missing mandatory size threshold.");

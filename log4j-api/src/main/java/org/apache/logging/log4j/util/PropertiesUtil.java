@@ -1,21 +1,24 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.util;
 
+import aQute.bnd.annotation.Cardinality;
+import aQute.bnd.annotation.Resolution;
+import aQute.bnd.annotation.spi.ServiceConsumer;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
@@ -23,15 +26,23 @@ import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalUnit;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.ResourceBundle;
 import java.util.ServiceLoader;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.status.StatusLogger;
 
 /**
  * <em>Consider this class private.</em>
@@ -46,12 +57,19 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * @see PropertySource
  */
+@ServiceConsumer(value = PropertySource.class, resolution = Resolution.OPTIONAL, cardinality = Cardinality.MULTIPLE)
 public final class PropertiesUtil {
 
+    private static final Logger LOGGER = StatusLogger.getLogger();
+
     private static final String LOG4J_PROPERTIES_FILE_NAME = "log4j2.component.properties";
+
     private static final String LOG4J_SYSTEM_PROPERTIES_FILE_NAME = "log4j2.system.properties";
-    private static final String SYSTEM = "system:";
-    private static final PropertiesUtil LOG4J_PROPERTIES = new PropertiesUtil(LOG4J_PROPERTIES_FILE_NAME);
+
+    private static final Lazy<PropertiesUtil> COMPONENT_PROPERTIES =
+            Lazy.lazy(() -> new PropertiesUtil(LOG4J_PROPERTIES_FILE_NAME, false));
+
+    private static final Pattern DURATION_PATTERN = Pattern.compile("([+-]?\\d+)\\s*(\\w+)?", Pattern.CASE_INSENSITIVE);
 
     private final Environment environment;
 
@@ -61,7 +79,7 @@ public final class PropertiesUtil {
      * @param props the Properties to use by default
      */
     public PropertiesUtil(final Properties props) {
-        this.environment = new Environment(new PropertiesPropertySource(props));
+        this(new PropertiesPropertySource(props));
     }
 
     /**
@@ -71,7 +89,19 @@ public final class PropertiesUtil {
      * @param propertiesFileName the location of properties file to load
      */
     public PropertiesUtil(final String propertiesFileName) {
-        this.environment = new Environment(new PropertyFilePropertySource(propertiesFileName));
+        this(propertiesFileName, true);
+    }
+
+    private PropertiesUtil(final String propertiesFileName, final boolean useTccl) {
+        this(new PropertyFilePropertySource(propertiesFileName, useTccl));
+    }
+
+    /**
+     * Constructs a PropertiesUtil for a give property source as source of additional properties.
+     * @param source a property source
+     */
+    PropertiesUtil(final PropertySource source) {
+        this.environment = new Environment(source);
     }
 
     /**
@@ -86,13 +116,13 @@ public final class PropertiesUtil {
         if (null != in) {
             try {
                 props.load(in);
-            } catch (final IOException e) {
-                LowLevelLogUtil.logException("Unable to read " + source, e);
+            } catch (final IOException error) {
+                LOGGER.error("Unable to read source `{}`", source, error);
             } finally {
                 try {
                     in.close();
-                } catch (final IOException e) {
-                    LowLevelLogUtil.logException("Unable to close " + source, e);
+                } catch (final IOException error) {
+                    LOGGER.error("Unable to close source `{}`", source, error);
                 }
             }
         }
@@ -105,7 +135,17 @@ public final class PropertiesUtil {
      * @return the main Log4j PropertiesUtil instance.
      */
     public static PropertiesUtil getProperties() {
-        return LOG4J_PROPERTIES;
+        return COMPONENT_PROPERTIES.get();
+    }
+
+    /**
+     * Allows a PropertySource to be added after PropertiesUtil has been created.
+     * @param propertySource the PropertySource to add.
+     */
+    public void addPropertySource(final PropertySource propertySource) {
+        if (environment != null) {
+            environment.addPropertySource(propertySource);
+        }
     }
 
     /**
@@ -150,11 +190,12 @@ public final class PropertiesUtil {
      * @param defaultValueIfPresent the default value to use if the property is defined but not assigned
      * @return the boolean value of the property or {@code defaultValue} if undefined.
      */
-    public boolean getBooleanProperty(final String name, final boolean defaultValueIfAbsent,
-                                      final boolean defaultValueIfPresent) {
+    public boolean getBooleanProperty(
+            final String name, final boolean defaultValueIfAbsent, final boolean defaultValueIfPresent) {
         final String prop = getStringProperty(name);
-        return prop == null ? defaultValueIfAbsent
-            : prop.isEmpty() ? defaultValueIfPresent : "true".equalsIgnoreCase(prop);
+        return prop == null
+                ? defaultValueIfAbsent
+                : prop.isEmpty() ? defaultValueIfPresent : "true".equalsIgnoreCase(prop);
     }
 
     /**
@@ -166,8 +207,8 @@ public final class PropertiesUtil {
      * @return The value or null if it is not found.
      * @since 2.13.0
      */
-    public Boolean getBooleanProperty(final String[] prefixes, String key, Supplier<Boolean> supplier) {
-        for (String prefix : prefixes) {
+    public Boolean getBooleanProperty(final String[] prefixes, final String key, final Supplier<Boolean> supplier) {
+        for (final String prefix : prefixes) {
             if (hasProperty(prefix + key)) {
                 return getBooleanProperty(prefix + key);
             }
@@ -208,8 +249,11 @@ public final class PropertiesUtil {
                 return Charset.forName(mapped);
             }
         }
-        LowLevelLogUtil.log("Unable to get Charset '" + charsetName + "' for property '" + name + "', using default "
-            + defaultValue + " and continuing.");
+        LOGGER.warn(
+                "Unable to read charset `{}` from property `{}`. Falling back to the default: `{}`",
+                charsetName,
+                name,
+                defaultValue);
         return defaultValue;
     }
 
@@ -225,7 +269,13 @@ public final class PropertiesUtil {
         if (prop != null) {
             try {
                 return Double.parseDouble(prop);
-            } catch (final Exception ignored) {
+            } catch (final NumberFormatException e) {
+                LOGGER.warn(
+                        "Unable to read double `{}` from property `{}`. Falling back to the default: `{}`",
+                        prop,
+                        name,
+                        defaultValue,
+                        e);
             }
         }
         return defaultValue;
@@ -243,9 +293,14 @@ public final class PropertiesUtil {
         final String prop = getStringProperty(name);
         if (prop != null) {
             try {
-                return Integer.parseInt(prop);
-            } catch (final Exception ignored) {
-                // ignore
+                return Integer.parseInt(prop.trim());
+            } catch (final NumberFormatException e) {
+                LOGGER.warn(
+                        "Unable to read int `{}` from property `{}`. Falling back to the default: `{}`",
+                        prop,
+                        name,
+                        defaultValue,
+                        e);
             }
         }
         return defaultValue;
@@ -260,8 +315,8 @@ public final class PropertiesUtil {
      * @return The value or null if it is not found.
      * @since 2.13.0
      */
-    public Integer getIntegerProperty(final String[] prefixes, String key, Supplier<Integer> supplier) {
-        for (String prefix : prefixes) {
+    public Integer getIntegerProperty(final String[] prefixes, final String key, final Supplier<Integer> supplier) {
+        for (final String prefix : prefixes) {
             if (hasProperty(prefix + key)) {
                 return getIntegerProperty(prefix + key, 0);
             }
@@ -281,7 +336,13 @@ public final class PropertiesUtil {
         if (prop != null) {
             try {
                 return Long.parseLong(prop);
-            } catch (final Exception ignored) {
+            } catch (final NumberFormatException e) {
+                LOGGER.warn(
+                        "Unable to read long `{}` from property `{}`. Falling back to the default: `{}`",
+                        prop,
+                        name,
+                        defaultValue,
+                        e);
             }
         }
         return defaultValue;
@@ -296,8 +357,8 @@ public final class PropertiesUtil {
      * @return The value or null if it is not found.
      * @since 2.13.0
      */
-    public Long getLongProperty(final String[] prefixes, String key, Supplier<Long> supplier) {
-        for (String prefix : prefixes) {
+    public Long getLongProperty(final String[] prefixes, final String key, final Supplier<Long> supplier) {
+        for (final String prefix : prefixes) {
             if (hasProperty(prefix + key)) {
                 return getLongProperty(prefix + key, 0);
             }
@@ -313,10 +374,18 @@ public final class PropertiesUtil {
      * @return The value of the String as a Duration or the default value, which may be null.
      * @since 2.13.0
      */
-    public Duration getDurationProperty(final String name, Duration defaultValue) {
+    public Duration getDurationProperty(final String name, final Duration defaultValue) {
         final String prop = getStringProperty(name);
-        if (prop != null) {
-            return TimeUnit.getDuration(prop);
+        try {
+            return parseDuration(prop);
+        } catch (final IllegalArgumentException e) {
+            LOGGER.warn(
+                    "Unable to read duration `{}` from property `{}`.\nExpected format 'n unit', where 'n' is an "
+                            + "integer and 'unit' is one of: {}.",
+                    prop,
+                    name,
+                    TimeUnit.getValidUnits().collect(Collectors.joining(", ")),
+                    e);
         }
         return defaultValue;
     }
@@ -330,8 +399,8 @@ public final class PropertiesUtil {
      * @return The value or null if it is not found.
      * @since 2.13.0
      */
-    public Duration getDurationProperty(final String[] prefixes, String key, Supplier<Duration> supplier) {
-        for (String prefix : prefixes) {
+    public Duration getDurationProperty(final String[] prefixes, final String key, final Supplier<Duration> supplier) {
+        for (final String prefix : prefixes) {
             if (hasProperty(prefix + key)) {
                 return getDurationProperty(prefix + key, null);
             }
@@ -348,9 +417,9 @@ public final class PropertiesUtil {
      * @return The value or null if it is not found.
      * @since 2.13.0
      */
-    public String getStringProperty(final String[] prefixes, String key, Supplier<String> supplier) {
-        for (String prefix : prefixes) {
-            String result = getStringProperty(prefix + key);
+    public String getStringProperty(final String[] prefixes, final String key, final Supplier<String> supplier) {
+        for (final String prefix : prefixes) {
+            final String result = getStringProperty(prefix + key);
             if (result != null) {
                 return result;
             }
@@ -377,7 +446,7 @@ public final class PropertiesUtil {
      */
     public String getStringProperty(final String name, final String defaultValue) {
         final String prop = getStringProperty(name);
-        return (prop == null) ? defaultValue : prop;
+        return prop == null ? defaultValue : prop;
     }
 
     /**
@@ -388,8 +457,8 @@ public final class PropertiesUtil {
     public static Properties getSystemProperties() {
         try {
             return new Properties(System.getProperties());
-        } catch (final SecurityException ex) {
-            LowLevelLogUtil.logException("Unable to access system properties.", ex);
+        } catch (final SecurityException error) {
+            LOGGER.error("Unable to access system properties.", error);
             // Sandboxed - can't read System Properties
             return new Properties();
         }
@@ -417,91 +486,107 @@ public final class PropertiesUtil {
      *
      * @since 2.10.0
      */
-    private static class Environment {
+    private static final class Environment {
 
-        private final Set<PropertySource> sources = new TreeSet<>(new PropertySource.Comparator());
-        private final Map<CharSequence, String> literal = new ConcurrentHashMap<>();
-        private final Map<CharSequence, String> normalized = new ConcurrentHashMap<>();
+        private final Set<PropertySource> sources = new ConcurrentSkipListSet<>(new PropertySource.Comparator());
+        /**
+         * Maps a key to its value or the value of its normalization in the lowest priority source that contains it.
+         */
+        private final Map<String, String> literal = new ConcurrentHashMap<>();
+
         private final Map<List<CharSequence>, String> tokenized = new ConcurrentHashMap<>();
 
         private Environment(final PropertySource propertySource) {
-            PropertyFilePropertySource sysProps = new PropertyFilePropertySource(LOG4J_SYSTEM_PROPERTIES_FILE_NAME);
+            final PropertySource sysProps = new PropertyFilePropertySource(LOG4J_SYSTEM_PROPERTIES_FILE_NAME, false);
             try {
                 sysProps.forEach((key, value) -> {
                     if (System.getProperty(key) == null) {
                         System.setProperty(key, value);
                     }
                 });
-            } catch (SecurityException ex) {
-                // Access to System Properties is restricted so just skip it.
+            } catch (final SecurityException e) {
+                LOGGER.warn(
+                        "Unable to set Java system properties from {} file, due to security restrictions.",
+                        LOG4J_SYSTEM_PROPERTIES_FILE_NAME,
+                        e);
             }
             sources.add(propertySource);
-			for (final ClassLoader classLoader : LoaderUtil.getClassLoaders()) {
-				try {
-					for (final PropertySource source : ServiceLoader.load(PropertySource.class, classLoader)) {
-						sources.add(source);
-					}
-				} catch (final Throwable ex) {
-					/* Don't log anything to the console. It may not be a problem that a PropertySource
-					 * isn't accessible.
-					 */
-				}
-			}
+            // We don't log anything on the status logger.
+            ServiceLoaderUtil.safeStream(
+                            PropertySource.class,
+                            ServiceLoader.load(PropertySource.class, PropertiesUtil.class.getClassLoader()),
+                            LOGGER)
+                    .forEach(sources::add);
 
             reload();
         }
 
+        /**
+         * Allow a PropertySource to be added.
+         * @param propertySource The PropertySource to add.
+         */
+        public void addPropertySource(final PropertySource propertySource) {
+            sources.add(propertySource);
+        }
+
         private synchronized void reload() {
             literal.clear();
-            normalized.clear();
             tokenized.clear();
-            for (final PropertySource source : sources) {
-                source.forEach((key, value) -> {
-                    if (key != null && value != null) {
-                        literal.put(key, value);
-                        final List<CharSequence> tokens = PropertySource.Util.tokenize(key);
-                        if (tokens.isEmpty()) {
-                            normalized.put(source.getNormalForm(Collections.singleton(key)), value);
-                        } else {
-                            normalized.put(source.getNormalForm(tokens), value);
-                            tokenized.put(tokens, value);
+            // 1. Collects all property keys from enumerable sources.
+            final Set<String> keys = new HashSet<>();
+            sources.stream().map(PropertySource::getPropertyNames).forEach(keys::addAll);
+            // 2. Fills the property caches. Sources with higher priority values don't override the previous ones.
+            keys.stream().filter(Strings::isNotBlank).forEach(key -> {
+                final List<CharSequence> tokens = PropertySource.Util.tokenize(key);
+                final boolean hasTokens = !tokens.isEmpty();
+                sources.forEach(source -> {
+                    if (source.containsProperty(key)) {
+                        final String value = source.getProperty(key);
+                        if (hasTokens) {
+                            tokenized.putIfAbsent(tokens, value);
+                        }
+                    }
+                    if (hasTokens) {
+                        final String normalKey = Objects.toString(source.getNormalForm(tokens), null);
+                        if (normalKey != null && source.containsProperty(normalKey)) {
+                            literal.putIfAbsent(key, source.getProperty(normalKey));
+                        } else if (source.containsProperty(key)) {
+                            literal.putIfAbsent(key, source.getProperty(key));
                         }
                     }
                 });
-            }
-        }
-
-        private static boolean hasSystemProperty(final String key) {
-            try {
-                return System.getProperties().containsKey(key);
-            } catch (final SecurityException ignored) {
-                return false;
-            }
+            });
         }
 
         private String get(final String key) {
-            if (normalized.containsKey(key)) {
-                return normalized.get(key);
-            }
             if (literal.containsKey(key)) {
                 return literal.get(key);
             }
-            if (hasSystemProperty(key)) {
-                return System.getProperty(key);
-            }
+            final List<CharSequence> tokens = PropertySource.Util.tokenize(key);
+            final boolean hasTokens = !tokens.isEmpty();
             for (final PropertySource source : sources) {
+                if (hasTokens) {
+                    final String normalKey = Objects.toString(source.getNormalForm(tokens), null);
+                    if (normalKey != null && source.containsProperty(normalKey)) {
+                        return source.getProperty(normalKey);
+                    }
+                }
                 if (source.containsProperty(key)) {
                     return source.getProperty(key);
                 }
             }
-            return tokenized.get(PropertySource.Util.tokenize(key));
+            return tokenized.get(tokens);
         }
 
         private boolean containsKey(final String key) {
-            return normalized.containsKey(key) ||
-                literal.containsKey(key) ||
-                hasSystemProperty(key) ||
-                tokenized.containsKey(PropertySource.Util.tokenize(key));
+            final List<CharSequence> tokens = PropertySource.Util.tokenize(key);
+            return literal.containsKey(key)
+                    || tokenized.containsKey(tokens)
+                    || sources.stream().anyMatch(s -> {
+                        final CharSequence normalizedKey = s.getNormalForm(tokens);
+                        return s.containsProperty(key)
+                                || (normalizedKey != null && s.containsProperty(normalizedKey.toString()));
+                    });
         }
     }
 
@@ -550,13 +635,37 @@ public final class PropertiesUtil {
      * @since 2.6
      */
     public static Map<String, Properties> partitionOnCommonPrefixes(final Properties properties) {
+        return partitionOnCommonPrefixes(properties, false);
+    }
+
+    /**
+     * Partitions a properties map based on common key prefixes up to the first period.
+     *
+     * @param properties properties to partition
+     * @param includeBaseKey when true if a key exists with no '.' the key will be included.
+     * @return the partitioned properties where each key is the common prefix (minus the period) and the values are
+     * new property maps without the prefix and period in the key
+     * @since 2.17.2
+     */
+    public static Map<String, Properties> partitionOnCommonPrefixes(
+            final Properties properties, final boolean includeBaseKey) {
         final Map<String, Properties> parts = new ConcurrentHashMap<>();
         for (final String key : properties.stringPropertyNames()) {
-            final String prefix = key.substring(0, key.indexOf('.'));
+            final int idx = key.indexOf('.');
+            if (idx < 0) {
+                if (includeBaseKey) {
+                    if (!parts.containsKey(key)) {
+                        parts.put(key, new Properties());
+                    }
+                    parts.get(key).setProperty("", properties.getProperty(key));
+                }
+                continue;
+            }
+            final String prefix = key.substring(0, idx);
             if (!parts.containsKey(prefix)) {
                 parts.put(prefix, new Properties());
             }
-            parts.get(prefix).setProperty(key.substring(key.indexOf('.') + 1), properties.getProperty(key));
+            parts.get(prefix).setProperty(key.substring(idx + 1), properties.getProperty(key));
         }
         return parts;
     }
@@ -567,43 +676,58 @@ public final class PropertiesUtil {
      * @return true if system properties tell us we are running on Windows.
      */
     public boolean isOsWindows() {
-        return getStringProperty("os.name", "").startsWith("Windows");
+        return SystemPropertiesPropertySource.getSystemProperty("os.name", "").startsWith("Windows");
+    }
+
+    static Duration parseDuration(final CharSequence value) {
+        final Matcher matcher = DURATION_PATTERN.matcher(value);
+        if (matcher.matches()) {
+            return Duration.of(parseDurationAmount(matcher.group(1)), TimeUnit.parseUnit(matcher.group(2)));
+        }
+        throw new IllegalArgumentException("Invalid duration value '" + value + "'.");
+    }
+
+    private static long parseDurationAmount(final String amount) {
+        try {
+            return Long.parseLong(amount);
+        } catch (final NumberFormatException e) {
+            throw new IllegalArgumentException("Invalid duration amount '" + amount + "'", e);
+        }
     }
 
     private enum TimeUnit {
-        NANOS("ns,nano,nanos,nanosecond,nanoseconds", ChronoUnit.NANOS),
-        MICROS("us,micro,micros,microsecond,microseconds", ChronoUnit.MICROS),
-        MILLIS("ms,milli,millis,millsecond,milliseconds", ChronoUnit.MILLIS),
-        SECONDS("s,second,seconds", ChronoUnit.SECONDS),
-        MINUTES("m,minute,minutes", ChronoUnit.MINUTES),
-        HOURS("h,hour,hours", ChronoUnit.HOURS),
-        DAYS("d,day,days", ChronoUnit.DAYS);
+        NANOS(new String[] {"ns", "nano", "nanos", "nanosecond", "nanoseconds"}, ChronoUnit.NANOS),
+        MICROS(new String[] {"us", "micro", "micros", "microsecond", "microseconds"}, ChronoUnit.MICROS),
+        MILLIS(new String[] {"ms", "milli", "millis", "millisecond", "milliseconds"}, ChronoUnit.MILLIS),
+        SECONDS(new String[] {"s", "second", "seconds"}, ChronoUnit.SECONDS),
+        MINUTES(new String[] {"m", "minute", "minutes"}, ChronoUnit.MINUTES),
+        HOURS(new String[] {"h", "hour", "hours"}, ChronoUnit.HOURS),
+        DAYS(new String[] {"d", "day", "days"}, ChronoUnit.DAYS);
 
         private final String[] descriptions;
-        private final ChronoUnit timeUnit;
+        private final TemporalUnit timeUnit;
 
-        TimeUnit(String descriptions, ChronoUnit timeUnit) {
-            this.descriptions = descriptions.split(",");
+        TimeUnit(final String[] descriptions, final TemporalUnit timeUnit) {
+            this.descriptions = descriptions;
             this.timeUnit = timeUnit;
         }
 
-        ChronoUnit getTimeUnit() {
-            return this.timeUnit;
+        private static Stream<String> getValidUnits() {
+            return Arrays.stream(values()).flatMap(unit -> Arrays.stream(unit.descriptions));
         }
 
-        static Duration getDuration(String time) {
-            String value = time.trim();
-            TemporalUnit temporalUnit = ChronoUnit.MILLIS;
-            long timeVal = 0;
-            for (TimeUnit timeUnit : values()) {
-                for (String suffix : timeUnit.descriptions) {
-                    if (value.endsWith(suffix)) {
-                        temporalUnit = timeUnit.timeUnit;
-                        timeVal = Long.parseLong(value.substring(0, value.length() - suffix.length()));
+        private static TemporalUnit parseUnit(final String unit) {
+            if (unit != null) {
+                for (final TimeUnit value : values()) {
+                    for (final String description : value.descriptions) {
+                        if (unit.equals(description)) {
+                            return value.timeUnit;
+                        }
                     }
                 }
+                throw new IllegalArgumentException("Invalid duration unit '" + unit + "'");
             }
-            return Duration.of(timeVal, temporalUnit);
+            return ChronoUnit.MILLIS;
         }
     }
 }

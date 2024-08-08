@@ -1,18 +1,18 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.log4j;
 
@@ -43,19 +43,16 @@ public abstract class AppenderSkeleton implements Appender, OptionHandler {
     /**
      * Create new instance.
      */
-    public AppenderSkeleton() {
-    }
+    public AppenderSkeleton() {}
 
-    protected AppenderSkeleton(final boolean isActive) {
-    }
+    protected AppenderSkeleton(final boolean isActive) {}
 
     @Override
-    public void activateOptions() {
-    }
+    public void activateOptions() {}
 
     @Override
     public void addFilter(final Filter newFilter) {
-        if(headFilter == null) {
+        if (headFilter == null) {
             headFilter = tailFilter = newFilter;
         } else {
             tailFilter.setNext(newFilter);
@@ -71,8 +68,7 @@ public abstract class AppenderSkeleton implements Appender, OptionHandler {
     }
 
     @Override
-    public void finalize() {
-    }
+    public void finalize() {}
 
     @Override
     public ErrorHandler getErrorHandler() {
@@ -106,12 +102,9 @@ public abstract class AppenderSkeleton implements Appender, OptionHandler {
         return ((threshold == null) || priority.isGreaterOrEqual(threshold));
     }
 
-    /**
-     * This method is never going to be called in Log4j 2 so there isn't much point in having any code in it.
-     * @param event The LoggingEvent.
-     */
     @Override
-    public void doAppend(final LoggingEvent event) {
+    public synchronized void doAppend(final LoggingEvent event) {
+        // Threshold checks and filtering is performed by the AppenderWrapper.
         append(event);
     }
 
@@ -143,33 +136,21 @@ public abstract class AppenderSkeleton implements Appender, OptionHandler {
 
     public static class NoOpErrorHandler implements ErrorHandler {
         @Override
-        public void setLogger(final Logger logger) {
-
-        }
+        public void setLogger(final Logger logger) {}
 
         @Override
-        public void error(final String message, final Exception e, final int errorCode) {
-
-        }
+        public void error(final String message, final Exception e, final int errorCode) {}
 
         @Override
-        public void error(final String message) {
-
-        }
+        public void error(final String message) {}
 
         @Override
-        public void error(final String message, final Exception e, final int errorCode, final LoggingEvent event) {
-
-        }
+        public void error(final String message, final Exception e, final int errorCode, final LoggingEvent event) {}
 
         @Override
-        public void setAppender(final Appender appender) {
-
-        }
+        public void setAppender(final Appender appender) {}
 
         @Override
-        public void setBackupAppender(final Appender appender) {
-
-        }
+        public void setBackupAppender(final Appender appender) {}
     }
 }

@@ -1,32 +1,29 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package org.apache.logging.log4j.jul;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.logging.Filter;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
-
 import org.apache.logging.log4j.message.Message;
 import org.apache.logging.log4j.message.MessageFactory;
 import org.apache.logging.log4j.spi.ExtendedLogger;
+import org.apache.logging.log4j.status.StatusLogger;
 
 /**
  * Log4j API implementation of the JUL {@link Logger} class. <strong>Note that this implementation does
@@ -49,12 +46,6 @@ public class ApiLogger extends Logger {
 
     ApiLogger(final ExtendedLogger logger) {
         super(logger.getName(), null);
-        final Level javaLevel = LevelTranslator.toJavaLevel(logger.getLevel());
-        // "java.util.logging.LoggingPermission" "control"
-        AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
-            ApiLogger.super.setLevel(javaLevel);
-            return null;
-        });
         this.logger = new WrappedLogger(logger);
     }
 
@@ -66,9 +57,9 @@ public class ApiLogger extends Logger {
         final org.apache.logging.log4j.Level level = LevelTranslator.toLevel(record.getLevel());
         final Object[] parameters = record.getParameters();
         final MessageFactory messageFactory = logger.getMessageFactory();
-        final Message message = parameters == null ?
-            messageFactory.newMessage(record.getMessage()) /* LOG4J2-1251: not formatted case */ :
-            messageFactory.newMessage(record.getMessage(), parameters);
+        final Message message = parameters == null
+                ? messageFactory.newMessage(record.getMessage()) /* LOG4J2-1251: not formatted case */
+                : messageFactory.newMessage(record.getMessage(), parameters);
         final Throwable thrown = record.getThrown();
         logger.logIfEnabled(FQCN, level, null, message, thrown);
     }
@@ -90,8 +81,18 @@ public class ApiLogger extends Logger {
     }
 
     @Override
+    public Level getLevel() {
+        // Returns the effective level instead of the configured one.
+        // The configured level is not accessible through Log4j API.
+        return LevelTranslator.toJavaLevel(logger.getLevel());
+    }
+
+    @Override
     public void setLevel(final Level newLevel) throws SecurityException {
-        throw new UnsupportedOperationException("Cannot set level through log4j-api");
+        StatusLogger.getLogger()
+                .error(
+                        "Cannot set JUL log level through log4j-api: " + "ignoring call to Logger.setLevel({})",
+                        newLevel);
     }
 
     /**
@@ -156,70 +157,101 @@ public class ApiLogger extends Logger {
     }
 
     @Override
-    public void logp(final Level level, final String sourceClass, final String sourceMethod, final String msg,
-                     final Object param1) {
+    public void logp(
+            final Level level,
+            final String sourceClass,
+            final String sourceMethod,
+            final String msg,
+            final Object param1) {
         log(level, msg, param1);
     }
 
     @Override
-    public void logp(final Level level, final String sourceClass, final String sourceMethod, final String msg,
-                     final Object[] params) {
+    public void logp(
+            final Level level,
+            final String sourceClass,
+            final String sourceMethod,
+            final String msg,
+            final Object[] params) {
         log(level, msg, params);
     }
 
     @Override
-    public void logp(final Level level, final String sourceClass, final String sourceMethod, final String msg,
-                     final Throwable thrown) {
+    public void logp(
+            final Level level,
+            final String sourceClass,
+            final String sourceMethod,
+            final String msg,
+            final Throwable thrown) {
         log(level, msg, thrown);
     }
 
     @Override
-    public void logrb(final Level level, final String sourceClass, final String sourceMethod, final String bundleName,
-                      final String msg) {
+    public void logrb(
+            final Level level,
+            final String sourceClass,
+            final String sourceMethod,
+            final String bundleName,
+            final String msg) {
         log(level, msg);
     }
 
     @Override
-    public void logrb(final Level level, final String sourceClass, final String sourceMethod, final String bundleName,
-                      final String msg, final Object param1) {
+    public void logrb(
+            final Level level,
+            final String sourceClass,
+            final String sourceMethod,
+            final String bundleName,
+            final String msg,
+            final Object param1) {
         log(level, msg, param1);
     }
 
     @Override
-    public void logrb(final Level level, final String sourceClass, final String sourceMethod, final String bundleName,
-                      final String msg, final Object[] params) {
+    public void logrb(
+            final Level level,
+            final String sourceClass,
+            final String sourceMethod,
+            final String bundleName,
+            final String msg,
+            final Object[] params) {
         log(level, msg, params);
     }
 
     @Override
-    public void logrb(final Level level, final String sourceClass, final String sourceMethod, final String bundleName,
-                      final String msg, final Throwable thrown) {
+    public void logrb(
+            final Level level,
+            final String sourceClass,
+            final String sourceMethod,
+            final String bundleName,
+            final String msg,
+            final Throwable thrown) {
         log(level, msg, thrown);
     }
 
     @Override
     public void entering(final String sourceClass, final String sourceMethod) {
-        logger.entry();
+        logger.traceEntry();
     }
 
     @Override
     public void entering(final String sourceClass, final String sourceMethod, final Object param1) {
-        logger.entry(param1);
+        logger.traceEntry(null, param1);
     }
 
     @Override
     public void entering(final String sourceClass, final String sourceMethod, final Object[] params) {
-        logger.entry(params);
+        logger.traceEntry(null, params);
     }
 
     @Override
     public void exiting(final String sourceClass, final String sourceMethod) {
-        logger.exit();
+        logger.traceExit();
     }
 
     @Override
     public void exiting(final String sourceClass, final String sourceMethod, final Object result) {
-        logger.exit(result);
+        logger.traceExit(result);
     }
 
     @Override

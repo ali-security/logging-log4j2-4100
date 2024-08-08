@@ -1,41 +1,38 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.impl;
-
-import org.apache.logging.log4j.core.util.Loader;
-import org.apache.logging.log4j.status.StatusLogger;
-import org.apache.logging.log4j.util.LoaderUtil;
 
 import java.net.URL;
 import java.security.CodeSource;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.Stack;
+import org.apache.logging.log4j.core.util.Loader;
+import org.apache.logging.log4j.status.StatusLogger;
+import org.apache.logging.log4j.util.LoaderUtil;
 
 /**
  * {@link ThrowableProxyHelper} provides utilities required to initialize a new {@link ThrowableProxy}
  * instance.
  */
-class ThrowableProxyHelper {
-
-    static final ThrowableProxy[] EMPTY_THROWABLE_PROXY_ARRAY = new ThrowableProxy[0];
+final class ThrowableProxyHelper {
 
     private ThrowableProxyHelper() {
         // Utility Class
@@ -69,7 +66,8 @@ class ThrowableProxyHelper {
      */
     static ExtendedStackTraceElement[] toExtendedStackTrace(
             final ThrowableProxy src,
-            final Stack<Class<?>> stack, final Map<String, CacheEntry> map,
+            final Deque<Class<?>> stack,
+            final Map<String, CacheEntry> map,
             final StackTraceElement[] rootTrace,
             final StackTraceElement[] stackTrace) {
         int stackLength;
@@ -87,7 +85,7 @@ class ThrowableProxyHelper {
             stackLength = stackTrace.length;
         }
         final ExtendedStackTraceElement[] extStackTrace = new ExtendedStackTraceElement[stackLength];
-        Class<?> clazz = stack.isEmpty() ? null : stack.peek();
+        Class<?> clazz = stack.isEmpty() ? null : stack.peekLast();
         ClassLoader lastLoader = null;
         for (int i = stackLength - 1; i >= 0; --i) {
             final StackTraceElement stackTraceElement = stackTrace[i];
@@ -100,8 +98,8 @@ class ThrowableProxyHelper {
                 final CacheEntry entry = toCacheEntry(clazz, true);
                 extClassInfo = entry.element;
                 lastLoader = entry.loader;
-                stack.pop();
-                clazz = stack.isEmpty() ? null : stack.peek();
+                stack.pollLast();
+                clazz = stack.peekLast();
             } else {
                 final CacheEntry cacheEntry = map.get(className);
                 if (cacheEntry != null) {
@@ -128,7 +126,7 @@ class ThrowableProxyHelper {
         try {
             final Throwable[] suppressed = thrown.getSuppressed();
             if (suppressed == null || suppressed.length == 0) {
-                return EMPTY_THROWABLE_PROXY_ARRAY;
+                return ThrowableProxy.EMPTY_ARRAY;
             }
             final List<ThrowableProxy> proxies = new ArrayList<>(suppressed.length);
             if (suppressedVisited == null) {
@@ -140,7 +138,7 @@ class ThrowableProxyHelper {
                     proxies.add(new ThrowableProxy(candidate, suppressedVisited));
                 }
             }
-            return proxies.toArray(new ThrowableProxy[proxies.size()]);
+            return proxies.toArray(ThrowableProxy.EMPTY_ARRAY);
         } catch (final Exception e) {
             StatusLogger.getLogger().error(e);
         }
@@ -190,7 +188,6 @@ class ThrowableProxyHelper {
         }
         return new CacheEntry(new ExtendedClassInfo(exact, location, version), lastLoader);
     }
-
 
     /**
      * Loads classes not located via Reflection.getCallerClass.

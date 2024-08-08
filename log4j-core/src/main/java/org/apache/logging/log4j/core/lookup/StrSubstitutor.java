@@ -1,18 +1,18 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.lookup;
 
@@ -22,11 +22,12 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
-
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.ConfigurationAware;
+import org.apache.logging.log4j.status.StatusLogger;
 import org.apache.logging.log4j.util.Strings;
 
 /**
@@ -57,7 +58,7 @@ import org.apache.logging.log4j.util.Strings;
  * The following example demonstrates this:
  * </p>
  * <pre>
- * Map valuesMap = HashMap();
+ * Map valuesMap = new HashMap&lt;&gt;();
  * valuesMap.put(&quot;animal&quot;, &quot;quick brown fox&quot;);
  * valuesMap.put(&quot;target&quot;, &quot;lazy dog&quot;);
  * String templateString = &quot;The ${animal} jumped over the ${target}.&quot;;
@@ -78,7 +79,7 @@ import org.apache.logging.log4j.util.Strings;
  * The following shows an example with variable default value settings:
  * </p>
  * <pre>
- * Map valuesMap = HashMap();
+ * Map valuesMap = new HashMap&lt;&gt;();
  * valuesMap.put(&quot;animal&quot;, &quot;quick brown fox&quot;);
  * valuesMap.put(&quot;target&quot;, &quot;lazy dog&quot;);
  * String templateString = &quot;The ${animal} jumped over the ${target}. ${undefined.number:-1234567890}.&quot;;
@@ -159,6 +160,7 @@ public class StrSubstitutor implements ConfigurationAware {
      * Constant for the default value delimiter of a variable.
      */
     public static final String DEFAULT_VALUE_DELIMITER_STRING = ":-";
+
     public static final StrMatcher DEFAULT_VALUE_DELIMITER = StrMatcher.stringMatcher(DEFAULT_VALUE_DELIMITER_STRING);
 
     public static final String ESCAPE_DELIMITER_STRING = ":\\-";
@@ -185,6 +187,7 @@ public class StrSubstitutor implements ConfigurationAware {
      * Stores the default variable value delimiter
      */
     private String valueDelimiterString;
+
     private StrMatcher valueDelimiterMatcher;
 
     /**
@@ -207,7 +210,7 @@ public class StrSubstitutor implements ConfigurationAware {
      */
     private Configuration configuration;
 
-    //-----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
     /**
      * Creates a new instance with defaults for variable prefix and suffix
      * and the escaping character.
@@ -223,7 +226,7 @@ public class StrSubstitutor implements ConfigurationAware {
      * @param valueMap  the map with the variables' values, may be null
      */
     public StrSubstitutor(final Map<String, String> valueMap) {
-        this(new MapLookup(valueMap), DEFAULT_PREFIX, DEFAULT_SUFFIX, DEFAULT_ESCAPE);
+        this(new PropertiesLookup(valueMap), DEFAULT_PREFIX, DEFAULT_SUFFIX, DEFAULT_ESCAPE);
     }
 
     /**
@@ -235,7 +238,7 @@ public class StrSubstitutor implements ConfigurationAware {
      * @throws IllegalArgumentException if the prefix or suffix is null
      */
     public StrSubstitutor(final Map<String, String> valueMap, final String prefix, final String suffix) {
-        this(new MapLookup(valueMap), prefix, suffix, DEFAULT_ESCAPE);
+        this(new PropertiesLookup(valueMap), prefix, suffix, DEFAULT_ESCAPE);
     }
 
     /**
@@ -247,9 +250,9 @@ public class StrSubstitutor implements ConfigurationAware {
      * @param escape  the escape character
      * @throws IllegalArgumentException if the prefix or suffix is null
      */
-    public StrSubstitutor(final Map<String, String> valueMap, final String prefix, final String suffix,
-                          final char escape) {
-        this(new MapLookup(valueMap), prefix, suffix, escape);
+    public StrSubstitutor(
+            final Map<String, String> valueMap, final String prefix, final String suffix, final char escape) {
+        this(new PropertiesLookup(valueMap), prefix, suffix, escape);
     }
 
     /**
@@ -262,9 +265,13 @@ public class StrSubstitutor implements ConfigurationAware {
      * @param valueDelimiter  the variable default value delimiter, may be null
      * @throws IllegalArgumentException if the prefix or suffix is null
      */
-    public StrSubstitutor(final Map<String, String> valueMap, final String prefix, final String suffix,
-                              final char escape, final String valueDelimiter) {
-        this(new MapLookup(valueMap), prefix, suffix, escape, valueDelimiter);
+    public StrSubstitutor(
+            final Map<String, String> valueMap,
+            final String prefix,
+            final String suffix,
+            final char escape,
+            final String valueDelimiter) {
+        this(new PropertiesLookup(valueMap), prefix, suffix, escape, valueDelimiter);
     }
 
     /**
@@ -295,8 +302,8 @@ public class StrSubstitutor implements ConfigurationAware {
      * @param escape  the escape character
      * @throws IllegalArgumentException if the prefix or suffix is null
      */
-    public StrSubstitutor(final StrLookup variableResolver, final String prefix, final String suffix,
-                          final char escape) {
+    public StrSubstitutor(
+            final StrLookup variableResolver, final String prefix, final String suffix, final char escape) {
         this.setVariableResolver(variableResolver);
         this.setVariablePrefix(prefix);
         this.setVariableSuffix(suffix);
@@ -313,7 +320,12 @@ public class StrSubstitutor implements ConfigurationAware {
      * @param valueDelimiter  the variable default value delimiter string, may be null
      * @throws IllegalArgumentException if the prefix or suffix is null
      */
-    public StrSubstitutor(final StrLookup variableResolver, final String prefix, final String suffix, final char escape, final String valueDelimiter) {
+    public StrSubstitutor(
+            final StrLookup variableResolver,
+            final String prefix,
+            final String suffix,
+            final char escape,
+            final String valueDelimiter) {
         this.setVariableResolver(variableResolver);
         this.setVariablePrefix(prefix);
         this.setVariableSuffix(suffix);
@@ -330,10 +342,17 @@ public class StrSubstitutor implements ConfigurationAware {
      * @param escape  the escape character
      * @throws IllegalArgumentException if the prefix or suffix is null
      */
-    public StrSubstitutor(final StrLookup variableResolver, final StrMatcher prefixMatcher,
-                          final StrMatcher suffixMatcher,
-                          final char escape) {
-        this(variableResolver, prefixMatcher, suffixMatcher, escape, DEFAULT_VALUE_DELIMITER,
+    public StrSubstitutor(
+            final StrLookup variableResolver,
+            final StrMatcher prefixMatcher,
+            final StrMatcher suffixMatcher,
+            final char escape) {
+        this(
+                variableResolver,
+                prefixMatcher,
+                suffixMatcher,
+                escape,
+                DEFAULT_VALUE_DELIMITER,
                 DEFAULT_VALUE_ESCAPE_DELIMITER);
         this.valueDelimiterString = DEFAULT_VALUE_DELIMITER_STRING;
     }
@@ -348,8 +367,12 @@ public class StrSubstitutor implements ConfigurationAware {
      * @param valueDelimiterMatcher  the variable default value delimiter matcher, may be null
      * @throws IllegalArgumentException if the prefix or suffix is null
      */
-    public StrSubstitutor(final StrLookup variableResolver, final StrMatcher prefixMatcher,
-            final StrMatcher suffixMatcher, final char escape, final StrMatcher valueDelimiterMatcher) {
+    public StrSubstitutor(
+            final StrLookup variableResolver,
+            final StrMatcher prefixMatcher,
+            final StrMatcher suffixMatcher,
+            final char escape,
+            final StrMatcher valueDelimiterMatcher) {
         this.setVariableResolver(variableResolver);
         this.setVariablePrefixMatcher(prefixMatcher);
         this.setVariableSuffixMatcher(suffixMatcher);
@@ -368,8 +391,12 @@ public class StrSubstitutor implements ConfigurationAware {
      * @param valueEscapeMatcher the matcher to escape defaulting, may be null.
      * @throws IllegalArgumentException if the prefix or suffix is null
      */
-    public StrSubstitutor(final StrLookup variableResolver, final StrMatcher prefixMatcher,
-            final StrMatcher suffixMatcher, final char escape, final StrMatcher valueDelimiterMatcher,
+    public StrSubstitutor(
+            final StrLookup variableResolver,
+            final StrMatcher prefixMatcher,
+            final StrMatcher suffixMatcher,
+            final char escape,
+            final StrMatcher valueDelimiterMatcher,
             final StrMatcher valueEscapeMatcher) {
         this.setVariableResolver(variableResolver);
         this.setVariablePrefixMatcher(prefixMatcher);
@@ -379,7 +406,20 @@ public class StrSubstitutor implements ConfigurationAware {
         valueEscapeDelimiterMatcher = valueEscapeMatcher;
     }
 
-    //-----------------------------------------------------------------------
+    StrSubstitutor(final StrSubstitutor other) {
+        Objects.requireNonNull(other, "other");
+        this.setVariableResolver(other.getVariableResolver());
+        this.setVariablePrefixMatcher(other.getVariablePrefixMatcher());
+        this.setVariableSuffixMatcher(other.getVariableSuffixMatcher());
+        this.setEscapeChar(other.getEscapeChar());
+        this.setValueDelimiterMatcher(other.valueDelimiterMatcher);
+        this.valueEscapeDelimiterMatcher = other.valueEscapeDelimiterMatcher;
+        this.configuration = other.configuration;
+        this.enableSubstitutionInVariables = other.isEnableSubstitutionInVariables();
+        this.valueDelimiterString = other.valueDelimiterString;
+    }
+
+    // -----------------------------------------------------------------------
     /**
      * Replaces all the occurrences of variables in the given source object with
      * their matching values from the map.
@@ -404,8 +444,8 @@ public class StrSubstitutor implements ConfigurationAware {
      * @return the result of the replace operation
      * @throws IllegalArgumentException if the prefix or suffix is null
      */
-    public static String replace(final Object source, final Map<String, String> valueMap, final String prefix,
-                                 final String suffix) {
+    public static String replace(
+            final Object source, final Map<String, String> valueMap, final String prefix, final String suffix) {
         return new StrSubstitutor(valueMap, prefix, suffix).replace(source);
     }
 
@@ -419,7 +459,7 @@ public class StrSubstitutor implements ConfigurationAware {
      */
     public static String replace(final Object source, final Properties valueProperties) {
         if (valueProperties == null) {
-            return source.toString();
+            return Objects.toString(source, null);
         }
         final Map<String, String> valueMap = new HashMap<>();
         final Enumeration<?> propNames = valueProperties.propertyNames();
@@ -439,7 +479,12 @@ public class StrSubstitutor implements ConfigurationAware {
         return map;
     }
 
-    //-----------------------------------------------------------------------
+    private static String handleFailedReplacement(final String input, final Throwable throwable) {
+        StatusLogger.getLogger().error("Replacement failed on {}", input, throwable);
+        return input;
+    }
+
+    // -----------------------------------------------------------------------
     /**
      * Replaces all the occurrences of variables with their matching values
      * from the resolver using the given source string as a template.
@@ -450,7 +495,7 @@ public class StrSubstitutor implements ConfigurationAware {
     public String replace(final String source) {
         return replace(null, source);
     }
-    //-----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
     /**
      * Replaces all the occurrences of variables with their matching values
      * from the resolver using the given source string as a template.
@@ -464,8 +509,12 @@ public class StrSubstitutor implements ConfigurationAware {
             return null;
         }
         final StringBuilder buf = new StringBuilder(source);
-        if (!substitute(event, buf, 0, source.length())) {
-            return source;
+        try {
+            if (!substitute(event, buf, 0, source.length())) {
+                return source;
+            }
+        } catch (Throwable t) {
+            return handleFailedReplacement(source, t);
         }
         return buf.toString();
     }
@@ -506,13 +555,17 @@ public class StrSubstitutor implements ConfigurationAware {
             return null;
         }
         final StringBuilder buf = new StringBuilder(length).append(source, offset, length);
-        if (!substitute(event, buf, 0, length)) {
-            return source.substring(offset, offset + length);
+        try {
+            if (!substitute(event, buf, 0, length)) {
+                return source.substring(offset, offset + length);
+            }
+        } catch (Throwable t) {
+            return handleFailedReplacement(source, t);
         }
         return buf.toString();
     }
 
-    //-----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
     /**
      * Replaces all the occurrences of variables with their matching values
      * from the resolver using the given source array as a template.
@@ -525,7 +578,7 @@ public class StrSubstitutor implements ConfigurationAware {
         return replace(null, source);
     }
 
-    //-----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
     /**
      * Replaces all the occurrences of variables with their matching values
      * from the resolver using the given source array as a template.
@@ -540,7 +593,11 @@ public class StrSubstitutor implements ConfigurationAware {
             return null;
         }
         final StringBuilder buf = new StringBuilder(source.length).append(source);
-        substitute(event, buf, 0, source.length);
+        try {
+            substitute(event, buf, 0, source.length);
+        } catch (Throwable t) {
+            return handleFailedReplacement(new String(source), t);
+        }
         return buf.toString();
     }
 
@@ -582,11 +639,15 @@ public class StrSubstitutor implements ConfigurationAware {
             return null;
         }
         final StringBuilder buf = new StringBuilder(length).append(source, offset, length);
-        substitute(event, buf, 0, length);
+        try {
+            substitute(event, buf, 0, length);
+        } catch (Throwable t) {
+            return handleFailedReplacement(new String(source, offset, length), t);
+        }
         return buf.toString();
     }
 
-    //-----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
     /**
      * Replaces all the occurrences of variables with their matching values
      * from the resolver using the given source buffer as a template.
@@ -599,7 +660,7 @@ public class StrSubstitutor implements ConfigurationAware {
         return replace(null, source);
     }
 
-    //-----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
     /**
      * Replaces all the occurrences of variables with their matching values
      * from the resolver using the given source buffer as a template.
@@ -614,7 +675,11 @@ public class StrSubstitutor implements ConfigurationAware {
             return null;
         }
         final StringBuilder buf = new StringBuilder(source.length()).append(source);
-        substitute(event, buf, 0, buf.length());
+        try {
+            substitute(event, buf, 0, buf.length());
+        } catch (Throwable t) {
+            return handleFailedReplacement(source.toString(), t);
+        }
         return buf.toString();
     }
 
@@ -656,11 +721,15 @@ public class StrSubstitutor implements ConfigurationAware {
             return null;
         }
         final StringBuilder buf = new StringBuilder(length).append(source, offset, length);
-        substitute(event, buf, 0, length);
+        try {
+            substitute(event, buf, 0, length);
+        } catch (Throwable t) {
+            return handleFailedReplacement(source.substring(offset, offset + length), t);
+        }
         return buf.toString();
     }
 
-    //-----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
     /**
      * Replaces all the occurrences of variables with their matching values
      * from the resolver using the given source builder as a template.
@@ -673,7 +742,7 @@ public class StrSubstitutor implements ConfigurationAware {
         return replace(null, source);
     }
 
-    //-----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
     /**
      * Replaces all the occurrences of variables with their matching values
      * from the resolver using the given source builder as a template.
@@ -688,7 +757,11 @@ public class StrSubstitutor implements ConfigurationAware {
             return null;
         }
         final StringBuilder buf = new StringBuilder(source.length()).append(source);
-        substitute(event, buf, 0, buf.length());
+        try {
+            substitute(event, buf, 0, buf.length());
+        } catch (Throwable t) {
+            return handleFailedReplacement(source.toString(), t);
+        }
         return buf.toString();
     }
     /**
@@ -729,11 +802,15 @@ public class StrSubstitutor implements ConfigurationAware {
             return null;
         }
         final StringBuilder buf = new StringBuilder(length).append(source, offset, length);
-        substitute(event, buf, 0, length);
+        try {
+            substitute(event, buf, 0, length);
+        } catch (Throwable t) {
+            return handleFailedReplacement(source.substring(offset, offset + length), t);
+        }
         return buf.toString();
     }
 
-    //-----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
     /**
      * Replaces all the occurrences of variables in the given source object with
      * their matching values from the resolver. The input source object is
@@ -745,7 +822,7 @@ public class StrSubstitutor implements ConfigurationAware {
     public String replace(final Object source) {
         return replace(null, source);
     }
-    //-----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
     /**
      * Replaces all the occurrences of variables in the given source object with
      * their matching values from the resolver. The input source object is
@@ -759,18 +836,23 @@ public class StrSubstitutor implements ConfigurationAware {
         if (source == null) {
             return null;
         }
-        final StringBuilder buf = new StringBuilder().append(source);
-        substitute(event, buf, 0, buf.length());
+        final String stringValue = String.valueOf(source);
+        final StringBuilder buf = new StringBuilder(stringValue.length()).append(stringValue);
+        try {
+            substitute(event, buf, 0, buf.length());
+        } catch (Throwable t) {
+            return handleFailedReplacement(stringValue, t);
+        }
         return buf.toString();
     }
 
-    //-----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
     /**
      * Replaces all the occurrences of variables within the given source buffer
      * with their matching values from the resolver.
      * The buffer is updated with the result.
      *
-     * @param source  the buffer to replace in, updated, null returns zero
+     * @param source  the buffer to replace in, updated, null returns false
      * @return true if altered
      */
     public boolean replaceIn(final StringBuffer source) {
@@ -789,7 +871,7 @@ public class StrSubstitutor implements ConfigurationAware {
      * The rest of the buffer is not processed, but it is not deleted.
      * </p>
      *
-     * @param source  the buffer to replace in, updated, null returns zero
+     * @param source  the buffer to replace in, updated, null returns false
      * @param offset  the start offset within the array, must be valid
      * @param length  the length within the buffer to be processed, must be valid
      * @return true if altered
@@ -808,7 +890,7 @@ public class StrSubstitutor implements ConfigurationAware {
      * </p>
      *
      * @param event the current LogEvent, if one exists.
-     * @param source  the buffer to replace in, updated, null returns zero
+     * @param source  the buffer to replace in, updated, null returns false
      * @param offset  the start offset within the array, must be valid
      * @param length  the length within the buffer to be processed, must be valid
      * @return true if altered
@@ -818,32 +900,37 @@ public class StrSubstitutor implements ConfigurationAware {
             return false;
         }
         final StringBuilder buf = new StringBuilder(length).append(source, offset, length);
-        if (!substitute(event, buf, 0, length)) {
+        try {
+            if (!substitute(event, buf, 0, length)) {
+                return false;
+            }
+        } catch (Throwable t) {
+            StatusLogger.getLogger().error("Replacement failed on {}", source, t);
             return false;
         }
         source.replace(offset, offset + length, buf.toString());
         return true;
     }
 
-    //-----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
     /**
      * Replaces all the occurrences of variables within the given source
      * builder with their matching values from the resolver.
      *
-     * @param source  the builder to replace in, updated, null returns zero
+     * @param source  the builder to replace in, updated, null returns false
      * @return true if altered
      */
     public boolean replaceIn(final StringBuilder source) {
         return replaceIn(null, source);
     }
 
-    //-----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
     /**
      * Replaces all the occurrences of variables within the given source
      * builder with their matching values from the resolver.
      *
      * @param event the current LogEvent, if one exists.
-     * @param source  the builder to replace in, updated, null returns zero
+     * @param source  the builder to replace in, updated, null returns false
      * @return true if altered
      */
     public boolean replaceIn(final LogEvent event, final StringBuilder source) {
@@ -860,7 +947,7 @@ public class StrSubstitutor implements ConfigurationAware {
      * The rest of the builder is not processed, but it is not deleted.
      * </p>
      *
-     * @param source  the builder to replace in, null returns zero
+     * @param source  the builder to replace in, null returns false
      * @param offset  the start offset within the array, must be valid
      * @param length  the length within the builder to be processed, must be valid
      * @return true if altered
@@ -878,7 +965,7 @@ public class StrSubstitutor implements ConfigurationAware {
      * </p>
      *
      * @param event   the current LogEvent, if one is present.
-     * @param source  the builder to replace in, null returns zero
+     * @param source  the builder to replace in, null returns false
      * @param offset  the start offset within the array, must be valid
      * @param length  the length within the builder to be processed, must be valid
      * @return true if altered
@@ -890,7 +977,7 @@ public class StrSubstitutor implements ConfigurationAware {
         return substitute(event, source, offset, length);
     }
 
-    //-----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
     /**
      * Internal method that substitutes the variables.
      * <p>
@@ -925,8 +1012,12 @@ public class StrSubstitutor implements ConfigurationAware {
      * @return the length change that occurs, unless priorVariables is null when the int
      *  represents a boolean flag as to whether any change occurred.
      */
-    private int substitute(final LogEvent event, final StringBuilder buf, final int offset, final int length,
-                           List<String> priorVariables) {
+    private int substitute(
+            final LogEvent event,
+            final StringBuilder buf,
+            final int offset,
+            final int length,
+            List<String> priorVariables) {
         final StrMatcher prefixMatcher = getVariablePrefixMatcher();
         final StrMatcher suffixMatcher = getVariableSuffixMatcher();
         final char escape = getEscapeChar();
@@ -972,10 +1063,15 @@ public class StrSubstitutor implements ConfigurationAware {
                     } else {
                         // found variable end marker
                         if (nestedVarCount == 0) {
-                            String varNameExpr = new String(chars, startPos + startMatchLen, pos - startPos - startMatchLen);
+                            String varNameExpr =
+                                    new String(chars, startPos + startMatchLen, pos - startPos - startMatchLen);
                             if (substitutionInVariablesEnabled) {
+                                // initialize priorVariables if they're not already set
+                                if (priorVariables == null) {
+                                    priorVariables = new ArrayList<>();
+                                }
                                 final StringBuilder bufName = new StringBuilder(varNameExpr);
-                                substitute(event, bufName, 0, bufName.length());
+                                substitute(event, bufName, 0, bufName.length(), priorVariables);
                                 varNameExpr = bufName.toString();
                             }
                             pos += endMatchLen;
@@ -985,33 +1081,42 @@ public class StrSubstitutor implements ConfigurationAware {
                             String varDefaultValue = null;
 
                             if (valueDelimiterMatcher != null) {
-                                final char [] varNameExprChars = varNameExpr.toCharArray();
+                                final char[] varNameExprChars = varNameExpr.toCharArray();
                                 int valueDelimiterMatchLen = 0;
                                 for (int i = 0; i < varNameExprChars.length; i++) {
-                                    // if there's any nested variable when nested variable substitution disabled, then stop resolving name and default value.
+                                    // if there's any nested variable when nested variable substitution disabled, then
+                                    // stop resolving name and default value.
                                     if (!substitutionInVariablesEnabled
-                                            && prefixMatcher.isMatch(varNameExprChars, i, i, varNameExprChars.length) != 0) {
+                                            && prefixMatcher.isMatch(varNameExprChars, i, i, varNameExprChars.length)
+                                                    != 0) {
                                         break;
                                     }
                                     if (valueEscapeDelimiterMatcher != null) {
-                                        int matchLen = valueEscapeDelimiterMatcher.isMatch(varNameExprChars, i);
+                                        final int matchLen = valueEscapeDelimiterMatcher.isMatch(varNameExprChars, i);
                                         if (matchLen != 0) {
-                                            String varNamePrefix = varNameExpr.substring(0, i) + Interpolator.PREFIX_SEPARATOR;
+                                            final String varNamePrefix =
+                                                    varNameExpr.substring(0, i) + Interpolator.PREFIX_SEPARATOR;
                                             varName = varNamePrefix + varNameExpr.substring(i + matchLen - 1);
-                                            for (int j = i + matchLen; j < varNameExprChars.length; ++j){
-                                                if ((valueDelimiterMatchLen = valueDelimiterMatcher.isMatch(varNameExprChars, j)) != 0) {
+                                            for (int j = i + matchLen; j < varNameExprChars.length; ++j) {
+                                                if ((valueDelimiterMatchLen =
+                                                                valueDelimiterMatcher.isMatch(varNameExprChars, j))
+                                                        != 0) {
                                                     varName = varNamePrefix + varNameExpr.substring(i + matchLen, j);
                                                     varDefaultValue = varNameExpr.substring(j + valueDelimiterMatchLen);
                                                     break;
                                                 }
                                             }
                                             break;
-                                        } else if ((valueDelimiterMatchLen = valueDelimiterMatcher.isMatch(varNameExprChars, i)) != 0) {
+                                        } else if ((valueDelimiterMatchLen =
+                                                        valueDelimiterMatcher.isMatch(varNameExprChars, i))
+                                                != 0) {
                                             varName = varNameExpr.substring(0, i);
                                             varDefaultValue = varNameExpr.substring(i + valueDelimiterMatchLen);
                                             break;
                                         }
-                                    } else if ((valueDelimiterMatchLen = valueDelimiterMatcher.isMatch(varNameExprChars, i)) != 0) {
+                                    } else if ((valueDelimiterMatchLen =
+                                                    valueDelimiterMatcher.isMatch(varNameExprChars, i))
+                                            != 0) {
                                         varName = varNameExpr.substring(0, i);
                                         varDefaultValue = varNameExpr.substring(i + valueDelimiterMatchLen);
                                         break;
@@ -1026,11 +1131,12 @@ public class StrSubstitutor implements ConfigurationAware {
                             }
 
                             // handle cyclic substitution
-                            checkCyclicSubstitution(varName, priorVariables);
-                            priorVariables.add(varName);
+                            final boolean isCyclic = isCyclicSubstitution(varName, priorVariables);
 
                             // resolve the variable
-                            String varValue = resolveVariable(event, varName, buf, startPos, endPos);
+                            final LookupResult resolvedResult =
+                                    isCyclic ? null : resolveVariable(event, varName, buf, startPos, endPos);
+                            String varValue = resolvedResult == null ? null : resolvedResult.value();
                             if (varValue == null) {
                                 varValue = varDefaultValue;
                             }
@@ -1039,7 +1145,9 @@ public class StrSubstitutor implements ConfigurationAware {
                                 final int varLen = varValue.length();
                                 buf.replace(startPos, endPos, varValue);
                                 altered = true;
-                                int change = substitute(event, buf, startPos, varLen, priorVariables);
+                                int change = resolvedResult != null && resolvedResult.isLookupEvaluationAllowedInValue()
+                                        ? substitute(event, buf, startPos, varLen, priorVariables)
+                                        : 0;
                                 change = change + (varLen - (endPos - startPos));
                                 pos += change;
                                 bufEnd += change;
@@ -1048,7 +1156,9 @@ public class StrSubstitutor implements ConfigurationAware {
                             }
 
                             // remove variable from the cyclic stack
-                            priorVariables.remove(priorVariables.size() - 1);
+                            if (!isCyclic) {
+                                priorVariables.remove(priorVariables.size() - 1);
+                            }
                             break;
                         }
                         nestedVarCount--;
@@ -1064,21 +1174,23 @@ public class StrSubstitutor implements ConfigurationAware {
     }
 
     /**
-     * Checks if the specified variable is already in the stack (list) of variables.
+     * Checks if the specified variable is already in the stack (list) of variables, adding the value
+     * if it's not already present.
      *
      * @param varName  the variable name to check
      * @param priorVariables  the list of prior variables
+     * @return true if this is a cyclic substitution
      */
-    private void checkCyclicSubstitution(final String varName, final List<String> priorVariables) {
+    private boolean isCyclicSubstitution(final String varName, final List<String> priorVariables) {
         if (!priorVariables.contains(varName)) {
-            return;
+            priorVariables.add(varName);
+            return false;
         }
         final StringBuilder buf = new StringBuilder(BUF_SIZE);
         buf.append("Infinite loop in property interpolation of ");
-        buf.append(priorVariables.remove(0));
-        buf.append(": ");
         appendWithSeparators(buf, priorVariables, "->");
-        throw new IllegalStateException(buf.toString());
+        StatusLogger.getLogger().warn(buf);
+        return true;
     }
 
     /**
@@ -1101,17 +1213,26 @@ public class StrSubstitutor implements ConfigurationAware {
      * @param endPos  the end position of the variable including the suffix, valid
      * @return the variable's value or <b>null</b> if the variable is unknown
      */
-    protected String resolveVariable(final LogEvent event, final String variableName, final StringBuilder buf,
-                                     final int startPos, final int endPos) {
+    protected LookupResult resolveVariable(
+            final LogEvent event,
+            final String variableName,
+            final StringBuilder buf,
+            final int startPos,
+            final int endPos) {
         final StrLookup resolver = getVariableResolver();
         if (resolver == null) {
             return null;
         }
-        return resolver.lookup(event, variableName);
+        try {
+            return resolver.evaluate(event, variableName);
+        } catch (Throwable t) {
+            StatusLogger.getLogger().error("Resolver failed to lookup {}", variableName, t);
+            return null;
+        }
     }
 
     // Escape
-    //-----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
     /**
      * Returns the escape character.
      *
@@ -1133,7 +1254,7 @@ public class StrSubstitutor implements ConfigurationAware {
     }
 
     // Prefix
-    //-----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
     /**
      * Gets the variable prefix matcher currently in use.
      * <p>
@@ -1156,13 +1277,13 @@ public class StrSubstitutor implements ConfigurationAware {
      * allowing advanced prefix matches.
      * </p>
      *
-     * @param prefixMatcher  the prefix matcher to use, null ignored
+     * @param prefixMatcher  the prefix matcher to use, must not be null
      * @return this, to enable chaining
      * @throws IllegalArgumentException if the prefix matcher is null
      */
     public StrSubstitutor setVariablePrefixMatcher(final StrMatcher prefixMatcher) {
         if (prefixMatcher == null) {
-            throw new IllegalArgumentException("Variable prefix matcher must not be null!");
+            throw new IllegalArgumentException("Parameter prefixMatcher must not be null!");
         }
         this.prefixMatcher = prefixMatcher;
         return this;
@@ -1195,14 +1316,14 @@ public class StrSubstitutor implements ConfigurationAware {
      * @throws IllegalArgumentException if the prefix is null
      */
     public StrSubstitutor setVariablePrefix(final String prefix) {
-       if (prefix == null) {
+        if (prefix == null) {
             throw new IllegalArgumentException("Variable prefix must not be null!");
         }
         return setVariablePrefixMatcher(StrMatcher.stringMatcher(prefix));
     }
 
     // Suffix
-    //-----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
     /**
      * Gets the variable suffix matcher currently in use.
      * <p>
@@ -1225,13 +1346,13 @@ public class StrSubstitutor implements ConfigurationAware {
      * allowing advanced suffix matches.
      * </p>
      *
-     * @param suffixMatcher  the suffix matcher to use, null ignored
+     * @param suffixMatcher  the suffix matcher to use, must not be null
      * @return this, to enable chaining
      * @throws IllegalArgumentException if the suffix matcher is null
      */
     public StrSubstitutor setVariableSuffixMatcher(final StrMatcher suffixMatcher) {
         if (suffixMatcher == null) {
-            throw new IllegalArgumentException("Variable suffix matcher must not be null!");
+            throw new IllegalArgumentException("Parameter suffixMatcher must not be null!");
         }
         this.suffixMatcher = suffixMatcher;
         return this;
@@ -1264,14 +1385,14 @@ public class StrSubstitutor implements ConfigurationAware {
      * @throws IllegalArgumentException if the suffix is null
      */
     public StrSubstitutor setVariableSuffix(final String suffix) {
-       if (suffix == null) {
+        if (suffix == null) {
             throw new IllegalArgumentException("Variable suffix must not be null!");
         }
         return setVariableSuffixMatcher(StrMatcher.stringMatcher(suffix));
     }
 
     // Variable Default Value Delimiter
-    //-----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
     /**
      * Gets the variable default value delimiter matcher currently in use.
      * <p>
@@ -1344,14 +1465,14 @@ public class StrSubstitutor implements ConfigurationAware {
             setValueDelimiterMatcher(null);
             return this;
         }
-        String escapeValue = valueDelimiter.substring(0, valueDelimiter.length() - 1) + "\\"
+        final String escapeValue = valueDelimiter.substring(0, valueDelimiter.length() - 1) + "\\"
                 + valueDelimiter.substring(valueDelimiter.length() - 1);
         valueEscapeDelimiterMatcher = StrMatcher.stringMatcher(escapeValue);
         return setValueDelimiterMatcher(StrMatcher.stringMatcher(valueDelimiter));
     }
 
     // Resolver
-    //-----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
     /**
      * Gets the VariableResolver that is used to lookup variables.
      *
@@ -1374,7 +1495,7 @@ public class StrSubstitutor implements ConfigurationAware {
     }
 
     // Substitution support in variable names
-    //-----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
     /**
      * Returns a flag whether substitution is done in variable names.
      *

@@ -1,33 +1,36 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package org.apache.logging.log4j.core.config.plugins.processor;
 
+import static org.apache.logging.log4j.util.Strings.toRootLowerCase;
+
+import aQute.bnd.annotation.Resolution;
+import aQute.bnd.annotation.spi.ServiceProvider;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Messager;
+import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.lang.model.SourceVersion;
@@ -39,7 +42,6 @@ import javax.lang.model.util.SimpleElementVisitor7;
 import javax.tools.Diagnostic.Kind;
 import javax.tools.FileObject;
 import javax.tools.StandardLocation;
-
 import org.apache.logging.log4j.core.config.plugins.Plugin;
 import org.apache.logging.log4j.core.config.plugins.PluginAliases;
 import org.apache.logging.log4j.util.Strings;
@@ -47,10 +49,13 @@ import org.apache.logging.log4j.util.Strings;
 /**
  * Annotation processor for pre-scanning Log4j 2 plugins.
  */
+@ServiceProvider(value = Processor.class, resolution = Resolution.OPTIONAL)
 @SupportedAnnotationTypes("org.apache.logging.log4j.core.config.plugins.*")
 public class PluginProcessor extends AbstractProcessor {
 
     // TODO: this could be made more abstract to allow for compile-time and run-time plugin processing
+
+    private static final Element[] EMPTY_ELEMENT_ARRAY = {};
 
     /**
      * The location of the plugin cache data file. This file is written to by this processor, and read from by
@@ -68,7 +73,7 @@ public class PluginProcessor extends AbstractProcessor {
 
     @Override
     public boolean process(final Set<? extends TypeElement> annotations, final RoundEnvironment roundEnv) {
-        Messager messager = processingEnv.getMessager();
+        final Messager messager = processingEnv.getMessager();
         messager.printMessage(Kind.NOTE, "Processing Log4j annotations");
         try {
             final Set<? extends Element> elements = roundEnv.getElementsAnnotatedWith(Plugin.class);
@@ -77,7 +82,7 @@ public class PluginProcessor extends AbstractProcessor {
                 return false;
             }
             collectPlugins(elements);
-            writeCacheFile(elements.toArray(new Element[elements.size()]));
+            writeCacheFile(elements.toArray(EMPTY_ELEMENT_ARRAY));
             messager.printMessage(Kind.NOTE, "Annotations processed");
             return true;
         } catch (final Exception ex) {
@@ -94,8 +99,8 @@ public class PluginProcessor extends AbstractProcessor {
     private void collectPlugins(final Iterable<? extends Element> elements) {
         final Elements elementUtils = processingEnv.getElementUtils();
         final ElementVisitor<PluginEntry, Plugin> pluginVisitor = new PluginElementVisitor(elementUtils);
-        final ElementVisitor<Collection<PluginEntry>, Plugin> pluginAliasesVisitor = new PluginAliasesElementVisitor(
-                elementUtils);
+        final ElementVisitor<Collection<PluginEntry>, Plugin> pluginAliasesVisitor =
+                new PluginAliasesElementVisitor(elementUtils);
         for (final Element element : elements) {
             final Plugin plugin = element.getAnnotation(Plugin.class);
             if (plugin == null) {
@@ -112,8 +117,9 @@ public class PluginProcessor extends AbstractProcessor {
     }
 
     private void writeCacheFile(final Element... elements) throws IOException {
-        final FileObject fileObject = processingEnv.getFiler().createResource(StandardLocation.CLASS_OUTPUT, Strings.EMPTY,
-                PLUGIN_CACHE_FILE, elements);
+        final FileObject fileObject = processingEnv
+                .getFiler()
+                .createResource(StandardLocation.CLASS_OUTPUT, Strings.EMPTY, PLUGIN_CACHE_FILE, elements);
         try (final OutputStream out = fileObject.openOutputStream()) {
             pluginCache.writeCache(out);
         }
@@ -122,7 +128,7 @@ public class PluginProcessor extends AbstractProcessor {
     /**
      * ElementVisitor to scan the Plugin annotation.
      */
-    private static class PluginElementVisitor extends SimpleElementVisitor7<PluginEntry, Plugin> {
+    private static final class PluginElementVisitor extends SimpleElementVisitor7<PluginEntry, Plugin> {
 
         private final Elements elements;
 
@@ -134,7 +140,7 @@ public class PluginProcessor extends AbstractProcessor {
         public PluginEntry visitType(final TypeElement e, final Plugin plugin) {
             Objects.requireNonNull(plugin, "Plugin annotation is null.");
             final PluginEntry entry = new PluginEntry();
-            entry.setKey(plugin.name().toLowerCase(Locale.US));
+            entry.setKey(toRootLowerCase(plugin.name()));
             entry.setClassName(elements.getBinaryName(e).toString());
             entry.setName(Plugin.EMPTY.equals(plugin.elementType()) ? plugin.name() : plugin.elementType());
             entry.setPrintable(plugin.printObject());
@@ -147,12 +153,13 @@ public class PluginProcessor extends AbstractProcessor {
     /**
      * ElementVisitor to scan the PluginAliases annotation.
      */
-    private static class PluginAliasesElementVisitor extends SimpleElementVisitor7<Collection<PluginEntry>, Plugin> {
+    private static final class PluginAliasesElementVisitor
+            extends SimpleElementVisitor7<Collection<PluginEntry>, Plugin> {
 
         private final Elements elements;
 
         private PluginAliasesElementVisitor(final Elements elements) {
-            super(Collections.<PluginEntry> emptyList());
+            super(Collections.<PluginEntry>emptyList());
             this.elements = elements;
         }
 
@@ -165,7 +172,7 @@ public class PluginProcessor extends AbstractProcessor {
             final Collection<PluginEntry> entries = new ArrayList<>(aliases.value().length);
             for (final String alias : aliases.value()) {
                 final PluginEntry entry = new PluginEntry();
-                entry.setKey(alias.toLowerCase(Locale.US));
+                entry.setKey(toRootLowerCase(alias));
                 entry.setClassName(elements.getBinaryName(e).toString());
                 entry.setName(Plugin.EMPTY.equals(plugin.elementType()) ? alias : plugin.elementType());
                 entry.setPrintable(plugin.printObject());

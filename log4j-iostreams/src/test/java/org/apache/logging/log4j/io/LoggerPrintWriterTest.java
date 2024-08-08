@@ -2,11 +2,11 @@
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,13 +16,13 @@
  */
 package org.apache.logging.log4j.io;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertSame;
+
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.Writer;
-
 import org.junit.Test;
-
-import static org.junit.Assert.*;
 
 public class LoggerPrintWriterTest extends AbstractLoggerWriterTest {
     private PrintWriter print;
@@ -34,8 +34,7 @@ public class LoggerPrintWriterTest extends AbstractLoggerWriterTest {
 
     @Override
     protected Writer createWriterWrapper() {
-        this.print =
-            IoBuilder.forLogger(getExtendedLogger())
+        this.print = IoBuilder.forLogger(getExtendedLogger())
                 .filter(this.wrapped)
                 .setLevel(LEVEL)
                 .buildPrintWriter();
@@ -118,7 +117,7 @@ public class LoggerPrintWriterTest extends AbstractLoggerWriterTest {
 
     @Test
     public void testPrintf() throws Exception {
-        assertSame(this.print,  this.print.printf("<<<%s>>>", FIRST));
+        assertSame(this.print, this.print.printf("<<<%s>>>", FIRST));
         assertMessages();
         this.print.println();
         assertMessages("<<<" + FIRST + ">>>");

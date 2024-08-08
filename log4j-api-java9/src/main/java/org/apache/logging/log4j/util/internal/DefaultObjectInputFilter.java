@@ -1,43 +1,27 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.util.internal;
 
+import static org.apache.logging.log4j.util.internal.SerializationUtil.REQUIRED_JAVA_CLASSES;
+import static org.apache.logging.log4j.util.internal.SerializationUtil.REQUIRED_JAVA_PACKAGES;
+
 import java.io.ObjectInputFilter;
-import java.util.Arrays;
-import java.util.List;
 
 public class DefaultObjectInputFilter implements ObjectInputFilter {
-
-
-    private static final List<String> REQUIRED_JAVA_CLASSES = Arrays.asList(
-            "java.math.BigDecimal",
-            "java.math.BigInteger",
-            // for Message delegate
-            "java.rmi.MarshalledObject",
-            "[B"
-    );
-
-    private static final List<String> REQUIRED_JAVA_PACKAGES = Arrays.asList(
-            "java.lang.",
-            "java.time",
-            "java.util.",
-            "org.apache.logging.log4j.",
-            "[Lorg.apache.logging.log4j."
-    );
 
     private final ObjectInputFilter delegate;
 
@@ -45,7 +29,7 @@ public class DefaultObjectInputFilter implements ObjectInputFilter {
         delegate = null;
     }
 
-    public DefaultObjectInputFilter(ObjectInputFilter filter) {
+    public DefaultObjectInputFilter(final ObjectInputFilter filter) {
         delegate = filter;
     }
 
@@ -54,21 +38,20 @@ public class DefaultObjectInputFilter implements ObjectInputFilter {
      * @param filter The ObjectInputFilter.
      * @return The DefaultObjectInputFilter.
      */
-    public static DefaultObjectInputFilter newInstance(ObjectInputFilter filter) {
+    public static DefaultObjectInputFilter newInstance(final ObjectInputFilter filter) {
         return new DefaultObjectInputFilter(filter);
     }
 
-
     @Override
-    public Status checkInput(FilterInfo filterInfo) {
-        Status status = null;
+    public Status checkInput(final FilterInfo filterInfo) {
+        Status status;
         if (delegate != null) {
             status = delegate.checkInput(filterInfo);
             if (status != Status.UNDECIDED) {
                 return status;
             }
         }
-        ObjectInputFilter serialFilter = ObjectInputFilter.Config.getSerialFilter();
+        final ObjectInputFilter serialFilter = ObjectInputFilter.Config.getSerialFilter();
         if (serialFilter != null) {
             status = serialFilter.checkInput(filterInfo);
             if (status != Status.UNDECIDED) {
@@ -76,11 +59,15 @@ public class DefaultObjectInputFilter implements ObjectInputFilter {
                 return status;
             }
         }
-        if (filterInfo.serialClass() != null) {
-            String name = filterInfo.serialClass().getName();
-            if (isAllowedByDefault(name) || isRequiredPackage(name)) {
+        final Class<?> serialClass = filterInfo.serialClass();
+        if (serialClass != null) {
+            final String name = SerializationUtil.stripArray(serialClass);
+            if (isAllowedByDefault(name)) {
                 return Status.ALLOWED;
             }
+        } else {
+            // Object already deserialized
+            return Status.ALLOWED;
         }
         return Status.REJECTED;
     }

@@ -2,7 +2,7 @@
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
@@ -16,6 +16,10 @@
  */
 package org.apache.log4j.rewrite;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.StringTokenizer;
 import org.apache.log4j.bridge.LogEventAdapter;
 import org.apache.log4j.helpers.OptionConverter;
 import org.apache.log4j.spi.LocationInfo;
@@ -24,11 +28,6 @@ import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.impl.Log4jLogEvent;
 import org.apache.logging.log4j.message.SimpleMessage;
 import org.apache.logging.log4j.util.SortedArrayStringMap;
-
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.StringTokenizer;
 
 /**
  * This policy rewrites events by adding
@@ -42,8 +41,7 @@ import java.util.StringTokenizer;
 public class PropertyRewritePolicy implements RewritePolicy {
     private Map<String, String> properties = Collections.EMPTY_MAP;
 
-    public PropertyRewritePolicy() {
-    }
+    public PropertyRewritePolicy() {}
 
     /**
      * Set a string representing the property name/value pairs.
@@ -56,12 +54,14 @@ public class PropertyRewritePolicy implements RewritePolicy {
      *
      * @param properties The properties.
      */
-    public void setProperties(String properties) {
-        Map<String, String> newMap = new HashMap<>();
-        StringTokenizer pairs = new StringTokenizer(properties, ",");
+    public void setProperties(final String properties) {
+        final Map<String, String> newMap = new HashMap<>();
+        final StringTokenizer pairs = new StringTokenizer(properties, ",");
         while (pairs.hasMoreTokens()) {
-            StringTokenizer entry = new StringTokenizer(pairs.nextToken(), "=");
-            newMap.put(entry.nextElement().toString().trim(), entry.nextElement().toString().trim());
+            final StringTokenizer entry = new StringTokenizer(pairs.nextToken(), "=");
+            newMap.put(
+                    entry.nextElement().toString().trim(),
+                    entry.nextElement().toString().trim());
         }
         synchronized (this) {
             this.properties = newMap;
@@ -74,8 +74,8 @@ public class PropertyRewritePolicy implements RewritePolicy {
     @Override
     public LoggingEvent rewrite(final LoggingEvent source) {
         if (!properties.isEmpty()) {
-            Map<String, String> rewriteProps = source.getProperties() != null ? new HashMap<>(source.getProperties())
-                    : new HashMap<>();
+            final Map<String, String> rewriteProps =
+                    source.getProperties() != null ? new HashMap<>(source.getProperties()) : new HashMap<>();
             for (Map.Entry<String, String> entry : properties.entrySet()) {
                 if (!rewriteProps.containsKey(entry.getKey())) {
                     rewriteProps.put(entry.getKey(), entry.getValue());
@@ -87,12 +87,15 @@ public class PropertyRewritePolicy implements RewritePolicy {
                         .setContextData(new SortedArrayStringMap(rewriteProps))
                         .build();
             } else {
-                LocationInfo info = source.getLocationInformation();
-                StackTraceElement element = new StackTraceElement(info.getClassName(), info.getMethodName(),
-                        info.getFileName(), Integer.parseInt(info.getLineNumber()));
-                Thread thread = getThread(source.getThreadName());
-                long threadId = thread != null ? thread.getId() : 0;
-                int threadPriority = thread != null ? thread.getPriority() : 0;
+                final LocationInfo info = source.getLocationInformation();
+                final StackTraceElement element = new StackTraceElement(
+                        info.getClassName(),
+                        info.getMethodName(),
+                        info.getFileName(),
+                        Integer.parseInt(info.getLineNumber()));
+                final Thread thread = getThread(source.getThreadName());
+                final long threadId = thread != null ? thread.getId() : 0;
+                final int threadPriority = thread != null ? thread.getPriority() : 0;
                 event = Log4jLogEvent.newBuilder()
                         .setContextData(new SortedArrayStringMap(rewriteProps))
                         .setLevel(OptionConverter.convertLevel(source.getLevel()))
@@ -115,7 +118,7 @@ public class PropertyRewritePolicy implements RewritePolicy {
         return source;
     }
 
-    private Thread getThread(String name) {
+    private Thread getThread(final String name) {
         for (Thread thread : Thread.getAllStackTraces().keySet()) {
             if (thread.getName().equals(name)) {
                 return thread;

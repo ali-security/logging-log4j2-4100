@@ -1,27 +1,25 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package org.apache.logging.log4j.core.appender.mom.jeromq;
 
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.logging.log4j.core.Appender;
 import org.apache.logging.log4j.core.Filter;
 import org.apache.logging.log4j.core.Layout;
@@ -63,18 +61,57 @@ public final class JeroMqAppender extends AbstractAppender {
     private int sendRcFalse;
     private int sendRcTrue;
 
-    private JeroMqAppender(final String name, final Filter filter, final Layout<? extends Serializable> layout,
-            final boolean ignoreExceptions, final List<String> endpoints, final long affinity, final long backlog,
-            final boolean delayAttachOnConnect, final byte[] identity, final boolean ipv4Only, final long linger,
-            final long maxMsgSize, final long rcvHwm, final long receiveBufferSize, final int receiveTimeOut,
-            final long reconnectIVL, final long reconnectIVLMax, final long sendBufferSize, final int sendTimeOut,
-            final long sndHWM, final int tcpKeepAlive, final long tcpKeepAliveCount, final long tcpKeepAliveIdle,
-            final long tcpKeepAliveInterval, final boolean xpubVerbose, final Property[] properties) {
+    private JeroMqAppender(
+            final String name,
+            final Filter filter,
+            final Layout<? extends Serializable> layout,
+            final boolean ignoreExceptions,
+            final List<String> endpoints,
+            final long affinity,
+            final long backlog,
+            final boolean delayAttachOnConnect,
+            final byte[] identity,
+            final boolean ipv4Only,
+            final long linger,
+            final long maxMsgSize,
+            final long rcvHwm,
+            final long receiveBufferSize,
+            final int receiveTimeOut,
+            final long reconnectIVL,
+            final long reconnectIVLMax,
+            final long sendBufferSize,
+            final int sendTimeOut,
+            final long sndHWM,
+            final int tcpKeepAlive,
+            final long tcpKeepAliveCount,
+            final long tcpKeepAliveIdle,
+            final long tcpKeepAliveInterval,
+            final boolean xpubVerbose,
+            final Property[] properties) {
         super(name, filter, layout, ignoreExceptions, properties);
-        this.manager = JeroMqManager.getJeroMqManager(name, affinity, backlog, delayAttachOnConnect, identity, ipv4Only,
-            linger, maxMsgSize, rcvHwm, receiveBufferSize, receiveTimeOut, reconnectIVL, reconnectIVLMax,
-            sendBufferSize, sendTimeOut, sndHWM, tcpKeepAlive, tcpKeepAliveCount, tcpKeepAliveIdle,
-            tcpKeepAliveInterval, xpubVerbose, endpoints);
+        this.manager = JeroMqManager.getJeroMqManager(
+                name,
+                affinity,
+                backlog,
+                delayAttachOnConnect,
+                identity,
+                ipv4Only,
+                linger,
+                maxMsgSize,
+                rcvHwm,
+                receiveBufferSize,
+                receiveTimeOut,
+                reconnectIVL,
+                reconnectIVLMax,
+                sendBufferSize,
+                sendTimeOut,
+                sndHWM,
+                tcpKeepAlive,
+                tcpKeepAliveCount,
+                tcpKeepAliveIdle,
+                tcpKeepAliveInterval,
+                xpubVerbose,
+                endpoints);
         this.endpoints = endpoints;
     }
 
@@ -111,7 +148,7 @@ public final class JeroMqAppender extends AbstractAppender {
             @PluginAttribute(value = "tcpKeepAliveInterval", defaultLong = -1) final long tcpKeepAliveInterval,
             @PluginAttribute(value = "xpubVerbose") final boolean xpubVerbose
             // @formatter:on
-    ) {
+            ) {
         if (layout == null) {
             layout = PatternLayout.createDefaultLayout();
         }
@@ -129,12 +166,40 @@ public final class JeroMqAppender extends AbstractAppender {
                 }
             }
         }
-        LOGGER.debug("Creating JeroMqAppender with name={}, filter={}, layout={}, ignoreExceptions={}, endpoints={}",
-                name, filter, layout, ignoreExceptions, endpoints);
-        return new JeroMqAppender(name, filter, layout, ignoreExceptions, endpoints, affinity, backlog,
-                delayAttachOnConnect, identity, ipv4Only, linger, maxMsgSize, rcvHwm, receiveBufferSize,
-                receiveTimeOut, reconnectIVL, reconnectIVLMax, sendBufferSize, sendTimeOut, sndHwm, tcpKeepAlive,
-                tcpKeepAliveCount, tcpKeepAliveIdle, tcpKeepAliveInterval, xpubVerbose, null);
+        LOGGER.debug(
+                "Creating JeroMqAppender with name={}, filter={}, layout={}, ignoreExceptions={}, endpoints={}",
+                name,
+                filter,
+                layout,
+                ignoreExceptions,
+                endpoints);
+        return new JeroMqAppender(
+                name,
+                filter,
+                layout,
+                ignoreExceptions,
+                endpoints,
+                affinity,
+                backlog,
+                delayAttachOnConnect,
+                identity,
+                ipv4Only,
+                linger,
+                maxMsgSize,
+                rcvHwm,
+                receiveBufferSize,
+                receiveTimeOut,
+                reconnectIVL,
+                reconnectIVLMax,
+                sendBufferSize,
+                sendTimeOut,
+                sndHwm,
+                tcpKeepAlive,
+                tcpKeepAliveCount,
+                tcpKeepAliveIdle,
+                tcpKeepAliveInterval,
+                xpubVerbose,
+                null);
     }
 
     @Override
@@ -145,7 +210,8 @@ public final class JeroMqAppender extends AbstractAppender {
             sendRcTrue++;
         } else {
             sendRcFalse++;
-            LOGGER.error("Appender {} could not send message {} to JeroMQ {}", getName(), sendRcFalse, formattedMessage);
+            LOGGER.error(
+                    "Appender {} could not send message {} to JeroMQ {}", getName(), sendRcFalse, formattedMessage);
         }
     }
 
@@ -173,13 +239,17 @@ public final class JeroMqAppender extends AbstractAppender {
         sendRcTrue = sendRcFalse = 0;
     }
 
+    // not public, handy for testing
+    JeroMqManager getManager() {
+        return manager;
+    }
+
     @Override
     public String toString() {
-        return "JeroMqAppender{" +
-            "name=" + getName() +
-            ", state=" + getState() +
-            ", manager=" + manager +
-            ", endpoints=" + endpoints +
-            '}';
+        return "JeroMqAppender{" + "name="
+                + getName() + ", state="
+                + getState() + ", manager="
+                + manager + ", endpoints="
+                + endpoints + '}';
     }
 }

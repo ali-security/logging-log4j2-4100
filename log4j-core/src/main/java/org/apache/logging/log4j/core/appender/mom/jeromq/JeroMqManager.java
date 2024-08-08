@@ -1,33 +1,39 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package org.apache.logging.log4j.core.appender.mom.jeromq;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.core.appender.AbstractManager;
 import org.apache.logging.log4j.core.appender.ManagerFactory;
 import org.apache.logging.log4j.core.util.Cancellable;
 import org.apache.logging.log4j.core.util.ShutdownCallbackRegistry;
 import org.apache.logging.log4j.util.PropertiesUtil;
+import org.zeromq.SocketType;
+import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
+import org.zeromq.ZMQ.Socket;
+import org.zeromq.ZMonitor;
+import org.zeromq.ZMonitor.Event;
+import org.zeromq.ZMonitor.ZEvent;
 
 /**
  * Manager for publishing messages via JeroMq.
@@ -47,7 +53,7 @@ public class JeroMqManager extends AbstractManager {
     public static final String SYS_PROPERTY_IO_THREADS = "log4j.jeromq.ioThreads";
 
     private static final JeroMqManagerFactory FACTORY = new JeroMqManagerFactory();
-    private static final ZMQ.Context CONTEXT;
+    private static final ZContext CONTEXT;
 
     // Retained to avoid garbage collection of the hook
     private static final Cancellable SHUTDOWN_HOOK;
@@ -57,11 +63,11 @@ public class JeroMqManager extends AbstractManager {
 
         final int ioThreads = PropertiesUtil.getProperties().getIntegerProperty(SYS_PROPERTY_IO_THREADS, 1);
         LOGGER.trace("JeroMqManager creating ZMQ context with ioThreads = {}", ioThreads);
-        CONTEXT = ZMQ.context(ioThreads);
+        CONTEXT = new ZContext(ioThreads);
 
-        final boolean enableShutdownHook = PropertiesUtil.getProperties().getBooleanProperty(
-            SYS_PROPERTY_ENABLE_SHUTDOWN_HOOK, true);
-        if (enableShutdownHook) {
+        final boolean enableShutdownHook =
+                PropertiesUtil.getProperties().getBooleanProperty(SYS_PROPERTY_ENABLE_SHUTDOWN_HOOK, true);
+        if (enableShutdownHook && LogManager.getFactory() instanceof ShutdownCallbackRegistry) {
             SHUTDOWN_HOOK = ((ShutdownCallbackRegistry) LogManager.getFactory()).addShutdownCallback(CONTEXT::close);
         } else {
             SHUTDOWN_HOOK = null;
@@ -69,10 +75,14 @@ public class JeroMqManager extends AbstractManager {
     }
 
     private final ZMQ.Socket publisher;
+    private final List<String> endpoints;
 
     private JeroMqManager(final String name, final JeroMqConfiguration config) {
         super(null, name);
-        publisher = CONTEXT.socket(ZMQ.PUB);
+        publisher = CONTEXT.createSocket(SocketType.PUB);
+        final ZMonitor monitor = new ZMonitor(CONTEXT, publisher);
+        monitor.add(Event.LISTENING);
+        monitor.start();
         publisher.setAffinity(config.affinity);
         publisher.setBacklog(config.backlog);
         publisher.setDelayAttachOnConnect(config.delayAttachOnConnect);
@@ -95,9 +105,16 @@ public class JeroMqManager extends AbstractManager {
         publisher.setTCPKeepAliveIdle(config.tcpKeepAliveIdle);
         publisher.setTCPKeepAliveInterval(config.tcpKeepAliveInterval);
         publisher.setXpubVerbose(config.xpubVerbose);
+        final List<String> endpoints = new ArrayList<String>(config.endpoints.size());
         for (final String endpoint : config.endpoints) {
             publisher.bind(endpoint);
+            // Retrieve the standardized list of endpoints,
+            // this also converts port 0 to an ephemeral port.
+            final ZEvent event = monitor.nextEvent();
+            endpoints.add(event.address);
         }
+        this.endpoints = Collections.unmodifiableList(endpoints);
+        monitor.destroy();
         LOGGER.debug("Created JeroMqManager with {}", config);
     }
 
@@ -111,28 +128,74 @@ public class JeroMqManager extends AbstractManager {
         return true;
     }
 
-    public static JeroMqManager getJeroMqManager(final String name, final long affinity, final long backlog,
-                                                 final boolean delayAttachOnConnect, final byte[] identity,
-                                                 final boolean ipv4Only, final long linger, final long maxMsgSize,
-                                                 final long rcvHwm, final long receiveBufferSize,
-                                                 final int receiveTimeOut, final long reconnectIVL,
-                                                 final long reconnectIVLMax, final long sendBufferSize,
-                                                 final int sendTimeOut, final long sndHwm, final int tcpKeepAlive,
-                                                 final long tcpKeepAliveCount, final long tcpKeepAliveIdle,
-                                                 final long tcpKeepAliveInterval, final boolean xpubVerbose,
-                                                 final List<String> endpoints) {
-        return getManager(name, FACTORY,
-            new JeroMqConfiguration(affinity, backlog, delayAttachOnConnect, identity, ipv4Only, linger, maxMsgSize,
-                rcvHwm, receiveBufferSize, receiveTimeOut, reconnectIVL, reconnectIVLMax, sendBufferSize, sendTimeOut,
-                sndHwm, tcpKeepAlive, tcpKeepAliveCount, tcpKeepAliveIdle, tcpKeepAliveInterval, xpubVerbose,
-                endpoints));
+    // not public, handy for testing
+    Socket getSocket() {
+        return publisher;
+    }
+
+    public List<String> getEndpoints() {
+        return endpoints;
+    }
+
+    public static JeroMqManager getJeroMqManager(
+            final String name,
+            final long affinity,
+            final long backlog,
+            final boolean delayAttachOnConnect,
+            final byte[] identity,
+            final boolean ipv4Only,
+            final long linger,
+            final long maxMsgSize,
+            final long rcvHwm,
+            final long receiveBufferSize,
+            final int receiveTimeOut,
+            final long reconnectIVL,
+            final long reconnectIVLMax,
+            final long sendBufferSize,
+            final int sendTimeOut,
+            final long sndHwm,
+            final int tcpKeepAlive,
+            final long tcpKeepAliveCount,
+            final long tcpKeepAliveIdle,
+            final long tcpKeepAliveInterval,
+            final boolean xpubVerbose,
+            final List<String> endpoints) {
+        return getManager(
+                name,
+                FACTORY,
+                new JeroMqConfiguration(
+                        affinity,
+                        backlog,
+                        delayAttachOnConnect,
+                        identity,
+                        ipv4Only,
+                        linger,
+                        maxMsgSize,
+                        rcvHwm,
+                        receiveBufferSize,
+                        receiveTimeOut,
+                        reconnectIVL,
+                        reconnectIVLMax,
+                        sendBufferSize,
+                        sendTimeOut,
+                        sndHwm,
+                        tcpKeepAlive,
+                        tcpKeepAliveCount,
+                        tcpKeepAliveIdle,
+                        tcpKeepAliveInterval,
+                        xpubVerbose,
+                        endpoints));
     }
 
     public static ZMQ.Context getContext() {
+        return CONTEXT.getContext();
+    }
+
+    public static ZContext getZContext() {
         return CONTEXT;
     }
 
-    private static class JeroMqConfiguration {
+    private static final class JeroMqConfiguration {
         private final long affinity;
         private final long backlog;
         private final boolean delayAttachOnConnect;
@@ -155,14 +218,28 @@ public class JeroMqManager extends AbstractManager {
         private final boolean xpubVerbose;
         private final List<String> endpoints;
 
-        private JeroMqConfiguration(final long affinity, final long backlog, final boolean delayAttachOnConnect,
-                                    final byte[] identity, final boolean ipv4Only, final long linger,
-                                    final long maxMsgSize, final long rcvHwm, final long receiveBufferSize,
-                                    final int receiveTimeOut, final long reconnectIVL, final long reconnectIVLMax,
-                                    final long sendBufferSize, final int sendTimeOut, final long sndHwm,
-                                    final int tcpKeepAlive, final long tcpKeepAliveCount, final long tcpKeepAliveIdle,
-                                    final long tcpKeepAliveInterval, final boolean xpubVerbose,
-                                    final List<String> endpoints) {
+        private JeroMqConfiguration(
+                final long affinity,
+                final long backlog,
+                final boolean delayAttachOnConnect,
+                final byte[] identity,
+                final boolean ipv4Only,
+                final long linger,
+                final long maxMsgSize,
+                final long rcvHwm,
+                final long receiveBufferSize,
+                final int receiveTimeOut,
+                final long reconnectIVL,
+                final long reconnectIVLMax,
+                final long sendBufferSize,
+                final int sendTimeOut,
+                final long sndHwm,
+                final int tcpKeepAlive,
+                final long tcpKeepAliveCount,
+                final long tcpKeepAliveIdle,
+                final long tcpKeepAliveInterval,
+                final boolean xpubVerbose,
+                final List<String> endpoints) {
             this.affinity = affinity;
             this.backlog = backlog;
             this.delayAttachOnConnect = delayAttachOnConnect;
@@ -188,29 +265,28 @@ public class JeroMqManager extends AbstractManager {
 
         @Override
         public String toString() {
-            return "JeroMqConfiguration{" +
-                "affinity=" + affinity +
-                ", backlog=" + backlog +
-                ", delayAttachOnConnect=" + delayAttachOnConnect +
-                ", identity=" + Arrays.toString(identity) +
-                ", ipv4Only=" + ipv4Only +
-                ", linger=" + linger +
-                ", maxMsgSize=" + maxMsgSize +
-                ", rcvHwm=" + rcvHwm +
-                ", receiveBufferSize=" + receiveBufferSize +
-                ", receiveTimeOut=" + receiveTimeOut +
-                ", reconnectIVL=" + reconnectIVL +
-                ", reconnectIVLMax=" + reconnectIVLMax +
-                ", sendBufferSize=" + sendBufferSize +
-                ", sendTimeOut=" + sendTimeOut +
-                ", sndHwm=" + sndHwm +
-                ", tcpKeepAlive=" + tcpKeepAlive +
-                ", tcpKeepAliveCount=" + tcpKeepAliveCount +
-                ", tcpKeepAliveIdle=" + tcpKeepAliveIdle +
-                ", tcpKeepAliveInterval=" + tcpKeepAliveInterval +
-                ", xpubVerbose=" + xpubVerbose +
-                ", endpoints=" + endpoints +
-                '}';
+            return "JeroMqConfiguration{" + "affinity="
+                    + affinity + ", backlog="
+                    + backlog + ", delayAttachOnConnect="
+                    + delayAttachOnConnect + ", identity="
+                    + Arrays.toString(identity) + ", ipv4Only="
+                    + ipv4Only + ", linger="
+                    + linger + ", maxMsgSize="
+                    + maxMsgSize + ", rcvHwm="
+                    + rcvHwm + ", receiveBufferSize="
+                    + receiveBufferSize + ", receiveTimeOut="
+                    + receiveTimeOut + ", reconnectIVL="
+                    + reconnectIVL + ", reconnectIVLMax="
+                    + reconnectIVLMax + ", sendBufferSize="
+                    + sendBufferSize + ", sendTimeOut="
+                    + sendTimeOut + ", sndHwm="
+                    + sndHwm + ", tcpKeepAlive="
+                    + tcpKeepAlive + ", tcpKeepAliveCount="
+                    + tcpKeepAliveCount + ", tcpKeepAliveIdle="
+                    + tcpKeepAliveIdle + ", tcpKeepAliveInterval="
+                    + tcpKeepAliveInterval + ", xpubVerbose="
+                    + xpubVerbose + ", endpoints="
+                    + endpoints + '}';
         }
     }
 

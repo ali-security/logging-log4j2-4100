@@ -1,27 +1,25 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.taglib;
 
 import java.util.HashSet;
 import java.util.Set;
-
 import javax.servlet.jsp.JspException;
 import javax.servlet.jsp.PageContext;
-
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LoggingException;
@@ -69,23 +67,24 @@ final class TagUtils {
         return null;
     }
 
-    static Log4jTaglibLogger resolveLogger(final Log4jTaglibLoggerContext context, final Object logger,
-                                           final MessageFactory factory) throws JspException {
+    static Log4jTaglibLogger resolveLogger(
+            final Log4jTaglibLoggerContext context, final Object logger, final MessageFactory factory)
+            throws JspException {
         if (logger instanceof Logger) {
             if (logger instanceof Log4jTaglibLogger) {
                 return (Log4jTaglibLogger) logger;
             }
             if (logger instanceof AbstractLogger) {
                 if (LOGGER.isInfoEnabled() && !WARNED_FOR.contains(logger)) {
-                    LOGGER.info("Constructing new Log4jTaglibLogger from AbstractLogger {} name and message factory.",
+                    LOGGER.info(
+                            "Constructing new Log4jTaglibLogger from AbstractLogger {} name and message factory.",
                             logger.getClass().getName());
                     WARNED_FOR.add(logger);
                 }
                 final AbstractLogger original = (AbstractLogger) logger;
                 return getLogger(context, original.getName(), original.getMessageFactory());
             }
-            throw new JspException(
-                    "Log4j Tag Library requires base logging system to extend Log4j AbstractLogger.");
+            throw new JspException("Log4j Tag Library requires base logging system to extend Log4j AbstractLogger.");
         }
         if (logger instanceof String) {
             return getLogger(context, (String) logger, factory);
@@ -93,8 +92,8 @@ final class TagUtils {
         throw new JspException("Logger must be of type String or org.apache.logging.log4j.Logger.");
     }
 
-    private static Log4jTaglibLogger getLogger(final Log4jTaglibLoggerContext context, final String name,
-                                               final MessageFactory factory)
+    private static Log4jTaglibLogger getLogger(
+            final Log4jTaglibLoggerContext context, final String name, final MessageFactory factory)
             throws JspException {
         try {
             return context.getLogger(name, factory);

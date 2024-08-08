@@ -1,32 +1,32 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.couchdb;
 
-import java.lang.reflect.Method;
+import static org.apache.logging.log4j.util.Strings.toRootLowerCase;
 
+import java.lang.reflect.Method;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.appender.nosql.NoSqlProvider;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
 import org.apache.logging.log4j.core.config.plugins.PluginAttribute;
 import org.apache.logging.log4j.core.config.plugins.PluginFactory;
 import org.apache.logging.log4j.core.config.plugins.convert.TypeConverters;
 import org.apache.logging.log4j.core.config.plugins.validation.constraints.ValidHost;
 import org.apache.logging.log4j.core.config.plugins.validation.constraints.ValidPort;
-import org.apache.logging.log4j.core.util.NameUtil;
-import org.apache.logging.log4j.core.appender.nosql.NoSqlProvider;
 import org.apache.logging.log4j.status.StatusLogger;
 import org.apache.logging.log4j.util.LoaderUtil;
 import org.apache.logging.log4j.util.Strings;
@@ -106,15 +106,18 @@ public final class CouchDbProvider implements NoSqlProvider<CouchDbConnection> {
                     final CouchDbProperties properties = (CouchDbProperties) object;
                     client = new CouchDbClient(properties);
                     description = "uri=" + client.getDBUri() + ", username=" + properties.getUsername()
-                            + ", passwordHash=" + NameUtil.md5(password + CouchDbProvider.class.getName())
                             + ", maxConnections=" + properties.getMaxConnections() + ", connectionTimeout="
                             + properties.getConnectionTimeout() + ", socketTimeout=" + properties.getSocketTimeout();
                 } else {
                     if (object == null) {
-                        LOGGER.error("The factory method [{}.{}()] returned null.", factoryClassName, factoryMethodName);
+                        LOGGER.error(
+                                "The factory method [{}.{}()] returned null.", factoryClassName, factoryMethodName);
                     } else {
-                        LOGGER.error("The factory method [{}.{}()] returned an unsupported type [{}].", factoryClassName,
-                                factoryMethodName, object.getClass().getName());
+                        LOGGER.error(
+                                "The factory method [{}.{}()] returned an unsupported type [{}].",
+                                factoryClassName,
+                                factoryMethodName,
+                                object.getClass().getName());
                     }
                     return null;
                 }
@@ -122,17 +125,20 @@ public final class CouchDbProvider implements NoSqlProvider<CouchDbConnection> {
                 LOGGER.error("The factory class [{}] could not be loaded.", factoryClassName, e);
                 return null;
             } catch (final NoSuchMethodException e) {
-                LOGGER.error("The factory class [{}] does not have a no-arg method named [{}].", factoryClassName,
-                        factoryMethodName, e);
+                LOGGER.error(
+                        "The factory class [{}] does not have a no-arg method named [{}].",
+                        factoryClassName,
+                        factoryMethodName,
+                        e);
                 return null;
             } catch (final Exception e) {
-                LOGGER.error("The factory method [{}.{}()] could not be invoked.", factoryClassName, factoryMethodName,
-                        e);
+                LOGGER.error(
+                        "The factory method [{}.{}()] could not be invoked.", factoryClassName, factoryMethodName, e);
                 return null;
             }
         } else if (Strings.isNotEmpty(databaseName)) {
             if (protocol != null && protocol.length() > 0) {
-                protocol = protocol.toLowerCase();
+                protocol = toRootLowerCase(protocol);
                 if (!protocol.equals("http") && !protocol.equals("https")) {
                     LOGGER.error("Only protocols [http] and [https] are supported, [{}] specified.", protocol);
                     return null;
@@ -150,8 +156,7 @@ public final class CouchDbProvider implements NoSqlProvider<CouchDbConnection> {
             }
 
             client = new CouchDbClient(databaseName, false, protocol, server, portInt, username, password);
-            description = "uri=" + client.getDBUri() + ", username=" + username + ", passwordHash="
-                    + NameUtil.md5(password + CouchDbProvider.class.getName());
+            description = "uri=" + client.getDBUri() + ", username=" + username;
         } else {
             LOGGER.error("No factory method was provided so the database name is required.");
             return null;

@@ -1,55 +1,54 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.impl;
 
 import org.apache.logging.log4j.ThreadContext;
 import org.apache.logging.log4j.core.ContextDataInjector;
 import org.apache.logging.log4j.core.LogEvent;
-import org.apache.logging.log4j.core.util.Loader;
 import org.apache.logging.log4j.spi.CopyOnWrite;
 import org.apache.logging.log4j.spi.DefaultThreadContextMap;
 import org.apache.logging.log4j.spi.ReadOnlyThreadContextMap;
 import org.apache.logging.log4j.status.StatusLogger;
-import org.apache.logging.log4j.util.PropertiesUtil;
+import org.apache.logging.log4j.util.LoaderUtil;
 import org.apache.logging.log4j.util.ReadOnlyStringMap;
 
 /**
  * Factory for ContextDataInjectors. Returns a new {@code ContextDataInjector} instance based on the value of system
  * property {@code log4j2.ContextDataInjector}. Users may use this system property to specify the fully qualified class
  * name of a class that implements the {@code ContextDataInjector} interface.
- * If no value was specified this factory method returns one of the injectors defined in
- * {@code ThreadContextDataInjector}.
  *
  * @see ContextDataInjector
  * @see ReadOnlyStringMap
  * @see ThreadContextDataInjector
  * @see LogEvent#getContextData()
  * @since 2.7
+ * @deprecated Use ContextDataProvider instead.
  */
+@Deprecated
 public class ContextDataInjectorFactory {
+
+    private static final String CONTEXT_DATA_INJECTOR_PROPERTY = "log4j2.ContextDataInjector";
 
     /**
      * Returns a new {@code ContextDataInjector} instance based on the value of system property
-     * {@code log4j2.ContextDataInjector}. If no value was specified this factory method returns one of the
-     * {@code ContextDataInjector} classes defined in {@link ThreadContextDataInjector} which is most appropriate for
-     * the ThreadContext implementation.
-     * <p>
+     * {@code log4j2.ContextDataInjector}. If no value was specified then @{link ContextData} will be used.
      * <b>Note:</b> It is no longer recommended that users provide a custom implementation of the ContextDataInjector.
-     * Instead, provide a {@code ContextDataProvider}.
+     * Instead, provide a {@code ContextDataProvider}. Support for ContextDataInjectors will be removed entirely
+     * in 3.0.0.
      * </p>
      * <p>
      * Users may use this system property to specify the fully qualified class name of a class that implements the
@@ -64,22 +63,23 @@ public class ContextDataInjectorFactory {
      * @return a ContextDataInjector that populates the {@code ReadOnlyStringMap} of all {@code LogEvent} objects
      * @see LogEvent#getContextData()
      * @see ContextDataInjector
+     * @deprecated Uses ContextData instead.
      */
+    @Deprecated
     public static ContextDataInjector createInjector() {
-        final String className = PropertiesUtil.getProperties().getStringProperty("log4j2.ContextDataInjector");
-        if (className == null) {
-            return createDefaultInjector();
-        }
+        return createInjector(false);
+    }
+
+    @Deprecated
+    public static ContextDataInjector createInjector(final boolean useDefault) {
         try {
-            final Class<? extends ContextDataInjector> cls = Loader.loadClass(className).asSubclass(
-                    ContextDataInjector.class);
-            return cls.newInstance();
-        } catch (final Exception dynamicFailed) {
-            final ContextDataInjector result = createDefaultInjector();
-            StatusLogger.getLogger().warn(
-                    "Could not create ContextDataInjector for '{}', using default {}: {}",
-                    className, result.getClass().getName(), dynamicFailed);
-            return result;
+            return LoaderUtil.newCheckedInstanceOfProperty(
+                    CONTEXT_DATA_INJECTOR_PROPERTY,
+                    ContextDataInjector.class,
+                    useDefault ? ContextDataInjectorFactory::createDefaultInjector : () -> null);
+        } catch (final ReflectiveOperationException e) {
+            StatusLogger.getLogger().info("Could not create ContextDataInjector: {}", e.getMessage(), e);
+            return null;
         }
     }
 

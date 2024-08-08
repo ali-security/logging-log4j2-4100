@@ -1,25 +1,25 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.simple;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.PrintStream;
-
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.message.MessageFactory;
 import org.apache.logging.log4j.spi.AbstractLogger;
@@ -29,9 +29,12 @@ import org.apache.logging.log4j.spi.LoggerRegistry;
 import org.apache.logging.log4j.util.PropertiesUtil;
 
 /**
- *
+ * A simple {@link LoggerContext} implementation.
  */
 public class SimpleLoggerContext implements LoggerContext {
+
+    /** Singleton instance. */
+    static final SimpleLoggerContext INSTANCE = new SimpleLoggerContext();
 
     private static final String SYSTEM_OUT = "system.out";
 
@@ -53,10 +56,13 @@ public class SimpleLoggerContext implements LoggerContext {
      * lost in a flood of messages without knowing who sends them.
      */
     private final boolean showShortName;
+
     /** Include the current time in the log message */
     private final boolean showDateTime;
+
     /** Include the ThreadContextMap in the log message */
     private final boolean showContextMap;
+
     /** The date and time format to use in the log message */
     private final String dateTimeFormat;
 
@@ -66,6 +72,12 @@ public class SimpleLoggerContext implements LoggerContext {
 
     private final LoggerRegistry<ExtendedLogger> loggerRegistry = new LoggerRegistry<>();
 
+    /**
+     * Constructs a new initialized instance.
+     */
+    @SuppressFBWarnings(
+            value = "PATH_TRAVERSAL_OUT",
+            justification = "Opens a file retrieved from configuration (Log4j properties)")
     public SimpleLoggerContext() {
         props = new PropertiesUtil("log4j2.simplelog.properties");
 
@@ -76,8 +88,10 @@ public class SimpleLoggerContext implements LoggerContext {
         final String lvl = props.getStringProperty(SYSTEM_PREFIX + "level");
         defaultLevel = Level.toLevel(lvl, Level.ERROR);
 
-        dateTimeFormat = showDateTime ? props.getStringProperty(SimpleLoggerContext.SYSTEM_PREFIX + "dateTimeFormat",
-                DEFAULT_DATE_TIME_FORMAT) : null;
+        dateTimeFormat = showDateTime
+                ? props.getStringProperty(
+                        SimpleLoggerContext.SYSTEM_PREFIX + "dateTimeFormat", DEFAULT_DATE_TIME_FORMAT)
+                : null;
 
         final String fileName = props.getStringProperty(SYSTEM_PREFIX + "logFile", SYSTEM_ERR);
         PrintStream ps;
@@ -87,13 +101,17 @@ public class SimpleLoggerContext implements LoggerContext {
             ps = System.out;
         } else {
             try {
-                final FileOutputStream os = new FileOutputStream(fileName);
-                ps = new PrintStream(os);
+                ps = new PrintStream(new FileOutputStream(fileName));
             } catch (final FileNotFoundException fnfe) {
                 ps = System.err;
             }
         }
         this.stream = ps;
+    }
+
+    @Override
+    public Object getExternalContext() {
+        return null;
     }
 
     @Override
@@ -109,19 +127,34 @@ public class SimpleLoggerContext implements LoggerContext {
             AbstractLogger.checkMessageFactory(extendedLogger, messageFactory);
             return extendedLogger;
         }
-        final SimpleLogger simpleLogger = new SimpleLogger(name, defaultLevel, showLogName, showShortName, showDateTime,
-                showContextMap, dateTimeFormat, messageFactory, props, stream);
+        final SimpleLogger simpleLogger = new SimpleLogger(
+                name,
+                defaultLevel,
+                showLogName,
+                showShortName,
+                showDateTime,
+                showContextMap,
+                dateTimeFormat,
+                messageFactory,
+                props,
+                stream);
         loggerRegistry.putIfAbsent(name, messageFactory, simpleLogger);
         return loggerRegistry.getLogger(name, messageFactory);
     }
 
+    /**
+     * Gets the LoggerRegistry.
+     *
+     * @return the LoggerRegistry.
+     * @since 2.17.2
+     */
     @Override
-    public boolean hasLogger(final String name) {
-        return false;
+    public LoggerRegistry<ExtendedLogger> getLoggerRegistry() {
+        return loggerRegistry;
     }
 
     @Override
-    public boolean hasLogger(final String name, final MessageFactory messageFactory) {
+    public boolean hasLogger(final String name) {
         return false;
     }
 
@@ -131,8 +164,7 @@ public class SimpleLoggerContext implements LoggerContext {
     }
 
     @Override
-    public Object getExternalContext() {
-        return null;
+    public boolean hasLogger(final String name, final MessageFactory messageFactory) {
+        return false;
     }
-
 }

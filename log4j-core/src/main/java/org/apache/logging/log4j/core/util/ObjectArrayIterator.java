@@ -2,7 +2,7 @@
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
@@ -43,7 +43,7 @@ public class ObjectArrayIterator<E> implements /*Resettable*/ Iterator<E> {
     /** The current iterator index */
     int index = 0;
 
-    //-------------------------------------------------------------------------
+    // -------------------------------------------------------------------------
     /**
      * Constructs an ObjectArrayIterator that will iterate over the values in the
      * specified array.
@@ -100,7 +100,7 @@ public class ObjectArrayIterator<E> implements /*Resettable*/ Iterator<E> {
     }
 
     // Iterator interface
-    //-------------------------------------------------------------------------
+    // -------------------------------------------------------------------------
 
     /**
      * Returns true if there are more elements to return from the array.
@@ -138,7 +138,7 @@ public class ObjectArrayIterator<E> implements /*Resettable*/ Iterator<E> {
     }
 
     // Properties
-    //-------------------------------------------------------------------------
+    // -------------------------------------------------------------------------
 
     /**
      * Gets the array that this iterator is iterating over.
@@ -170,9 +170,8 @@ public class ObjectArrayIterator<E> implements /*Resettable*/ Iterator<E> {
     /**
      * Resets the iterator back to the start index.
      */
-    //@Override
+    // @Override
     public void reset() {
         this.index = this.startIndex;
     }
-
 }

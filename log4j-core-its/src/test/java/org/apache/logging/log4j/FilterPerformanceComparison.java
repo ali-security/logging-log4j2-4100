@@ -1,27 +1,26 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j;
 
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-
-import org.apache.logging.log4j.categories.PerformanceTests;
 import org.apache.logging.log4j.core.config.ConfigurationFactory;
+import org.apache.logging.log4j.core.test.categories.PerformanceTests;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -37,7 +36,6 @@ public class FilterPerformanceComparison {
 
     private final Logger logger = LogManager.getLogger(FilterPerformanceComparison.class.getName());
     private final org.slf4j.Logger logbacklogger = org.slf4j.LoggerFactory.getLogger(FilterPerformanceComparison.class);
-
 
     // How many times should we try to log:
     private static final int COUNT = 10000000;
@@ -95,12 +93,12 @@ public class FilterPerformanceComparison {
         Target.LOGBACK.timedLoop(logger, logbacklogger, WARMUP);
         Target.LOG4J2.timedLoop(logger, logbacklogger, WARMUP);
 
-        System.out.println("Single-threaded Log4j 2.0, "
-                + (contextData.isEmpty() ? "EMPTY context" : "NON-EMPTY context"));
+        System.out.println(
+                "Single-threaded Log4j 2.0, " + (contextData.isEmpty() ? "EMPTY context" : "NON-EMPTY context"));
 
         final long result3 = Target.LOG4J2.timedLoop(logger, logbacklogger, COUNT);
-        System.out.println("Single-threaded Logback, "
-                + (contextData.isEmpty() ? "EMPTY context" : "NON-EMPTY context"));
+        System.out.println(
+                "Single-threaded Logback, " + (contextData.isEmpty() ? "EMPTY context" : "NON-EMPTY context"));
 
         final long result2 = Target.LOGBACK.timedLoop(logger, logbacklogger, COUNT);
 
@@ -129,33 +127,33 @@ public class FilterPerformanceComparison {
                     + (contextData.isEmpty() ? "EMPTY context" : "NON-EMPTY context"));
             final Worker[] workers = new Worker[threadCount];
             final long[] results = new long[threadCount];
-            for (int i=0; i < threadCount; ++i) {
+            for (int i = 0; i < threadCount; ++i) {
                 workers[i] = new Worker(Target.LOG4J2, threadedCount, results, i, contextData);
             }
-            for (int i=0; i < threadCount; ++i) {
+            for (int i = 0; i < threadCount; ++i) {
                 workers[i].start();
             }
             long total = 0;
-            for (int i=0; i < threadCount; ++i) {
+            for (int i = 0; i < threadCount; ++i) {
                 workers[i].join();
                 total += results[i];
             }
             final long result3 = total / threadCount;
             total = 0;
-            for (int i=0; i < threadCount; ++i) {
+            for (int i = 0; i < threadCount; ++i) {
                 workers[i] = new Worker(Target.LOGBACK, threadedCount, results, i, contextData);
             }
-            for (int i=0; i < threadCount; ++i) {
+            for (int i = 0; i < threadCount; ++i) {
                 workers[i].start();
             }
-            for (int i=0; i < threadCount; ++i) {
+            for (int i = 0; i < threadCount; ++i) {
                 workers[i].join();
                 total += results[i];
             }
             final long result2 = total / threadCount;
             System.out.println("###############################################");
             System.out.println("Logback: " + result2);
-            System.out.println("Log4j 2.0: " + result3 );
+            System.out.println("Log4j 2.0: " + result3);
             System.out.println("###############################################");
         }
     }
@@ -184,6 +182,7 @@ public class FilterPerformanceComparison {
                 return (System.nanoTime() - start) / loop;
             }
         };
+
         abstract long timedLoop(final Logger logger, final org.slf4j.Logger logbacklogger, final int loop);
     }
 
@@ -195,7 +194,11 @@ public class FilterPerformanceComparison {
         private final int index;
         private final Map<String, String> contextData;
 
-        public Worker(final Target target, final int count, final long[] results, final int index,
+        public Worker(
+                final Target target,
+                final int count,
+                final long[] results,
+                final int index,
                 final Map<String, String> contextData) {
             this.target = target;
             this.count = count;
@@ -210,5 +213,4 @@ public class FilterPerformanceComparison {
             results[index] = target.timedLoop(logger, logbacklogger, count);
         }
     }
-
 }

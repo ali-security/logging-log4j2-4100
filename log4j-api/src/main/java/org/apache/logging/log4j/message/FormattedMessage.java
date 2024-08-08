@@ -1,18 +1,18 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.message;
 
@@ -23,7 +23,6 @@ import java.text.Format;
 import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.Locale;
-import java.util.regex.Pattern;
 
 /**
  * Handles messages that contain a format String. Dynamically determines if the format conforms to
@@ -33,8 +32,6 @@ public class FormattedMessage implements Message {
 
     private static final long serialVersionUID = -665975803997290697L;
     private static final int HASHVAL = 31;
-    private static final String FORMAT_SPECIFIER = "%(\\d+\\$)?([-#+ 0,(\\<]*)?(\\d+)?(\\.\\d+)?([tT])?([a-zA-Z%])";
-    private static final Pattern MSG_PATTERN = Pattern.compile(FORMAT_SPECIFIER);
 
     private String messagePattern;
     private transient Object[] argArray;
@@ -43,7 +40,7 @@ public class FormattedMessage implements Message {
     private final Throwable throwable;
     private Message message;
     private final Locale locale;
-    
+
     /**
      * Constructs with a locale, a pattern and a single parameter.
      * @param locale The locale
@@ -52,7 +49,7 @@ public class FormattedMessage implements Message {
      * @since 2.6
      */
     public FormattedMessage(final Locale locale, final String messagePattern, final Object arg) {
-        this(locale, messagePattern, new Object[] { arg }, null);
+        this(locale, messagePattern, new Object[] {arg}, null);
     }
 
     /**
@@ -64,7 +61,7 @@ public class FormattedMessage implements Message {
      * @since 2.6
      */
     public FormattedMessage(final Locale locale, final String messagePattern, final Object arg1, final Object arg2) {
-        this(locale, messagePattern, new Object[] { arg1, arg2 });
+        this(locale, messagePattern, new Object[] {arg1, arg2});
     }
 
     /**
@@ -86,7 +83,8 @@ public class FormattedMessage implements Message {
      * @param throwable The throwable
      * @since 2.6
      */
-    public FormattedMessage(final Locale locale, final String messagePattern, final Object[] arguments, final Throwable throwable) {
+    public FormattedMessage(
+            final Locale locale, final String messagePattern, final Object[] arguments, final Throwable throwable) {
         this.locale = locale;
         this.messagePattern = messagePattern;
         this.argArray = arguments;
@@ -99,7 +97,7 @@ public class FormattedMessage implements Message {
      * @param arg The parameter.
      */
     public FormattedMessage(final String messagePattern, final Object arg) {
-        this(messagePattern, new Object[] { arg }, null);
+        this(messagePattern, new Object[] {arg}, null);
     }
 
     /**
@@ -109,7 +107,7 @@ public class FormattedMessage implements Message {
      * @param arg2 The second parameter.
      */
     public FormattedMessage(final String messagePattern, final Object arg1, final Object arg2) {
-        this(messagePattern, new Object[] { arg1, arg2 });
+        this(messagePattern, new Object[] {arg1, arg2});
     }
 
     /**
@@ -134,13 +132,12 @@ public class FormattedMessage implements Message {
         this.throwable = throwable;
     }
 
-
     @Override
     public boolean equals(final Object o) {
         if (this == o) {
             return true;
         }
-        if (o == null || getClass() != o.getClass()) {
+        if (!(o instanceof FormattedMessage)) {
             return false;
         }
 
@@ -149,11 +146,7 @@ public class FormattedMessage implements Message {
         if (messagePattern != null ? !messagePattern.equals(that.messagePattern) : that.messagePattern != null) {
             return false;
         }
-        if (!Arrays.equals(stringArgs, that.stringArgs)) {
-            return false;
-        }
-
-        return true;
+        return Arrays.equals(stringArgs, that.stringArgs);
     }
 
     /**
@@ -180,24 +173,43 @@ public class FormattedMessage implements Message {
         return formattedMessage;
     }
 
+    /**
+     * Gets the message implementation to which formatting is delegated.
+     *
+     * <ul>
+     *     <li>if {@code msgPattern} contains {@link MessageFormat} format specifiers a {@link MessageFormatMessage}
+     * is returned,</li>
+     *     <li>if {@code msgPattern} contains {@code {}} placeholders a {@link ParameterizedMessage} is returned,</li>
+     *     <li>if {@code msgPattern} contains {@link Format} specifiers a {@link StringFormattedMessage} is returned
+     *    .</li>
+     * </ul>
+     * <p>
+     *     Mixing specifiers from multiple types is not supported.
+     * </p>
+     *
+     * @param msgPattern The message pattern.
+     * @param args       The parameters.
+     * @param aThrowable The throwable
+     * @return The message that performs formatting.
+     */
     protected Message getMessage(final String msgPattern, final Object[] args, final Throwable aThrowable) {
+        // Check for valid `{ ArgumentIndex [, FormatType [, FormatStyle]] }` format specifiers
         try {
             final MessageFormat format = new MessageFormat(msgPattern);
             final Format[] formats = format.getFormats();
-            if (formats != null && formats.length > 0) {
+            if (formats.length > 0) {
                 return new MessageFormatMessage(locale, msgPattern, args);
             }
         } catch (final Exception ignored) {
             // Obviously, the message is not a proper pattern for MessageFormat.
         }
-        try {
-            if (MSG_PATTERN.matcher(msgPattern).find()) {
-                return new StringFormattedMessage(locale, msgPattern, args);
-            }
-        } catch (final Exception ignored) {
-            // Also not properly formatted.
+        // Check for non-escaped `{}` format specifiers
+        // This case also includes patterns without any `java.util.Formatter` specifiers
+        if (ParameterFormatter.analyzePattern(msgPattern, 1).placeholderCount > 0 || msgPattern.indexOf('%') == -1) {
+            return new ParameterizedMessage(msgPattern, args, aThrowable);
         }
-        return new ParameterizedMessage(msgPattern, args, aThrowable);
+        // Interpret as `java.util.Formatter` format
+        return new StringFormattedMessage(locale, msgPattern, args);
     }
 
     /**
@@ -222,7 +234,6 @@ public class FormattedMessage implements Message {
         }
         return message.getThrowable();
     }
-
 
     @Override
     public int hashCode() {

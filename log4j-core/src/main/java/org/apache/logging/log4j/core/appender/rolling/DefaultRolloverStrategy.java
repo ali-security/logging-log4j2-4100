@@ -1,21 +1,22 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.appender.rolling;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -27,7 +28,6 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.Deflater;
-
 import org.apache.logging.log4j.core.Core;
 import org.apache.logging.log4j.core.appender.rolling.action.Action;
 import org.apache.logging.log4j.core.appender.rolling.action.CompositeAction;
@@ -126,7 +126,7 @@ public class DefaultRolloverStrategy extends AbstractRolloverStrategy {
                 useMax = fileIndex == null ? true : fileIndex.equalsIgnoreCase("max");
                 minIndex = MIN_WINDOW_SIZE;
                 if (min != null) {
-                    minIndex = Integer.parseInt(min);
+                    minIndex = Integers.parseInt(min);
                     if (minIndex < 1) {
                         LOGGER.error("Minimum window size too small. Limited to " + MIN_WINDOW_SIZE);
                         minIndex = MIN_WINDOW_SIZE;
@@ -134,18 +134,29 @@ public class DefaultRolloverStrategy extends AbstractRolloverStrategy {
                 }
                 maxIndex = DEFAULT_WINDOW_SIZE;
                 if (max != null) {
-                    maxIndex = Integer.parseInt(max);
+                    maxIndex = Integer.parseInt(max.trim());
                     if (maxIndex < minIndex) {
                         maxIndex = minIndex < DEFAULT_WINDOW_SIZE ? DEFAULT_WINDOW_SIZE : minIndex;
-                        LOGGER.error("Maximum window size must be greater than the minimum windows size. Set to " + maxIndex);
+                        LOGGER.error("Maximum window size must be greater than the minimum windows size. Set to "
+                                + maxIndex);
                     }
                 }
             }
-            final int compressionLevel = Integers.parseInt(compressionLevelStr, Deflater.DEFAULT_COMPRESSION);
+            final String trimmedCompressionLevelStr =
+                    compressionLevelStr != null ? compressionLevelStr.trim() : compressionLevelStr;
+            final int compressionLevel = Integers.parseInt(trimmedCompressionLevelStr, Deflater.DEFAULT_COMPRESSION);
             // The config object can be null when this object is built programmatically.
-            final StrSubstitutor nonNullStrSubstitutor = config != null ? config.getStrSubstitutor() : new StrSubstitutor();
-			return new DefaultRolloverStrategy(minIndex, maxIndex, useMax, compressionLevel, nonNullStrSubstitutor,
-                    customActions, stopCustomActionsOnError, tempCompressedFilePattern);
+            final StrSubstitutor nonNullStrSubstitutor =
+                    config != null ? config.getStrSubstitutor() : new StrSubstitutor();
+            return new DefaultRolloverStrategy(
+                    minIndex,
+                    maxIndex,
+                    useMax,
+                    compressionLevel,
+                    nonNullStrSubstitutor,
+                    customActions,
+                    stopCustomActionsOnError,
+                    tempCompressedFilePattern);
         }
 
         public String getMax() {
@@ -302,15 +313,15 @@ public class DefaultRolloverStrategy extends AbstractRolloverStrategy {
                     final boolean stopCustomActionsOnError,
             @PluginConfiguration final Configuration config) {
         return DefaultRolloverStrategy.newBuilder()
-                    .withMin(min)
-                    .withMax(max)
-                    .withFileIndex(fileIndex)
-                    .withCompressionLevelStr(compressionLevelStr)
-                    .withCustomActions(customActions)
-                    .withStopCustomActionsOnError(stopCustomActionsOnError)
-                    .withConfig(config)
+                .withMin(min)
+                .withMax(max)
+                .withFileIndex(fileIndex)
+                .withCompressionLevelStr(compressionLevelStr)
+                .withCustomActions(customActions)
+                .withStopCustomActionsOnError(stopCustomActionsOnError)
+                .withConfig(config)
                 .build();
-            // @formatter:on
+        // @formatter:on
     }
 
     /**
@@ -322,6 +333,7 @@ public class DefaultRolloverStrategy extends AbstractRolloverStrategy {
      * Index for most recent log file.
      */
     private final int minIndex;
+
     private final boolean useMax;
     private final int compressionLevel;
     private final List<Action> customActions;
@@ -338,11 +350,23 @@ public class DefaultRolloverStrategy extends AbstractRolloverStrategy {
      * @deprecated Since 2.9 Added tempCompressedFilePatternString parameter
      */
     @Deprecated
-    protected DefaultRolloverStrategy(final int minIndex, final int maxIndex, final boolean useMax,
-            final int compressionLevel, final StrSubstitutor strSubstitutor, final Action[] customActions,
+    protected DefaultRolloverStrategy(
+            final int minIndex,
+            final int maxIndex,
+            final boolean useMax,
+            final int compressionLevel,
+            final StrSubstitutor strSubstitutor,
+            final Action[] customActions,
             final boolean stopCustomActionsOnError) {
-        this(minIndex, maxIndex, useMax, compressionLevel,
-                       strSubstitutor, customActions, stopCustomActionsOnError, null);
+        this(
+                minIndex,
+                maxIndex,
+                useMax,
+                compressionLevel,
+                strSubstitutor,
+                customActions,
+                stopCustomActionsOnError,
+                null);
     }
 
     /**
@@ -355,16 +379,22 @@ public class DefaultRolloverStrategy extends AbstractRolloverStrategy {
      * @param tempCompressedFilePatternString File pattern of the working file
      *                                     used during compression, if null no temporary file are used
      */
-    protected DefaultRolloverStrategy(final int minIndex, final int maxIndex, final boolean useMax,
-            final int compressionLevel, final StrSubstitutor strSubstitutor, final Action[] customActions,
-            final boolean stopCustomActionsOnError, final String tempCompressedFilePatternString) {
+    protected DefaultRolloverStrategy(
+            final int minIndex,
+            final int maxIndex,
+            final boolean useMax,
+            final int compressionLevel,
+            final StrSubstitutor strSubstitutor,
+            final Action[] customActions,
+            final boolean stopCustomActionsOnError,
+            final String tempCompressedFilePatternString) {
         super(strSubstitutor);
         this.minIndex = minIndex;
         this.maxIndex = maxIndex;
         this.useMax = useMax;
         this.compressionLevel = compressionLevel;
         this.stopCustomActionsOnError = stopCustomActionsOnError;
-        this.customActions = customActions == null ? Collections.<Action> emptyList() : Arrays.asList(customActions);
+        this.customActions = customActions == null ? Collections.<Action>emptyList() : Arrays.asList(customActions);
         this.tempCompressedFilePattern =
                 tempCompressedFilePatternString != null ? new PatternProcessor(tempCompressedFilePatternString) : null;
     }
@@ -410,10 +440,13 @@ public class DefaultRolloverStrategy extends AbstractRolloverStrategy {
      * @param manager The RollingFileManager
      * @return true if purge was successful and rollover should be attempted.
      */
+    @SuppressFBWarnings(
+            value = "PATH_TRAVERSAL_IN",
+            justification = "The name of the accessed files is based on a configuration value.")
     private int purgeAscending(final int lowIndex, final int highIndex, final RollingFileManager manager) {
         final SortedMap<Integer, Path> eligibleFiles = getEligibleFiles(manager);
         final int maxFiles = highIndex - lowIndex + 1;
-
+        LOGGER.debug("Eligible files: {}", eligibleFiles);
         boolean renameFiles = !eligibleFiles.isEmpty() && eligibleFiles.lastKey() >= maxIndex;
         while (eligibleFiles.size() >= maxFiles) {
             try {
@@ -438,7 +471,7 @@ public class DefaultRolloverStrategy extends AbstractRolloverStrategy {
                 String renameTo = buf.toString();
                 final int suffixLength = suffixLength(renameTo);
                 if (suffixLength > 0 && suffixLength(currentName) == 0) {
-                   renameTo = renameTo.substring(0, renameTo.length() - suffixLength);
+                    renameTo = renameTo.substring(0, renameTo.length() - suffixLength);
                 }
                 final Action action = new FileRenameAction(entry.getValue().toFile(), new File(renameTo), true);
                 try {
@@ -453,8 +486,9 @@ public class DefaultRolloverStrategy extends AbstractRolloverStrategy {
             }
         }
 
-        return eligibleFiles.size() > 0 ?
-                (eligibleFiles.lastKey() < highIndex ? eligibleFiles.lastKey() + 1 : highIndex) : lowIndex;
+        return eligibleFiles.size() > 0
+                ? (eligibleFiles.lastKey() < highIndex ? eligibleFiles.lastKey() + 1 : highIndex)
+                : lowIndex;
     }
 
     /**
@@ -466,6 +500,9 @@ public class DefaultRolloverStrategy extends AbstractRolloverStrategy {
      * @param manager The RollingFileManager
      * @return true if purge was successful and rollover should be attempted.
      */
+    @SuppressFBWarnings(
+            value = "PATH_TRAVERSAL_IN",
+            justification = "The name of the accessed files is based on a configuration value.")
     private int purgeDescending(final int lowIndex, final int highIndex, final RollingFileManager manager) {
         // Retrieve the files in descending order, so the highest key will be first.
         final SortedMap<Integer, Path> eligibleFiles = getEligibleFiles(manager, false);
@@ -474,6 +511,7 @@ public class DefaultRolloverStrategy extends AbstractRolloverStrategy {
         while (eligibleFiles.size() >= maxFiles) {
             try {
                 final Integer key = eligibleFiles.firstKey();
+                LOGGER.debug("Deleting {}", eligibleFiles.get(key).toFile().getAbsolutePath());
                 Files.delete(eligibleFiles.get(key));
                 eligibleFiles.remove(key);
             } catch (final IOException ioe) {
@@ -515,13 +553,16 @@ public class DefaultRolloverStrategy extends AbstractRolloverStrategy {
      * @throws SecurityException if an error occurs.
      */
     @Override
+    @SuppressFBWarnings(
+            value = "PATH_TRAVERSAL_IN",
+            justification = "The name of the accessed files is based on a configuration value.")
     public RolloverDescription rollover(final RollingFileManager manager) throws SecurityException {
         int fileIndex;
-		final StringBuilder buf = new StringBuilder(255);
+        final StringBuilder buf = new StringBuilder(255);
         if (minIndex == Integer.MIN_VALUE) {
             final SortedMap<Integer, Path> eligibleFiles = getEligibleFiles(manager);
             fileIndex = eligibleFiles.size() > 0 ? eligibleFiles.lastKey() + 1 : 1;
-			manager.getPatternProcessor().formatFileName(strSubstitutor, buf, fileIndex);
+            manager.getPatternProcessor().formatFileName(strSubstitutor, buf, fileIndex);
         } else {
             if (maxIndex < 0) {
                 return null;
@@ -531,7 +572,7 @@ public class DefaultRolloverStrategy extends AbstractRolloverStrategy {
             if (fileIndex < 0) {
                 return null;
             }
-			manager.getPatternProcessor().formatFileName(strSubstitutor, buf, fileIndex);
+            manager.getPatternProcessor().formatFileName(strSubstitutor, buf, fileIndex);
             if (LOGGER.isTraceEnabled()) {
                 final double durationMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNanos);
                 LOGGER.trace("DefaultRolloverStrategy.purge() took {} milliseconds", durationMillis);
@@ -558,14 +599,12 @@ public class DefaultRolloverStrategy extends AbstractRolloverStrategy {
                     parentFile.mkdirs();
                 }
                 compressAction = new CompositeAction(
-                        Arrays.asList(fileExtension.createCompressAction(renameTo, tmpCompressedName,
-                                true, compressionLevel),
-                                new FileRenameAction(tmpCompressedNameFile,
-                                        renameToFile, true)),
+                        Arrays.asList(
+                                fileExtension.createCompressAction(renameTo, tmpCompressedName, true, compressionLevel),
+                                new FileRenameAction(tmpCompressedNameFile, renameToFile, true)),
                         true);
             } else {
-                compressAction = fileExtension.createCompressAction(renameTo, compressedName,
-                        true, compressionLevel);
+                compressAction = fileExtension.createCompressAction(renameTo, compressedName, true, compressionLevel);
             }
         }
 
@@ -575,24 +614,24 @@ public class DefaultRolloverStrategy extends AbstractRolloverStrategy {
         }
 
         if (compressAction != null && manager.isAttributeViewEnabled()) {
-            // Propagate posix attribute view to compressed file
+            // Propagate POSIX attribute view to compressed file
             // @formatter:off
             final Action posixAttributeViewAction = PosixViewAttributeAction.newBuilder()
-                                                        .withBasePath(compressedName)
-                                                        .withFollowLinks(false)
-                                                        .withMaxDepth(1)
-                                                        .withPathConditions(new PathCondition[0])
-                                                        .withSubst(getStrSubstitutor())
-                                                        .withFilePermissions(manager.getFilePermissions())
-                                                        .withFileOwner(manager.getFileOwner())
-                                                        .withFileGroup(manager.getFileGroup())
-                                                        .build();
+                    .withBasePath(compressedName)
+                    .withFollowLinks(false)
+                    .withMaxDepth(1)
+                    .withPathConditions(PathCondition.EMPTY_ARRAY)
+                    .withSubst(getStrSubstitutor())
+                    .withFilePermissions(manager.getFilePermissions())
+                    .withFileOwner(manager.getFileOwner())
+                    .withFileGroup(manager.getFileGroup())
+                    .build();
             // @formatter:on
             compressAction = new CompositeAction(Arrays.asList(compressAction, posixAttributeViewAction), false);
         }
 
-        final FileRenameAction renameAction = new FileRenameAction(new File(currentFileName), new File(renameTo),
-                    manager.isRenameEmptyFiles());
+        final FileRenameAction renameAction =
+                new FileRenameAction(new File(currentFileName), new File(renameTo), manager.isRenameEmptyFiles());
 
         final Action asyncAction = merge(compressAction, customActions, stopCustomActionsOnError);
         return new RolloverDescriptionImpl(currentFileName, false, renameAction, asyncAction);
@@ -602,5 +641,4 @@ public class DefaultRolloverStrategy extends AbstractRolloverStrategy {
     public String toString() {
         return "DefaultRolloverStrategy(min=" + minIndex + ", max=" + maxIndex + ", useMax=" + useMax + ")";
     }
-
 }

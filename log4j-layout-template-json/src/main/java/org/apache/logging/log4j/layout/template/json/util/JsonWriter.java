@@ -1,25 +1,20 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.layout.template.json.util;
-
-import org.apache.logging.log4j.util.BiConsumer;
-import org.apache.logging.log4j.util.IndexedReadOnlyStringMap;
-import org.apache.logging.log4j.util.StringBuilderFormattable;
-import org.apache.logging.log4j.util.StringMap;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -27,6 +22,10 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.BiConsumer;
+import org.apache.logging.log4j.util.IndexedReadOnlyStringMap;
+import org.apache.logging.log4j.util.StringBuilderFormattable;
+import org.apache.logging.log4j.util.StringMap;
 
 /**
  * A simple JSON writer with support for common Java data types.
@@ -42,7 +41,7 @@ import java.util.Objects;
  *     {@link Long})
  *     <li>{@link Boolean}
  *     <li>{@link StringBuilderFormattable}
- *     <li>arrays of primitve types
+ *     <li>arrays of primitive types
  *     <tt>char/boolean/byte/short/int/long/float/double</tt> and {@link Object}
  *     <li>{@link CharSequence} and <tt>char[]</tt> with necessary escaping
  * </ul>
@@ -55,20 +54,21 @@ import java.util.Objects;
  */
 public final class JsonWriter implements AutoCloseable, Cloneable {
 
-    private final static char[] HEX_CHARS = "0123456789ABCDEF".toCharArray();
+    private static final char[] HEX_CHARS = "0123456789ABCDEF".toCharArray();
 
     /**
      * Lookup table used for determining which output characters in 7-bit ASCII
      * range (i.e., first 128 Unicode code points, single-byte UTF-8 characters)
      * need to be quoted.
-     *<p>
+     * <p>
      * Value of 0 means "no escaping"; other positive values, that value is
      * character to use after backslash; and negative values, that generic
      * (backslash - u) escaping is to be used.
      */
-    private final static int[] ESC_CODES;
+    private static final int[] ESC_CODES;
+
     static {
-        int[] table = new int[128];
+        final int[] table = new int[128];
         // Control chars need generic escape sequence
         for (int i = 0; i < 32; ++i) {
             // 04-Mar-2011, tatu: Used to use "-(i + 1)", replaced with constant
@@ -99,9 +99,9 @@ public final class JsonWriter implements AutoCloseable, Cloneable {
     private final String quotedTruncatedStringSuffix;
 
     private JsonWriter(final Builder builder) {
-        this.quoteBuffer = new char[]{'\\', '-', '0', '0', '-', '-'};
-        this.stringBuilder = new StringBuilder();
-        this.formattableBuffer = new StringBuilder();
+        this.quoteBuffer = new char[] {'\\', '-', '0', '0', '-', '-'};
+        this.stringBuilder = new StringBuilder(builder.maxStringLength);
+        this.formattableBuffer = new StringBuilder(builder.maxStringLength);
         this.maxStringLength = builder.maxStringLength;
         this.truncatedStringSuffix = builder.truncatedStringSuffix;
         this.quotedTruncatedStringSuffix = quoteString(builder.truncatedStringSuffix);
@@ -117,13 +117,17 @@ public final class JsonWriter implements AutoCloseable, Cloneable {
         return quotedString;
     }
 
-    public String use(Runnable runnable) {
+    public String use(final Runnable runnable) {
+        Objects.requireNonNull(runnable, "runnable");
         final int startIndex = stringBuilder.length();
-        runnable.run();
-        final StringBuilder sliceStringBuilder = new StringBuilder();
-        sliceStringBuilder.append(stringBuilder, startIndex, stringBuilder.length());
-        stringBuilder.setLength(startIndex);
-        return sliceStringBuilder.toString();
+        try {
+            runnable.run();
+            final StringBuilder sliceStringBuilder = new StringBuilder();
+            sliceStringBuilder.append(stringBuilder, startIndex, stringBuilder.length());
+            return sliceStringBuilder.toString();
+        } finally {
+            trimStringBuilder(stringBuilder, startIndex);
+        }
     }
 
     public StringBuilder getStringBuilder() {
@@ -216,12 +220,9 @@ public final class JsonWriter implements AutoCloseable, Cloneable {
 
         // string
         else {
-            final String stringValue = value instanceof String
-                    ? (String) value
-                    : String.valueOf(value);
+            final String stringValue = value instanceof String ? (String) value : String.valueOf(value);
             writeString(stringValue);
         }
-
     }
 
     public void writeObject(final StringMap map) {
@@ -230,20 +231,22 @@ public final class JsonWriter implements AutoCloseable, Cloneable {
         } else {
             writeObjectStart();
             final boolean[] firstEntry = {true};
-            map.forEach((final String key, final Object value) -> {
-                if (key == null) {
-                    throw new IllegalArgumentException("null keys are not allowed");
-                }
-                if (firstEntry[0]) {
-                    firstEntry[0] = false;
-                } else {
-                    writeSeparator();
-                }
-                writeObjectKey(key);
-                writeValue(value);
-            });
+            map.forEach(this::writeStringMap, firstEntry);
             writeObjectEnd();
         }
+    }
+
+    private void writeStringMap(final String key, final Object value, final boolean[] firstEntry) {
+        if (key == null) {
+            throw new IllegalArgumentException("null keys are not allowed");
+        }
+        if (firstEntry[0]) {
+            firstEntry[0] = false;
+        } else {
+            writeSeparator();
+        }
+        writeObjectKey(key);
+        writeValue(value);
     }
 
     public void writeObject(final IndexedReadOnlyStringMap map) {
@@ -490,33 +493,11 @@ public final class JsonWriter implements AutoCloseable, Cloneable {
         stringBuilder.append(',');
     }
 
-    public <S> void writeString(
-            final BiConsumer<StringBuilder, S> emitter,
-            final S state) {
+    public <S> void writeString(final BiConsumer<StringBuilder, S> emitter, final S state) {
         Objects.requireNonNull(emitter, "emitter");
         stringBuilder.append('"');
-        formattableBuffer.setLength(0);
-        emitter.accept(formattableBuffer, state);
-        final int length = formattableBuffer.length();
-        // Handle max. string length complying input.
-        if (length <= maxStringLength) {
-            quoteString(formattableBuffer, 0, length);
-        }
-        // Handle max. string length violating input.
-        else {
-            quoteString(formattableBuffer, 0, maxStringLength);
-            stringBuilder.append(quotedTruncatedStringSuffix);
-        }
-        stringBuilder.append('"');
-    }
-
-    public void writeString(final StringBuilderFormattable formattable) {
-        if (formattable == null) {
-            writeNull();
-        } else {
-            stringBuilder.append('"');
-            formattableBuffer.setLength(0);
-            formattable.formatTo(formattableBuffer);
+        try {
+            emitter.accept(formattableBuffer, state);
             final int length = formattableBuffer.length();
             // Handle max. string length complying input.
             if (length <= maxStringLength) {
@@ -528,6 +509,32 @@ public final class JsonWriter implements AutoCloseable, Cloneable {
                 stringBuilder.append(quotedTruncatedStringSuffix);
             }
             stringBuilder.append('"');
+        } finally {
+            trimStringBuilder(formattableBuffer, 0);
+        }
+    }
+
+    public void writeString(final StringBuilderFormattable formattable) {
+        if (formattable == null) {
+            writeNull();
+        } else {
+            stringBuilder.append('"');
+            try {
+                formattable.formatTo(formattableBuffer);
+                final int length = formattableBuffer.length();
+                // Handle max. string length complying input.
+                if (length <= maxStringLength) {
+                    quoteString(formattableBuffer, 0, length);
+                }
+                // Handle max. string length violating input.
+                else {
+                    quoteString(formattableBuffer, 0, maxStringLength);
+                    stringBuilder.append(quotedTruncatedStringSuffix);
+                }
+                stringBuilder.append('"');
+            } finally {
+                trimStringBuilder(formattableBuffer, 0);
+            }
         }
     }
 
@@ -539,10 +546,7 @@ public final class JsonWriter implements AutoCloseable, Cloneable {
         }
     }
 
-    public void writeString(
-            final CharSequence seq,
-            final int offset,
-            final int length) {
+    public void writeString(final CharSequence seq, final int offset, final int length) {
 
         // Handle null input.
         if (seq == null) {
@@ -552,12 +556,10 @@ public final class JsonWriter implements AutoCloseable, Cloneable {
 
         // Check arguments.
         if (offset < 0) {
-            throw new IllegalArgumentException(
-                    "was expecting a positive offset: " + offset);
+            throw new IllegalArgumentException("was expecting a positive offset: " + offset);
         }
         if (length < 0) {
-            throw new IllegalArgumentException(
-                    "was expecting a positive length: " + length);
+            throw new IllegalArgumentException("was expecting a positive length: " + length);
         }
 
         stringBuilder.append('"');
@@ -571,20 +573,14 @@ public final class JsonWriter implements AutoCloseable, Cloneable {
             stringBuilder.append(quotedTruncatedStringSuffix);
         }
         stringBuilder.append('"');
-
     }
 
     /**
      * Quote text contents using JSON standard quoting.
      */
-    private void quoteString(
-            final CharSequence seq,
-            final int offset,
-            final int length) {
+    private void quoteString(final CharSequence seq, final int offset, final int length) {
         final int surrogateCorrection =
-                length > 0 && Character.isHighSurrogate(seq.charAt(offset + length - 1))
-                        ? -1
-                        : 0;
+                length > 0 && Character.isHighSurrogate(seq.charAt(offset + length - 1)) ? -1 : 0;
         final int limit = offset + length + surrogateCorrection;
         int i = offset;
         outer:
@@ -601,9 +597,7 @@ public final class JsonWriter implements AutoCloseable, Cloneable {
             }
             final char d = seq.charAt(i++);
             final int escCode = ESC_CODES[d];
-            final int quoteBufferLength = escCode < 0
-                    ? quoteNumeric(d)
-                    : quoteNamed(escCode);
+            final int quoteBufferLength = escCode < 0 ? quoteNumeric(d) : quoteNamed(escCode);
             stringBuilder.append(quoteBuffer, 0, quoteBufferLength);
         }
     }
@@ -616,10 +610,7 @@ public final class JsonWriter implements AutoCloseable, Cloneable {
         }
     }
 
-    public void writeString(
-            final char[] buffer,
-            final int offset,
-            final int length) {
+    public void writeString(final char[] buffer, final int offset, final int length) {
 
         // Handle null input.
         if (buffer == null) {
@@ -629,12 +620,10 @@ public final class JsonWriter implements AutoCloseable, Cloneable {
 
         // Check arguments.
         if (offset < 0) {
-            throw new IllegalArgumentException(
-                    "was expecting a positive offset: " + offset);
+            throw new IllegalArgumentException("was expecting a positive offset: " + offset);
         }
         if (length < 0) {
-            throw new IllegalArgumentException(
-                    "was expecting a positive length: " + length);
+            throw new IllegalArgumentException("was expecting a positive length: " + length);
         }
 
         stringBuilder.append('"');
@@ -648,20 +637,13 @@ public final class JsonWriter implements AutoCloseable, Cloneable {
             stringBuilder.append(quotedTruncatedStringSuffix);
         }
         stringBuilder.append('"');
-
     }
 
     /**
      * Quote text contents using JSON standard quoting.
      */
-    private void quoteString(
-            final char[] buffer,
-            final int offset,
-            final int length) {
-        final int surrogateCorrection =
-                length > 0 && Character.isHighSurrogate(buffer[offset + length - 1])
-                        ? -1
-                        : 0;
+    private void quoteString(final char[] buffer, final int offset, final int length) {
+        final int surrogateCorrection = length > 0 && Character.isHighSurrogate(buffer[offset + length - 1]) ? -1 : 0;
         final int limit = offset + length + surrogateCorrection;
         int i = offset;
         outer:
@@ -678,9 +660,7 @@ public final class JsonWriter implements AutoCloseable, Cloneable {
             }
             final char d = buffer[i++];
             final int escCode = ESC_CODES[d];
-            final int quoteBufferLength = escCode < 0
-                    ? quoteNumeric(d)
-                    : quoteNamed(escCode);
+            final int quoteBufferLength = escCode < 0 ? quoteNumeric(d) : quoteNamed(escCode);
             stringBuilder.append(quoteBuffer, 0, quoteBufferLength);
         }
     }
@@ -711,16 +691,16 @@ public final class JsonWriter implements AutoCloseable, Cloneable {
         } else if (number instanceof Float) {
             final float floatNumber = (float) number;
             writeNumber(floatNumber);
-        } else if (number instanceof Byte ||
-                number instanceof Short ||
-                number instanceof Integer ||
-                number instanceof Long) {
+        } else if (number instanceof Byte
+                || number instanceof Short
+                || number instanceof Integer
+                || number instanceof Long) {
             final long longNumber = number.longValue();
             writeNumber(longNumber);
         } else {
             final long longNumber = number.longValue();
             final double doubleValue = number.doubleValue();
-            if (Double.compare(longNumber, doubleValue) == 0) {
+            if (Double.compare((double) longNumber, doubleValue) == 0) {
                 writeNumber(longNumber);
             } else {
                 writeNumber(doubleValue);
@@ -766,8 +746,7 @@ public final class JsonWriter implements AutoCloseable, Cloneable {
 
     public void writeNumber(final long integralPart, final long fractionalPart) {
         if (fractionalPart < 0) {
-            throw new IllegalArgumentException(
-                    "was expecting a positive fraction: " + fractionalPart);
+            throw new IllegalArgumentException("was expecting a positive fraction: " + fractionalPart);
         }
         stringBuilder.append(integralPart);
         if (fractionalPart != 0) {
@@ -789,26 +768,20 @@ public final class JsonWriter implements AutoCloseable, Cloneable {
         writeRawString(seq, 0, seq.length());
     }
 
-    public void writeRawString(
-            final CharSequence seq,
-            final int offset,
-            final int length) {
+    public void writeRawString(final CharSequence seq, final int offset, final int length) {
 
         // Check arguments.
         Objects.requireNonNull(seq, "seq");
         if (offset < 0) {
-            throw new IllegalArgumentException(
-                    "was expecting a positive offset: " + offset);
+            throw new IllegalArgumentException("was expecting a positive offset: " + offset);
         }
         if (length < 0) {
-            throw new IllegalArgumentException(
-                    "was expecting a positive length: " + length);
+            throw new IllegalArgumentException("was expecting a positive length: " + length);
         }
 
         // Write characters.
         final int limit = offset + length;
         stringBuilder.append(seq, offset, limit);
-
     }
 
     public void writeRawString(final char[] buffer) {
@@ -816,30 +789,33 @@ public final class JsonWriter implements AutoCloseable, Cloneable {
         writeRawString(buffer, 0, buffer.length);
     }
 
-    public void writeRawString(
-            final char[] buffer,
-            final int offset,
-            final int length) {
+    public void writeRawString(final char[] buffer, final int offset, final int length) {
 
         // Check arguments.
         Objects.requireNonNull(buffer, "buffer");
         if (offset < 0) {
-            throw new IllegalArgumentException(
-                    "was expecting a positive offset: " + offset);
+            throw new IllegalArgumentException("was expecting a positive offset: " + offset);
         }
         if (length < 0) {
-            throw new IllegalArgumentException(
-                    "was expecting a positive length: " + length);
+            throw new IllegalArgumentException("was expecting a positive length: " + length);
         }
 
         // Write characters.
         stringBuilder.append(buffer, offset, length);
-
     }
 
     @Override
     public void close() {
-        stringBuilder.setLength(0);
+        trimStringBuilder(stringBuilder, 0);
+    }
+
+    private void trimStringBuilder(final StringBuilder stringBuilder, final int length) {
+        final int trimLength = Math.max(maxStringLength, length);
+        if (stringBuilder.capacity() > trimLength) {
+            stringBuilder.setLength(trimLength);
+            stringBuilder.trimToSize();
+        }
+        stringBuilder.setLength(length);
     }
 
     @Override
@@ -888,13 +864,9 @@ public final class JsonWriter implements AutoCloseable, Cloneable {
 
         private void validate() {
             if (maxStringLength <= 0) {
-                throw new IllegalArgumentException(
-                        "was expecting maxStringLength > 0: " +
-                                maxStringLength);
+                throw new IllegalArgumentException("was expecting maxStringLength > 0: " + maxStringLength);
             }
             Objects.requireNonNull(truncatedStringSuffix, "truncatedStringSuffix");
         }
-
     }
-
 }

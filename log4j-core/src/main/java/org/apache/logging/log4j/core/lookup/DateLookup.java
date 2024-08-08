@@ -1,25 +1,24 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.lookup;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.MarkerManager;
@@ -28,7 +27,8 @@ import org.apache.logging.log4j.core.config.plugins.Plugin;
 import org.apache.logging.log4j.status.StatusLogger;
 
 /**
- * Formats the current date or the date in the LogEvent. The "key" is used as the format String.
+ * Formats the current date or the date in the LogEvent. The "key" is used as the format String,
+ * following the java.text.SimpleDateFormat date and time pattern strings.
  */
 @Plugin(name = "date", category = StrLookup.CATEGORY)
 public class DateLookup implements StrLookup {
@@ -37,9 +37,9 @@ public class DateLookup implements StrLookup {
     private static final Marker LOOKUP = MarkerManager.getMarker("LOOKUP");
 
     /**
-     * Looks up the value of the environment variable.
+     * Looks up the current date.
      * @param key the format to use. If null, the default DateFormat will be used.
-     * @return The value of the environment variable.
+     * @return The formatted current date, never null.
      */
     @Override
     public String lookup(final String key) {
@@ -47,14 +47,14 @@ public class DateLookup implements StrLookup {
     }
 
     /**
-     * Looks up the value of the environment variable.
-     * @param event The current LogEvent (is ignored by this StrLookup).
+     * Looks up d the current date or the date in the LogEvent.
+     * @param event The LogEvent for which the date is returned. If null, current date is returned.
      * @param key the format to use. If null, the default DateFormat will be used.
-     * @return The value of the environment variable.
+     * @return The formatted date, never null.
      */
     @Override
     public String lookup(final LogEvent event, final String key) {
-        return formatDate(event.getTimeMillis(), key);
+        return event == null ? lookup(key) : formatDate(event.getTimeMillis(), key);
     }
 
     private String formatDate(final long date, final String format) {

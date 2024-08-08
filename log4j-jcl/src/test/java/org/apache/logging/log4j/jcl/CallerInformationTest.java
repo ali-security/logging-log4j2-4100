@@ -1,57 +1,51 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.jcl;
 
-import static org.junit.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.logging.log4j.junit.LoggerContextRule;
-import org.apache.logging.log4j.test.appender.ListAppender;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.apache.logging.log4j.core.LoggerContext;
+import org.apache.logging.log4j.core.test.appender.ListAppender;
+import org.apache.logging.log4j.core.test.junit.LoggerContextSource;
+import org.junit.jupiter.api.Test;
 
 public class CallerInformationTest {
 
-    // config from log4j-core test-jar
-    private static final String CONFIG = "log4j2-calling-class.xml";
-
-    @ClassRule
-    public static final LoggerContextRule ctx = new LoggerContextRule(CONFIG);
-
     @Test
-    public void testClassLogger() throws Exception {
-        final ListAppender app = ctx.getListAppender("Class").clear();
+    @LoggerContextSource("CallerInformationTest.xml")
+    public void testClassLogger(final LoggerContext ctx) {
+        final ListAppender app = ctx.getConfiguration().getAppender("Class");
+        app.clear();
         final Log logger = LogFactory.getLog("ClassLogger");
         logger.info("Ignored message contents.");
         logger.warn("Verifying the caller class is still correct.");
         logger.error("Hopefully nobody breaks me!");
         final List<String> messages = app.getMessages();
-        assertEquals("Incorrect number of messages.", 3, messages.size());
-        for (final String message : messages) {
-            assertEquals("Incorrect caller class name.", this.getClass().getName(), message);
-        }
+        assertThat(messages).hasSize(3).allMatch(c -> getClass().getName().equals(c));
     }
 
     @Test
-    public void testMethodLogger() throws Exception {
-        final ListAppender app = ctx.getListAppender("Method").clear();
+    @LoggerContextSource("CallerInformationTest.xml")
+    public void testMethodLogger(final LoggerContext ctx) {
+        final ListAppender app = ctx.getConfiguration().getAppender("Method");
+        app.clear();
         final Log logger = LogFactory.getLog("MethodLogger");
         logger.info("More messages.");
         logger.warn("CATASTROPHE INCOMING!");
@@ -59,9 +53,6 @@ public class CallerInformationTest {
         logger.warn("brains~~~");
         logger.info("Itchy. Tasty.");
         final List<String> messages = app.getMessages();
-        assertEquals("Incorrect number of messages.", 5, messages.size());
-        for (final String message : messages) {
-            assertEquals("Incorrect caller method name.", "testMethodLogger", message);
-        }
+        assertThat(messages).hasSize(5).allMatch("testMethodLogger"::equals);
     }
 }

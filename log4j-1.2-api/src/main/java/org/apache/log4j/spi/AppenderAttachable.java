@@ -2,7 +2,7 @@
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
@@ -14,12 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.log4j.spi;
 
-import org.apache.log4j.Appender;
-
 import java.util.Enumeration;
+import org.apache.log4j.Appender;
 
 /**
  * Interface for attaching appenders to objects.
@@ -45,10 +43,9 @@ public interface AppenderAttachable {
      */
     Appender getAppender(String name);
 
-
     /**
      * Returns <code>true</code> if the specified appender is in list of
-     * attached attached, <code>false</code> otherwise.
+     * attached, <code>false</code> otherwise.
      * @param appender The Appender to check.
      * @return true if the Appender is attached.
      *
@@ -61,13 +58,11 @@ public interface AppenderAttachable {
      */
     void removeAllAppenders();
 
-
     /**
      * Remove the appender passed as parameter from the list of appenders.
      * @param appender The Appender to remove.
      */
     void removeAppender(Appender appender);
-
 
     /**
      * Remove the appender with the name passed as parameter from the

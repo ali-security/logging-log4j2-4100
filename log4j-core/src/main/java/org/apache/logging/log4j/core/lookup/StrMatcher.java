@@ -1,23 +1,22 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.lookup;
 
 import java.util.Arrays;
-
 import org.apache.logging.log4j.util.Chars;
 import org.apache.logging.log4j.util.Strings;
 
@@ -71,8 +70,7 @@ public abstract class StrMatcher {
     /**
      * Constructor.
      */
-    protected StrMatcher() {
-    }
+    protected StrMatcher() {}
 
     /**
      * Returns a matcher which matches the comma character.
@@ -262,7 +260,7 @@ public abstract class StrMatcher {
         return isMatch(buffer, pos, 0, buffer.length);
     }
 
-    //-----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
     /**
      * Class used to define a set of characters for matching purposes.
      */
@@ -295,7 +293,7 @@ public abstract class StrMatcher {
         }
     }
 
-    //-----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
     /**
      * Class used to define a character for matching purposes.
      */
@@ -327,7 +325,7 @@ public abstract class StrMatcher {
         }
     }
 
-    //-----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
     /**
      * Class used to define a set of characters for matching purposes.
      */
@@ -354,13 +352,14 @@ public abstract class StrMatcher {
          * @return the number of matching characters, zero for no match
          */
         @Override
-        public int isMatch(final char[] buffer, int pos, final int bufferStart, final int bufferEnd) {
+        public int isMatch(final char[] buffer, final int pos, final int bufferStart, final int bufferEnd) {
             final int len = chars.length;
             if (pos + len > bufferEnd) {
                 return 0;
             }
-            for (int i = 0; i < chars.length; i++, pos++) {
-                if (chars[i] != buffer[pos]) {
+            int p = pos;
+            for (int i = 0; i < chars.length; i++, p++) {
+                if (chars[i] != buffer[p]) {
                     return 0;
                 }
             }
@@ -371,10 +370,9 @@ public abstract class StrMatcher {
         public String toString() {
             return super.toString() + Chars.SPACE + Arrays.toString(chars);
         }
-
     }
 
-    //-----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
     /**
      * Class used to match no characters.
      */
@@ -383,8 +381,7 @@ public abstract class StrMatcher {
         /**
          * Constructs a new instance of <code>NoMatcher</code>.
          */
-        NoMatcher() {
-        }
+        NoMatcher() {}
 
         /**
          * Always returns {@code false}.
@@ -401,7 +398,7 @@ public abstract class StrMatcher {
         }
     }
 
-    //-----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
     /**
      * Class used to match whitespace as per trim().
      */
@@ -410,8 +407,7 @@ public abstract class StrMatcher {
         /**
          * Constructs a new instance of <code>TrimMatcher</code>.
          */
-        TrimMatcher() {
-        }
+        TrimMatcher() {}
 
         /**
          * Returns whether or not the given character matches.
@@ -427,5 +423,4 @@ public abstract class StrMatcher {
             return buffer[pos] <= ' ' ? 1 : 0;
         }
     }
-
 }

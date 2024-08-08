@@ -1,25 +1,24 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.time;
 
+import java.io.Serializable;
 import org.apache.logging.log4j.core.util.Clock;
 import org.apache.logging.log4j.util.PerformanceSensitive;
-
-import java.io.Serializable;
 
 // This class is here to allow {@link SystemClock}, {@link SystemMillisClock}
 // to compile. It will not be copied into the log4j-core module.
@@ -57,14 +56,15 @@ public class MutableInstant implements Instant, Serializable {
     @Override
     public long getEpochMillisecond() {
         final int millis = nanoOfSecond / NANOS_PER_MILLI;
-        long epochMillisecond = epochSecond * MILLIS_PER_SECOND + millis;
+        final long epochMillisecond = epochSecond * MILLIS_PER_SECOND + millis;
         return epochMillisecond;
     }
 
     @Override
     public int getNanoOfMillisecond() {
         final int millis = nanoOfSecond / NANOS_PER_MILLI;
-        int nanoOfMillisecond = nanoOfSecond - (millis * NANOS_PER_MILLI); // cheaper than nanoOfSecond % NANOS_PER_MILLI
+        final int nanoOfMillisecond =
+                nanoOfSecond - (millis * NANOS_PER_MILLI); // cheaper than nanoOfSecond % NANOS_PER_MILLI
         return nanoOfMillisecond;
     }
 
@@ -81,7 +81,8 @@ public class MutableInstant implements Instant, Serializable {
     public void initFromEpochMilli(final long epochMilli, final int nanoOfMillisecond) {
         validateNanoOfMillisecond(nanoOfMillisecond);
         this.epochSecond = epochMilli / MILLIS_PER_SECOND;
-        this.nanoOfSecond = (int) (epochMilli - (epochSecond * MILLIS_PER_SECOND)) * NANOS_PER_MILLI + nanoOfMillisecond;
+        this.nanoOfSecond =
+                (int) (epochMilli - (epochSecond * MILLIS_PER_SECOND)) * NANOS_PER_MILLI + nanoOfMillisecond;
     }
 
     private void validateNanoOfMillisecond(final int nanoOfMillisecond) {
@@ -124,7 +125,7 @@ public class MutableInstant implements Instant, Serializable {
      *               the second element is the number of nanoseconds, later along the time-line, from the start of the millisecond
      */
     public static void instantToMillisAndNanos(final long epochSecond, final int nano, final long[] result) {
-        int millis = nano / NANOS_PER_MILLI;
+        final int millis = nano / NANOS_PER_MILLI;
         result[0] = epochSecond * MILLIS_PER_SECOND + millis;
         result[1] = nano - (millis * NANOS_PER_MILLI); // cheaper than nanoOfSecond % NANOS_PER_MILLI
     }
@@ -137,7 +138,7 @@ public class MutableInstant implements Instant, Serializable {
         if (!(object instanceof MutableInstant)) {
             return false;
         }
-        MutableInstant other = (MutableInstant) object;
+        final MutableInstant other = (MutableInstant) object;
         return epochSecond == other.epochSecond && nanoOfSecond == other.nanoOfSecond;
     }
 

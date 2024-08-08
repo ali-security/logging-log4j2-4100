@@ -1,20 +1,19 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package org.apache.logging.log4j.core.util;
 
 import java.lang.ref.Reference;
@@ -26,7 +25,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.AbstractLifeCycle;
 import org.apache.logging.log4j.core.LifeCycle2;
@@ -72,7 +70,7 @@ public class DefaultShutdownCallbackRegistry implements ShutdownCallbackRegistry
     public void run() {
         if (state.compareAndSet(State.STARTED, State.STOPPING)) {
             for (final Reference<Cancellable> hookRef : hooks) {
-                Cancellable hook = hookRef.get();
+                final Cancellable hook = hookRef.get();
                 if (hook != null) {
                     try {
                         hook.run();
@@ -80,7 +78,8 @@ public class DefaultShutdownCallbackRegistry implements ShutdownCallbackRegistry
                         try {
                             LOGGER.error(SHUTDOWN_HOOK_MARKER, "Caught exception executing shutdown hook {}", hook, t1);
                         } catch (final Throwable t2) {
-                            System.err.println("Caught exception " + t2.getClass() + " logging exception " + t1.getClass());
+                            System.err.println(
+                                    "Caught exception " + t2.getClass() + " logging exception " + t1.getClass());
                             t1.printStackTrace();
                         }
                     }
@@ -102,11 +101,11 @@ public class DefaultShutdownCallbackRegistry implements ShutdownCallbackRegistry
         @Override
         public void cancel() {
             callback = null;
-            Collection<Reference<Cancellable>> references = registered;
+            final Collection<Reference<Cancellable>> references = registered;
             if (references != null) {
                 registered = null;
                 references.removeIf(ref -> {
-                    Cancellable value = ref.get();
+                    final Cancellable value = ref.get();
                     return value == null || value == RegisteredCancellable.this;
                 });
             }
@@ -134,13 +133,12 @@ public class DefaultShutdownCallbackRegistry implements ShutdownCallbackRegistry
             hooks.add(new SoftReference<>(receipt));
             return receipt;
         }
-        throw new IllegalStateException("Cannot add new shutdown hook as this is not started. Current state: " +
-            state.get().name());
+        throw new IllegalStateException("Cannot add new shutdown hook as this is not started. Current state: "
+                + state.get().name());
     }
 
     @Override
-    public void initialize() {
-    }
+    public void initialize() {}
 
     /**
      * Registers the shutdown thread only if this is initialized.
@@ -213,5 +211,4 @@ public class DefaultShutdownCallbackRegistry implements ShutdownCallbackRegistry
     public boolean isStopped() {
         return state.get() == State.STOPPED;
     }
-
 }

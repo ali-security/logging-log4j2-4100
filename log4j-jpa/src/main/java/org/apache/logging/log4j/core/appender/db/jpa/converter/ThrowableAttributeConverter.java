@@ -1,18 +1,18 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.appender.db.jpa.converter;
 
@@ -22,10 +22,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.ListIterator;
-
 import javax.persistence.AttributeConverter;
 import javax.persistence.Converter;
-
 import org.apache.logging.log4j.util.LoaderUtil;
 import org.apache.logging.log4j.util.Strings;
 
@@ -35,6 +33,8 @@ import org.apache.logging.log4j.util.Strings;
  */
 @Converter(autoApply = false)
 public class ThrowableAttributeConverter implements AttributeConverter<Throwable, String> {
+    private static final StackTraceElement[] EMPTY_STACK_TRACE_ELEMENT_ARRAY = new StackTraceElement[0];
+
     private static final int CAUSED_BY_STRING_LENGTH = 10;
 
     private static final Field THROWABLE_CAUSE;
@@ -112,17 +112,19 @@ public class ThrowableAttributeConverter implements AttributeConverter<Throwable
                 break;
             }
 
-            stackTrace.add(
-                    StackTraceElementAttributeConverter.convertString(line.trim().substring(3).trim())
-            );
+            stackTrace.add(StackTraceElementAttributeConverter.convertString(
+                    line.trim().substring(3).trim()));
         }
 
-        return this.getThrowable(throwableClassName, message, cause,
-                stackTrace.toArray(new StackTraceElement[stackTrace.size()]));
+        return this.getThrowable(
+                throwableClassName, message, cause, stackTrace.toArray(EMPTY_STACK_TRACE_ELEMENT_ARRAY));
     }
 
-    private Throwable getThrowable(final String throwableClassName, final String message, final Throwable cause,
-                                   final StackTraceElement[] stackTrace) {
+    private Throwable getThrowable(
+            final String throwableClassName,
+            final String message,
+            final Throwable cause,
+            final StackTraceElement[] stackTrace) {
         try {
             @SuppressWarnings("unchecked")
             final Class<Throwable> throwableClass = (Class<Throwable>) LoaderUtil.loadClass(throwableClassName);
@@ -184,15 +186,14 @@ public class ThrowableAttributeConverter implements AttributeConverter<Throwable
     private Throwable getThrowable(final Class<Throwable> throwableClass, final String message, final Throwable cause) {
         try {
             @SuppressWarnings("unchecked")
-            final
-            Constructor<Throwable>[] constructors = (Constructor<Throwable>[]) throwableClass.getConstructors();
+            final Constructor<Throwable>[] constructors = (Constructor<Throwable>[]) throwableClass.getConstructors();
             for (final Constructor<Throwable> constructor : constructors) {
                 final Class<?>[] parameterTypes = constructor.getParameterTypes();
                 if (parameterTypes.length == 2) {
                     if (String.class == parameterTypes[0] && Throwable.class.isAssignableFrom(parameterTypes[1])) {
                         return constructor.newInstance(message, cause);
-                    } else if (String.class == parameterTypes[1] &&
-                            Throwable.class.isAssignableFrom(parameterTypes[0])) {
+                    } else if (String.class == parameterTypes[1]
+                            && Throwable.class.isAssignableFrom(parameterTypes[0])) {
                         return constructor.newInstance(cause, message);
                     }
                 }
@@ -206,8 +207,7 @@ public class ThrowableAttributeConverter implements AttributeConverter<Throwable
     private Throwable getThrowable(final Class<Throwable> throwableClass, final Throwable cause) {
         try {
             @SuppressWarnings("unchecked")
-            final
-            Constructor<Throwable>[] constructors = (Constructor<Throwable>[]) throwableClass.getConstructors();
+            final Constructor<Throwable>[] constructors = (Constructor<Throwable>[]) throwableClass.getConstructors();
             for (final Constructor<Throwable> constructor : constructors) {
                 final Class<?>[] parameterTypes = constructor.getParameterTypes();
                 if (parameterTypes.length == 1 && Throwable.class.isAssignableFrom(parameterTypes[0])) {
@@ -230,7 +230,7 @@ public class ThrowableAttributeConverter implements AttributeConverter<Throwable
 
     private Throwable getThrowable(final Class<Throwable> throwableClass) {
         try {
-            return throwableClass.newInstance();
+            return LoaderUtil.newInstanceOf(throwableClass);
         } catch (final Exception e) {
             return null;
         }

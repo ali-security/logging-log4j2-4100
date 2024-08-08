@@ -1,21 +1,27 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.appender;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TransferQueue;
 import org.apache.logging.log4j.core.Appender;
 import org.apache.logging.log4j.core.Core;
 import org.apache.logging.log4j.core.Filter;
@@ -44,13 +50,6 @@ import org.apache.logging.log4j.core.filter.AbstractFilterable;
 import org.apache.logging.log4j.core.impl.Log4jLogEvent;
 import org.apache.logging.log4j.spi.AbstractLogger;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TransferQueue;
-
 /**
  * Appends to one or more Appenders asynchronously. You can configure an AsyncAppender with one or more Appenders and an
  * Appender to append to if the queue is full. The AsyncAppender does not allow a filter to be specified on the Appender
@@ -73,10 +72,19 @@ public final class AsyncAppender extends AbstractAppender {
     private AsyncAppenderEventDispatcher dispatcher;
     private AsyncQueueFullPolicy asyncQueueFullPolicy;
 
-    private AsyncAppender(final String name, final Filter filter, final AppenderRef[] appenderRefs,
-            final String errorRef, final int queueSize, final boolean blocking, final boolean ignoreExceptions,
-            final long shutdownTimeout, final Configuration config, final boolean includeLocation,
-            final BlockingQueueFactory<LogEvent> blockingQueueFactory, final Property[] properties) {
+    private AsyncAppender(
+            final String name,
+            final Filter filter,
+            final AppenderRef[] appenderRefs,
+            final String errorRef,
+            final int queueSize,
+            final boolean blocking,
+            final boolean ignoreExceptions,
+            final long shutdownTimeout,
+            final Configuration config,
+            final boolean includeLocation,
+            final BlockingQueueFactory<LogEvent> blockingQueueFactory,
+            final Property[] properties) {
         super(name, filter, null, ignoreExceptions, properties);
         this.queue = blockingQueueFactory.create(queueSize);
         this.queueSize = queueSize;
@@ -109,8 +117,7 @@ public final class AsyncAppender extends AbstractAppender {
             }
         }
         if (appenders.size() > 0) {
-            dispatcher = new AsyncAppenderEventDispatcher(
-                    getName(), errorAppender, appenders, queue);
+            dispatcher = new AsyncAppenderEventDispatcher(getName(), errorAppender, appenders, queue);
         } else if (errorRef == null) {
             throw new ConfigurationException("No appenders are available for AsyncAppender " + getName());
         }
@@ -135,8 +142,10 @@ public final class AsyncAppender extends AbstractAppender {
         LOGGER.trace("AsyncAppender stopped. Queue has {} events.", queue.size());
 
         if (DiscardingAsyncQueueFullPolicy.getDiscardCount(asyncQueueFullPolicy) > 0) {
-            LOGGER.trace("AsyncAppender: {} discarded {} events.", asyncQueueFullPolicy,
-                DiscardingAsyncQueueFullPolicy.getDiscardCount(asyncQueueFullPolicy));
+            LOGGER.trace(
+                    "AsyncAppender: {} discarded {} events.",
+                    asyncQueueFullPolicy,
+                    DiscardingAsyncQueueFullPolicy.getDiscardCount(asyncQueueFullPolicy));
         }
         setStopped();
         return true;
@@ -174,8 +183,8 @@ public final class AsyncAppender extends AbstractAppender {
 
     private boolean transfer(final LogEvent memento) {
         return queue instanceof TransferQueue
-            ? ((TransferQueue<LogEvent>) queue).tryTransfer(memento)
-            : queue.offer(memento);
+                ? ((TransferQueue<LogEvent>) queue).tryTransfer(memento)
+                : queue.offer(memento);
     }
 
     /**
@@ -217,8 +226,7 @@ public final class AsyncAppender extends AbstractAppender {
     private boolean handleInterruptedException(final LogEvent memento) {
         final boolean appendSuccessful = queue.offer(memento);
         if (!appendSuccessful) {
-            LOGGER.warn("Interrupted while waiting for a free slot in the AsyncAppender LogEvent-queue {}",
-                getName());
+            LOGGER.warn("Interrupted while waiting for a free slot in the AsyncAppender LogEvent-queue {}", getName());
         }
         // set the interrupted flag again.
         Thread.currentThread().interrupt();
@@ -252,10 +260,17 @@ public final class AsyncAppender extends AbstractAppender {
      * @deprecated use {@link Builder} instead
      */
     @Deprecated
-    public static AsyncAppender createAppender(final AppenderRef[] appenderRefs, final String errorRef,
-                                               final boolean blocking, final long shutdownTimeout, final int size,
-                                               final String name, final boolean includeLocation, final Filter filter,
-                                               final Configuration config, final boolean ignoreExceptions) {
+    public static AsyncAppender createAppender(
+            final AppenderRef[] appenderRefs,
+            final String errorRef,
+            final boolean blocking,
+            final long shutdownTimeout,
+            final int size,
+            final String name,
+            final boolean includeLocation,
+            final Filter filter,
+            final Configuration config,
+            final boolean ignoreExceptions) {
         if (name == null) {
             LOGGER.error("No name provided for AsyncAppender");
             return null;
@@ -264,8 +279,19 @@ public final class AsyncAppender extends AbstractAppender {
             LOGGER.error("No appender references provided to AsyncAppender {}", name);
         }
 
-        return new AsyncAppender(name, filter, appenderRefs, errorRef, size, blocking, ignoreExceptions,
-            shutdownTimeout, config, includeLocation, new ArrayBlockingQueueFactory<LogEvent>(), null);
+        return new AsyncAppender(
+                name,
+                filter,
+                appenderRefs,
+                errorRef,
+                size,
+                blocking,
+                ignoreExceptions,
+                shutdownTimeout,
+                config,
+                includeLocation,
+                new ArrayBlockingQueueFactory<LogEvent>(),
+                null);
     }
 
     @PluginBuilderFactory
@@ -361,8 +387,19 @@ public final class AsyncAppender extends AbstractAppender {
 
         @Override
         public AsyncAppender build() {
-            return new AsyncAppender(name, getFilter(), appenderRefs, errorRef, bufferSize, blocking, ignoreExceptions,
-                shutdownTimeout, configuration, includeLocation, blockingQueueFactory, getPropertyArray());
+            return new AsyncAppender(
+                    name,
+                    getFilter(),
+                    appenderRefs,
+                    errorRef,
+                    bufferSize,
+                    blocking,
+                    ignoreExceptions,
+                    shutdownTimeout,
+                    configuration,
+                    includeLocation,
+                    blockingQueueFactory,
+                    getPropertyArray());
         }
     }
 
@@ -400,6 +437,15 @@ public final class AsyncAppender extends AbstractAppender {
     }
 
     /**
+     * Gets all Appenders.
+     *
+     * @return a list of Appenders.
+     */
+    public List<Appender> getAppenders() {
+        return dispatcher.getAppenders();
+    }
+
+    /**
      * Returns the name of the appender that any errors are logged to or {@code null}.
      *
      * @return the name of the appender that any errors are logged to or {@code null}
@@ -425,5 +471,4 @@ public final class AsyncAppender extends AbstractAppender {
     public int getQueueSize() {
         return queue.size();
     }
-
 }

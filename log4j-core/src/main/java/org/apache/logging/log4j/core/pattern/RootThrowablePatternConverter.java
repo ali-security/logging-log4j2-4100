@@ -1,18 +1,18 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.pattern;
 
@@ -31,14 +31,14 @@ import org.apache.logging.log4j.util.Strings;
  * version of the jar if available.
  */
 @Plugin(name = "RootThrowablePatternConverter", category = PatternConverter.CATEGORY)
-@ConverterKeys({ "rEx", "rThrowable", "rException" })
+@ConverterKeys({"rEx", "rThrowable", "rException"})
 public final class RootThrowablePatternConverter extends ThrowablePatternConverter {
 
     /**
      * Private constructor.
      *
-     * @param config
-     * @param options options, may be null.
+     * @param config the Configuration or {@code null}
+     * @param options Options, may be null.
      */
     private RootThrowablePatternConverter(final Configuration config, final String[] options) {
         super("RootThrowable", "throwable", options, config);
@@ -47,7 +47,7 @@ public final class RootThrowablePatternConverter extends ThrowablePatternConvert
     /**
      * Gets an instance of the class.
      *
-     * @param config
+     * @param config The Configuration or {@code null}.
      * @param options pattern options, may be null.  If first element is "short",
      *                only the first line of the throwable will be formatted.
      * @return instance of class.
@@ -68,7 +68,8 @@ public final class RootThrowablePatternConverter extends ThrowablePatternConvert
                 super.format(event, toAppendTo);
                 return;
             }
-            final String trace = proxy.getCauseStackTraceAsString(options.getIgnorePackages(), options.getTextRenderer(), getSuffix(event), options.getSeparator());
+            final String trace = proxy.getCauseStackTraceAsString(
+                    options.getIgnorePackages(), options.getTextRenderer(), getSuffix(event), options.getSeparator());
             final int len = toAppendTo.length();
             if (len > 0 && !Character.isWhitespace(toAppendTo.charAt(len - 1))) {
                 toAppendTo.append(' ');

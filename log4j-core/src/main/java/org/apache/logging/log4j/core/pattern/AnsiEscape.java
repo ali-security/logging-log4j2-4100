@@ -1,28 +1,30 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.pattern;
 
+import static org.apache.logging.log4j.util.Strings.toRootUpperCase;
+
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
-
 import org.apache.logging.log4j.core.util.Patterns;
+import org.apache.logging.log4j.status.StatusLogger;
 import org.apache.logging.log4j.util.EnglishEnums;
+import org.apache.logging.log4j.util.Strings;
 
 /**
  * Converts text into ANSI escape sequences.
@@ -58,8 +60,17 @@ public enum AnsiEscape {
 
     /**
      * Bright general attribute.
+     *
+     * @deprecated This attribute sets font-weight as "bold" and doesn't set color brightness. Use BOLD if you
+     * need to change font-weight and BRIGHT_* to use a bright color.
+     *
      */
     BRIGHT("1"),
+
+    /**
+     * Bold general attribute.
+     */
+    BOLD("1"),
 
     /**
      * Dim general attribute.
@@ -214,7 +225,128 @@ public enum AnsiEscape {
     /**
      * White background color.
      */
-    BG_WHITE("47");
+    BG_WHITE("47"),
+
+    /**
+     * Bright black foreground color.
+     */
+    BRIGHT_BLACK("90"),
+
+    /**
+     * Bright black foreground color.
+     */
+    FG_BRIGHT_BLACK("90"),
+
+    /**
+     * Bright red foreground color.
+     */
+    BRIGHT_RED("91"),
+
+    /**
+     * Bright red foreground color.
+     */
+    FG_BRIGHT_RED("91"),
+
+    /**
+     * Bright green foreground color.
+     */
+    BRIGHT_GREEN("92"),
+
+    /**
+     * Bright green foreground color.
+     */
+    FG_BRIGHT_GREEN("92"),
+
+    /**
+     * Bright yellow foreground color.
+     */
+    BRIGHT_YELLOW("93"),
+
+    /**
+     * Bright yellow foreground color.
+     */
+    FG_BRIGHT_YELLOW("93"),
+
+    /**
+     * Bright blue foreground color.
+     */
+    BRIGHT_BLUE("94"),
+
+    /**
+     * Bright blue foreground color.
+     */
+    FG_BRIGHT_BLUE("94"),
+
+    /**
+     * Bright magenta foreground color.
+     */
+    BRIGHT_MAGENTA("95"),
+
+    /**
+     * Bright magenta foreground color.
+     */
+    FG_BRIGHT_MAGENTA("95"),
+
+    /**
+     * Bright cyan foreground color.
+     */
+    BRIGHT_CYAN("96"),
+
+    /**
+     * Bright cyan foreground color.
+     */
+    FG_BRIGHT_CYAN("96"),
+
+    /**
+     * Bright white foreground color.
+     */
+    BRIGHT_WHITE("97"),
+
+    /**
+     * Bright white foreground color.
+     */
+    FG_BRIGHT_WHITE("97"),
+
+    /**
+     * Bright black background color.
+     */
+    BG_BRIGHT_BLACK("100"),
+
+    /**
+     * Bright red background color.
+     */
+    BG_BRIGHT_RED("101"),
+
+    /**
+     * Bright green background color.
+     */
+    BG_BRIGHT_GREEN("102"),
+
+    /**
+     * Bright yellow background color.
+     */
+    BG_BRIGHT_YELLOW("103"),
+
+    /**
+     * Bright blue background color.
+     */
+    BG_BRIGHT_BLUE("104"),
+
+    /**
+     * Bright magenta background color.
+     */
+    BG_BRIGHT_MAGENTA("105"),
+
+    /**
+     * Bright cyan background color.
+     */
+    BG_BRIGHT_CYAN("106"),
+
+    /**
+     * Bright white background color.
+     */
+    BG_BRIGHT_WHITE("107");
+    private static final StatusLogger LOGGER = StatusLogger.getLogger();
 
     private static final String DEFAULT_STYLE = CSI.getCode() + SUFFIX.getCode();
 
@@ -289,16 +421,18 @@ public enum AnsiEscape {
      * @return a new map
      */
     public static Map<String, String> createMap(final String[] values, final String[] dontEscapeKeys) {
-        final String[] sortedIgnoreKeys = dontEscapeKeys != null ? dontEscapeKeys.clone() : new String[0];
+        final String[] sortedIgnoreKeys = dontEscapeKeys != null ? dontEscapeKeys.clone() : Strings.EMPTY_ARRAY;
         Arrays.sort(sortedIgnoreKeys);
         final Map<String, String> map = new HashMap<>();
         for (final String string : values) {
             final String[] keyValue = string.split(Patterns.toWhitespaceSeparator("="));
             if (keyValue.length > 1) {
-                final String key = keyValue[0].toUpperCase(Locale.ENGLISH);
+                final String key = toRootUpperCase(keyValue[0]);
                 final String value = keyValue[1];
                 final boolean escape = Arrays.binarySearch(sortedIgnoreKeys, key) < 0;
                 map.put(key, escape ? createSequence(value.split("\\s")) : value);
+            } else {
+                LOGGER.warn("Syntax error, missing '=': Expected \"{KEY1=VALUE, KEY2=VALUE, ...}");
             }
         }
         return map;
@@ -319,18 +453,51 @@ public enum AnsiEscape {
         boolean first = true;
         for (final String name : names) {
             try {
-                final AnsiEscape escape = EnglishEnums.valueOf(AnsiEscape.class, name.trim());
+                // GitHub Issue #1202
+                if (name.startsWith(PatternParser.DISABLE_ANSI) || name.startsWith(PatternParser.NO_CONSOLE_NO_ANSI)) {
+                    continue;
+                }
                 if (!first) {
                     sb.append(AnsiEscape.SEPARATOR.getCode());
                 }
                 first = false;
-                sb.append(escape.getCode());
+                String hexColor = null;
+                final String trimmedName = toRootUpperCase(name.trim());
+                if (trimmedName.startsWith("#")) {
+                    sb.append("38");
+                    sb.append(SEPARATOR.getCode());
+                    sb.append("2");
+                    sb.append(SEPARATOR.getCode());
+                    hexColor = trimmedName;
+                } else if (trimmedName.startsWith("FG_#")) {
+                    sb.append("38");
+                    sb.append(SEPARATOR.getCode());
+                    sb.append("2");
+                    sb.append(SEPARATOR.getCode());
+                    hexColor = trimmedName.substring(3);
+                } else if (trimmedName.startsWith("BG_#")) {
+                    sb.append("48");
+                    sb.append(SEPARATOR.getCode());
+                    sb.append("2");
+                    sb.append(SEPARATOR.getCode());
+                    hexColor = trimmedName.substring(3);
+                }
+                if (hexColor != null) {
+                    sb.append(Integer.valueOf(hexColor.substring(1, 3), 16)); // r
+                    sb.append(SEPARATOR.getCode());
+                    sb.append(Integer.valueOf(hexColor.substring(3, 5), 16)); // g
+                    sb.append(SEPARATOR.getCode());
+                    sb.append(Integer.valueOf(hexColor.substring(5, 7), 16)); // b
+                    // no separator at the end
+                } else {
+                    final AnsiEscape escape = EnglishEnums.valueOf(AnsiEscape.class, trimmedName);
+                    sb.append(escape.getCode());
+                }
             } catch (final Exception ex) {
-                // Ignore the error.
+                StatusLogger.getLogger().warn("The style attribute {} is incorrect.", name, ex);
             }
         }
         sb.append(AnsiEscape.SUFFIX.getCode());
         return sb.toString();
     }
-
 }

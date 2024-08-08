@@ -1,18 +1,18 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.appender.routing;
 
@@ -20,9 +20,7 @@ import static org.apache.logging.log4j.core.appender.routing.RoutingAppender.STA
 
 import java.util.Objects;
 import java.util.concurrent.ConcurrentMap;
-
 import javax.script.Bindings;
-
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.Core;
 import org.apache.logging.log4j.core.LogEvent;
@@ -35,6 +33,7 @@ import org.apache.logging.log4j.core.config.plugins.PluginElement;
 import org.apache.logging.log4j.core.config.plugins.validation.constraints.Required;
 import org.apache.logging.log4j.core.script.AbstractScript;
 import org.apache.logging.log4j.core.script.ScriptManager;
+import org.apache.logging.log4j.core.script.ScriptRef;
 import org.apache.logging.log4j.status.StatusLogger;
 
 /**
@@ -45,7 +44,7 @@ public final class Routes {
 
     private static final String LOG_EVENT_KEY = "logEvent";
 
-    public static class Builder implements org.apache.logging.log4j.core.util.Builder<Routes>  {
+    public static class Builder implements org.apache.logging.log4j.core.util.Builder<Routes> {
 
         @PluginConfiguration
         private Configuration configuration;
@@ -73,7 +72,17 @@ public final class Routes {
                 if (configuration == null) {
                     LOGGER.error("No Configuration defined for Routes; required for Script");
                 } else {
-                    configuration.getScriptManager().addScript(patternScript);
+                    if (configuration.getScriptManager() == null) {
+                        LOGGER.error("Script support is not enabled");
+                        return null;
+                    }
+                    if (!configuration.getScriptManager().addScript(patternScript)) {
+                        if (!(patternScript instanceof ScriptRef)) {
+                            if (!getConfiguration().getScriptManager().addScript(patternScript)) {
+                                return null;
+                            }
+                        }
+                    }
                 }
             }
             return new Routes(configuration, patternScript, pattern, routes);
@@ -114,7 +123,6 @@ public final class Routes {
             this.routes = routes;
             return this;
         }
-
     }
 
     private static final Logger LOGGER = StatusLogger.getLogger();
@@ -127,9 +135,7 @@ public final class Routes {
      * @deprecated since 2.7; use {@link #newBuilder()}.
      */
     @Deprecated
-    public static Routes createRoutes(
-            final String pattern,
-            final Route... routes) {
+    public static Routes createRoutes(final String pattern, final Route... routes) {
         if (routes == null || routes.length == 0) {
             LOGGER.error("No routes configured");
             return null;
@@ -151,7 +157,11 @@ public final class Routes {
     // TODO Why not make this a Map or add a Map.
     private final Route[] routes;
 
-    private Routes(final Configuration configuration, final AbstractScript patternScript, final String pattern, final Route... routes) {
+    private Routes(
+            final Configuration configuration,
+            final AbstractScript patternScript,
+            final String pattern,
+            final Route... routes) {
         this.configuration = configuration;
         this.patternScript = patternScript;
         this.pattern = pattern;
@@ -215,7 +225,5 @@ public final class Routes {
         }
         sb.append('}');
         return sb.toString();
-
     }
-
 }

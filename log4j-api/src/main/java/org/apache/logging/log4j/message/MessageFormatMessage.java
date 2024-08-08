@@ -1,20 +1,19 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package org.apache.logging.log4j.message;
 
 import java.io.IOException;
@@ -24,20 +23,20 @@ import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.IllegalFormatException;
 import java.util.Locale;
-
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.status.StatusLogger;
 
 /**
  * Handles messages that consist of a format string conforming to java.text.MessageFormat.
- *
- * @serial In version 2.1, due to a bug in the serialization format, the serialization format was changed along with
- * its {@code serialVersionUID} value.
  */
 public class MessageFormatMessage implements Message {
 
     private static final Logger LOGGER = StatusLogger.getLogger();
 
+    /**
+     * @serial In version 2.1, due to a bug in the serialization format, the serialization format was changed along with
+     * its {@code serialVersionUID} value.
+     */
     private static final long serialVersionUID = 1L;
 
     private static final int HASHVAL = 31;
@@ -51,7 +50,7 @@ public class MessageFormatMessage implements Message {
 
     /**
      * Constructs a message.
-     * 
+     *
      * @param locale the locale for this message format
      * @param messagePattern the pattern for this message format
      * @param parameters The objects to format
@@ -69,7 +68,7 @@ public class MessageFormatMessage implements Message {
 
     /**
      * Constructs a message.
-     * 
+     *
      * @param messagePattern the pattern for this message format
      * @param parameters The objects to format
      */
@@ -115,7 +114,7 @@ public class MessageFormatMessage implements Message {
             final MessageFormat temp = new MessageFormat(msgPattern, locale);
             return temp.format(args);
         } catch (final IllegalFormatException ife) {
-            LOGGER.error("Unable to format msg: " + msgPattern, ife);
+            LOGGER.error("Unable to format msg: {}", msgPattern, ife);
             return msgPattern;
         }
     }
@@ -125,7 +124,7 @@ public class MessageFormatMessage implements Message {
         if (this == o) {
             return true;
         }
-        if (o == null || getClass() != o.getClass()) {
+        if (!(o instanceof MessageFormatMessage)) {
             return false;
         }
 
@@ -143,7 +142,6 @@ public class MessageFormatMessage implements Message {
         result = HASHVAL * result + (serializedParameters != null ? Arrays.hashCode(serializedParameters) : 0);
         return result;
     }
-
 
     @Override
     public String toString() {

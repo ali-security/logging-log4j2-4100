@@ -1,18 +1,18 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.pattern;
 
@@ -24,13 +24,12 @@ import org.apache.logging.log4j.core.impl.LocationAware;
  * Returns the event's line location information in a StringBuilder.
  */
 @Plugin(name = "LineLocationPatternConverter", category = PatternConverter.CATEGORY)
-@ConverterKeys({ "L", "line" })
+@ConverterKeys({"L", "line"})
 public final class LineLocationPatternConverter extends LogEventPatternConverter implements LocationAware {
     /**
      * Singleton.
      */
-    private static final LineLocationPatternConverter INSTANCE =
-        new LineLocationPatternConverter();
+    private static final LineLocationPatternConverter INSTANCE = new LineLocationPatternConverter();
 
     /**
      * Private constructor.
@@ -45,8 +44,7 @@ public final class LineLocationPatternConverter extends LogEventPatternConverter
      * @param options options, may be null.
      * @return instance of pattern converter.
      */
-    public static LineLocationPatternConverter newInstance(
-        final String[] options) {
+    public static LineLocationPatternConverter newInstance(final String[] options) {
         return INSTANCE;
     }
 

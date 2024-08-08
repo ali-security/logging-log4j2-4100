@@ -1,18 +1,18 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.appender.rolling.action;
 
@@ -127,17 +127,15 @@ public final class GzCompressAction extends AbstractAction {
      * @throws IOException on IO exception.
      */
     public static boolean execute(
-            final File source,
-            final File destination,
-            final boolean deleteSource,
-            final int compressionLevel) throws IOException {
+            final File source, final File destination, final boolean deleteSource, final int compressionLevel)
+            throws IOException {
         if (source.exists()) {
             try (final FileInputStream fis = new FileInputStream(source);
-                 final OutputStream fos = new FileOutputStream(destination);
-                 final OutputStream gzipOut = new ConfigurableLevelGZIPOutputStream(
-                         fos, BUF_SIZE, compressionLevel);
-                 // Reduce native invocations by buffering data into GZIPOutputStream
-                 final OutputStream os = new BufferedOutputStream(gzipOut, BUF_SIZE)) {
+                    final OutputStream fos = new FileOutputStream(destination);
+                    final OutputStream gzipOut =
+                            new ConfigurableLevelGZIPOutputStream(fos, BUF_SIZE, compressionLevel);
+                    // Reduce native invocations by buffering data into GZIPOutputStream
+                    final OutputStream os = new BufferedOutputStream(gzipOut, BUF_SIZE)) {
                 final byte[] inbuf = new byte[BUF_SIZE];
                 int n;
 
@@ -158,7 +156,8 @@ public final class GzCompressAction extends AbstractAction {
 
     private static final class ConfigurableLevelGZIPOutputStream extends GZIPOutputStream {
 
-        ConfigurableLevelGZIPOutputStream(OutputStream out, int bufSize, int level) throws IOException {
+        ConfigurableLevelGZIPOutputStream(final OutputStream out, final int bufSize, final int level)
+                throws IOException {
             super(out, bufSize);
             def.setLevel(level);
         }
@@ -176,8 +175,8 @@ public final class GzCompressAction extends AbstractAction {
 
     @Override
     public String toString() {
-        return GzCompressAction.class.getSimpleName() + '[' + source + " to " + destination
-                + ", deleteSource=" + deleteSource + ']';
+        return GzCompressAction.class.getSimpleName() + '[' + source + " to " + destination + ", deleteSource="
+                + deleteSource + ']';
     }
 
     public File getSource() {

@@ -1,25 +1,25 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.appender.rewrite;
 
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
+import static org.apache.logging.log4j.util.Strings.toRootUpperCase;
 
+import java.util.HashMap;
+import java.util.Map;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.core.Core;
 import org.apache.logging.log4j.core.LogEvent;
@@ -35,7 +35,11 @@ import org.apache.logging.log4j.core.util.KeyValuePair;
  *
  * @since 2.4
  */
-@Plugin(name = "LoggerNameLevelRewritePolicy", category = Core.CATEGORY_NAME, elementType = "rewritePolicy", printObject = true)
+@Plugin(
+        name = "LoggerNameLevelRewritePolicy",
+        category = Core.CATEGORY_NAME,
+        elementType = "rewritePolicy",
+        printObject = true)
 public class LoggerNameLevelRewritePolicy implements RewritePolicy {
 
     /**
@@ -53,7 +57,7 @@ public class LoggerNameLevelRewritePolicy implements RewritePolicy {
             // @formatter:off
             @PluginAttribute("logger") final String loggerNamePrefix,
             @PluginElement("KeyValuePair") final KeyValuePair[] levelPairs) {
-            // @formatter:on
+        // @formatter:on
         final Map<Level, Level> newMap = new HashMap<>(levelPairs.length);
         for (final KeyValuePair keyValuePair : levelPairs) {
             newMap.put(getLevel(keyValuePair.getKey()), getLevel(keyValuePair.getValue()));
@@ -62,7 +66,7 @@ public class LoggerNameLevelRewritePolicy implements RewritePolicy {
     }
 
     private static Level getLevel(final String name) {
-        return Level.getLevel(name.toUpperCase(Locale.ROOT));
+        return Level.getLevel(toRootUpperCase(name));
     }
 
     private final String loggerName;
@@ -84,8 +88,8 @@ public class LoggerNameLevelRewritePolicy implements RewritePolicy {
         if (newLevel == null || newLevel == sourceLevel) {
             return event;
         }
-        final LogEvent result = new Log4jLogEvent.Builder(event).setLevel(newLevel).build();
+        final LogEvent result =
+                new Log4jLogEvent.Builder(event).setLevel(newLevel).build();
         return result;
     }
-
 }

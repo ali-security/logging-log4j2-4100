@@ -1,30 +1,29 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.layout.template.json.resolver;
-
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.core.LogEvent;
-import org.apache.logging.log4j.core.net.Severity;
-import org.apache.logging.log4j.layout.template.json.util.JsonWriter;
 
 import java.util.Arrays;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.core.LogEvent;
+import org.apache.logging.log4j.core.net.Severity;
+import org.apache.logging.log4j.layout.template.json.util.JsonWriter;
 
 /**
  * {@link Level} resolver.
@@ -72,68 +71,64 @@ import java.util.stream.Collectors;
  * }
  * </pre>
  */
-final class LevelResolver implements EventResolver {
+public final class LevelResolver implements EventResolver {
 
-    private static String[] SEVERITY_CODE_RESOLUTION_BY_STANDARD_LEVEL_ORDINAL;
+    private static final String[] SEVERITY_CODE_RESOLUTION_BY_STANDARD_LEVEL_ORDINAL;
 
     static {
         final int levelCount = Level.values().length;
-        final String[] severityCodeResolutionByStandardLevelOrdinal =
-                new String[levelCount + 1];
+        final String[] severityCodeResolutionByStandardLevelOrdinal = new String[levelCount + 1];
         for (final Level level : Level.values()) {
             final int standardLevelOrdinal = level.getStandardLevel().ordinal();
             final int severityCode = Severity.getSeverity(level).getCode();
-            severityCodeResolutionByStandardLevelOrdinal[standardLevelOrdinal] =
-                    String.valueOf(severityCode);
+            severityCodeResolutionByStandardLevelOrdinal[standardLevelOrdinal] = String.valueOf(severityCode);
         }
-        SEVERITY_CODE_RESOLUTION_BY_STANDARD_LEVEL_ORDINAL =
-                severityCodeResolutionByStandardLevelOrdinal;
+        SEVERITY_CODE_RESOLUTION_BY_STANDARD_LEVEL_ORDINAL = severityCodeResolutionByStandardLevelOrdinal;
     }
 
     private static final EventResolver SEVERITY_CODE_RESOLVER =
             (final LogEvent logEvent, final JsonWriter jsonWriter) -> {
-                final int standardLevelOrdinal =
-                        logEvent.getLevel().getStandardLevel().ordinal();
+                final Level level = logEvent.getLevel();
+                final int standardLevelOrdinal = level.getStandardLevel().ordinal();
                 final String severityCodeResolution =
-                        SEVERITY_CODE_RESOLUTION_BY_STANDARD_LEVEL_ORDINAL[
-                                standardLevelOrdinal];
-                jsonWriter.writeRawString(severityCodeResolution);
+                        SEVERITY_CODE_RESOLUTION_BY_STANDARD_LEVEL_ORDINAL[standardLevelOrdinal];
+                if (severityCodeResolution != null) {
+                    jsonWriter.writeRawString(severityCodeResolution);
+                }
+                // `Level.values()` can change at runtime and cause a lookup miss.
+                // When that happens, fallback to the slow path:
+                else {
+                    final int severityCode = Severity.getSeverity(level).getCode();
+                    jsonWriter.writeNumber(severityCode);
+                }
             };
 
     private final EventResolver internalResolver;
 
-    LevelResolver(
-            final EventResolverContext context,
-            final TemplateResolverConfig config) {
+    LevelResolver(final EventResolverContext context, final TemplateResolverConfig config) {
         this.internalResolver = createResolver(context, config);
     }
 
     private static EventResolver createResolver(
-            final EventResolverContext context,
-            final TemplateResolverConfig config) {
+            final EventResolverContext context, final TemplateResolverConfig config) {
         final JsonWriter jsonWriter = context.getJsonWriter();
         final String fieldName = config.getString("field");
-        switch (fieldName) {
-            case "name": return createNameResolver(jsonWriter);
-            case "severity": {
-                final String severityFieldName =
-                        config.getString(new String[]{"severity", "field"});
-                switch (severityFieldName) {
-                    case "keyword": return createSeverityKeywordResolver(jsonWriter);
-                    case "code": return SEVERITY_CODE_RESOLVER;
-                    default:
-                        throw new IllegalArgumentException(
-                                "unknown severity field: " + config);
-                }
+        if ("name".equals(fieldName)) {
+            return createNameResolver(jsonWriter);
+        } else if ("severity".equals(fieldName)) {
+            final String severityFieldName = config.getString(new String[] {"severity", "field"});
+            if ("keyword".equals(severityFieldName)) {
+                return createSeverityKeywordResolver(jsonWriter);
+            } else if ("code".equals(severityFieldName)) {
+                return SEVERITY_CODE_RESOLVER;
             }
-            default: throw new IllegalArgumentException("unknown field: " + config);
+            throw new IllegalArgumentException("unknown severity field: " + config);
         }
+        throw new IllegalArgumentException("unknown field: " + config);
     }
 
-    private static EventResolver createNameResolver(
-            final JsonWriter contextJsonWriter) {
-        final Map<Level, String> resolutionByLevel = Arrays
-                .stream(Level.values())
+    private static EventResolver createNameResolver(final JsonWriter contextJsonWriter) {
+        final Map<Level, String> resolutionByLevel = Arrays.stream(Level.values())
                 .collect(Collectors.toMap(
                         Function.identity(),
                         (final Level level) -> contextJsonWriter.use(() -> {
@@ -141,24 +136,41 @@ final class LevelResolver implements EventResolver {
                             contextJsonWriter.writeString(name);
                         })));
         return (final LogEvent logEvent, final JsonWriter jsonWriter) -> {
-            final String resolution = resolutionByLevel.get(logEvent.getLevel());
-            jsonWriter.writeRawString(resolution);
+            final Level level = logEvent.getLevel();
+            final String resolution = resolutionByLevel.get(level);
+            if (resolution != null) {
+                jsonWriter.writeRawString(resolution);
+            }
+            // `Level.values()` can change at runtime and cause a lookup miss.
+            // When that happens, fallback to the slow path:
+            else {
+                final String levelName = level.name();
+                jsonWriter.writeString(levelName);
+            }
         };
     }
 
-    private static EventResolver createSeverityKeywordResolver(
-            final JsonWriter contextJsonWriter) {
-        final Map<Level, String> resolutionByLevel = Arrays
-                .stream(Level.values())
+    private static EventResolver createSeverityKeywordResolver(final JsonWriter contextJsonWriter) {
+        final Map<Level, String> resolutionByLevel = Arrays.stream(Level.values())
                 .collect(Collectors.toMap(
                         Function.identity(),
                         (final Level level) -> contextJsonWriter.use(() -> {
-                            final String severityKeyword = Severity.getSeverity(level).name();
+                            final String severityKeyword =
+                                    Severity.getSeverity(level).name();
                             contextJsonWriter.writeString(severityKeyword);
                         })));
         return (final LogEvent logEvent, final JsonWriter jsonWriter) -> {
-            final String resolution = resolutionByLevel.get(logEvent.getLevel());
-            jsonWriter.writeRawString(resolution);
+            final Level level = logEvent.getLevel();
+            String resolution = resolutionByLevel.get(level);
+            if (resolution != null) {
+                jsonWriter.writeRawString(resolution);
+            }
+            // `Level.values()` can change at runtime and cause a lookup miss.
+            // When that happens, fallback to the slow path:
+            else {
+                final String severityKeyword = Severity.getSeverity(level).name();
+                jsonWriter.writeString(severityKeyword);
+            }
         };
     }
 
@@ -167,10 +179,7 @@ final class LevelResolver implements EventResolver {
     }
 
     @Override
-    public void resolve(
-            final LogEvent logEvent,
-            final JsonWriter jsonWriter) {
+    public void resolve(final LogEvent logEvent, final JsonWriter jsonWriter) {
         internalResolver.resolve(logEvent, jsonWriter);
     }
-
 }

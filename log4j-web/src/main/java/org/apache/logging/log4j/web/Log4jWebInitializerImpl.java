@@ -1,18 +1,18 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.web;
 
@@ -24,11 +24,10 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-
 import javax.servlet.ServletContext;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.core.AbstractLifeCycle;
 import org.apache.logging.log4j.core.LoggerContext;
@@ -36,15 +35,16 @@ import org.apache.logging.log4j.core.async.AsyncLoggerContext;
 import org.apache.logging.log4j.core.config.Configurator;
 import org.apache.logging.log4j.core.impl.ContextAnchor;
 import org.apache.logging.log4j.core.impl.Log4jContextFactory;
+import org.apache.logging.log4j.core.lookup.ConfigurationStrSubstitutor;
 import org.apache.logging.log4j.core.lookup.Interpolator;
 import org.apache.logging.log4j.core.lookup.StrSubstitutor;
 import org.apache.logging.log4j.core.selector.ContextSelector;
 import org.apache.logging.log4j.core.selector.NamedContextSelector;
 import org.apache.logging.log4j.core.util.Loader;
 import org.apache.logging.log4j.core.util.NetUtils;
-import org.apache.logging.log4j.core.util.SetUtils;
 import org.apache.logging.log4j.spi.LoggerContextFactory;
 import org.apache.logging.log4j.util.LoaderUtil;
+import org.apache.logging.log4j.util.Strings;
 
 /**
  * This class initializes and deinitializes Log4j no matter how the initialization occurs.
@@ -62,7 +62,7 @@ final class Log4jWebInitializerImpl extends AbstractLifeCycle implements Log4jWe
     }
 
     private final Map<String, String> map = new ConcurrentHashMap<>();
-    private final StrSubstitutor substitutor = new StrSubstitutor(new Interpolator(map));
+    private final StrSubstitutor substitutor = new ConfigurationStrSubstitutor(new Interpolator(map));
     private final ServletContext servletContext;
 
     private String name;
@@ -101,10 +101,10 @@ final class Log4jWebInitializerImpl extends AbstractLifeCycle implements Log4jWe
             super.setStarting();
 
             this.name = this.substitutor.replace(this.servletContext.getInitParameter(LOG4J_CONTEXT_NAME));
-            final String location = this.substitutor.replace(this.servletContext
-                    .getInitParameter(LOG4J_CONFIG_LOCATION));
-            final boolean isJndi = "true".equalsIgnoreCase(this.servletContext
-                    .getInitParameter(IS_LOG4J_CONTEXT_SELECTOR_NAMED));
+            final String location =
+                    this.substitutor.replace(this.servletContext.getInitParameter(LOG4J_CONFIG_LOCATION));
+            final boolean isJndi =
+                    "true".equalsIgnoreCase(this.servletContext.getInitParameter(IS_LOG4J_CONTEXT_SELECTOR_NAMED));
 
             if (isJndi) {
                 this.initializeJndi(location);
@@ -133,8 +133,8 @@ final class Log4jWebInitializerImpl extends AbstractLifeCycle implements Log4jWe
             final ContextSelector selector = ((Log4jContextFactory) factory).getSelector();
             if (selector instanceof NamedContextSelector) {
                 this.namedContextSelector = (NamedContextSelector) selector;
-                context = this.namedContextSelector.locateContext(this.name,
-                        WebLoggerContextUtils.createExternalEntry(this.servletContext), configLocation);
+                context = this.namedContextSelector.locateContext(
+                        this.name, WebLoggerContextUtils.createExternalEntry(this.servletContext), configLocation);
                 ContextAnchor.THREAD_CONTEXT.set(context);
                 if (context.isInitialized()) {
                     context.start();
@@ -149,7 +149,10 @@ final class Log4jWebInitializerImpl extends AbstractLifeCycle implements Log4jWe
             return;
         }
         this.loggerContext = context;
-        LOGGER.debug("Created logger context for [{}] using [{}].", this.name, context.getClass().getClassLoader());
+        LOGGER.debug(
+                "Created logger context for [{}] using [{}].",
+                this.name,
+                context.getClass().getClassLoader());
     }
 
     private void initializeNonJndi(final String location) {
@@ -167,14 +170,17 @@ final class Log4jWebInitializerImpl extends AbstractLifeCycle implements Log4jWe
         }
         if (location != null && location.contains(",")) {
             final List<URI> uris = getConfigURIs(location);
-            this.loggerContext = Configurator.initialize(this.name, this.getClassLoader(), uris,
+            this.loggerContext = Configurator.initialize(
+                    this.name,
+                    this.getClassLoader(),
+                    uris,
                     WebLoggerContextUtils.createExternalEntry(this.servletContext));
             return;
         }
 
         final URI uri = getConfigURI(location);
-        this.loggerContext = Configurator.initialize(this.name, this.getClassLoader(), uri,
-                WebLoggerContextUtils.createExternalEntry(this.servletContext));
+        this.loggerContext = Configurator.initialize(
+                this.name, this.getClassLoader(), uri, WebLoggerContextUtils.createExternalEntry(this.servletContext));
     }
 
     private List<URI> getConfigURIs(final String location) {
@@ -193,8 +199,11 @@ final class Log4jWebInitializerImpl extends AbstractLifeCycle implements Log4jWe
         try {
             String configLocation = location;
             if (configLocation == null) {
-                final String[] paths = SetUtils.prefixSet(servletContext.getResourcePaths(WEB_INF), WEB_INF + "log4j2");
-                LOGGER.debug("getConfigURI found resource paths {} in servletContext at [{}]", Arrays.toString(paths), WEB_INF);
+                final String[] paths = prefixSet(servletContext.getResourcePaths(WEB_INF), WEB_INF + "log4j2");
+                LOGGER.debug(
+                        "getConfigURI found resource paths {} in servletContext at [{}]",
+                        Arrays.toString(paths),
+                        WEB_INF);
                 if (paths.length == 1) {
                     configLocation = paths[0];
                 } else if (paths.length > 1) {
@@ -233,6 +242,21 @@ final class Log4jWebInitializerImpl extends AbstractLifeCycle implements Log4jWe
             }
         }
         return null;
+    }
+
+    /**
+     * Collects strings starting with the given {@code prefix} from the given {@code set}.
+     *
+     * @param set a (nullable) set of strings
+     * @param prefix a prefix to look for in the string set
+     * @return an array of the matching strings from the given set
+     */
+    @SuppressWarnings("SameParameterValue")
+    private static String[] prefixSet(final Set<String> set, final String prefix) {
+        if (set == null) {
+            return Strings.EMPTY_ARRAY;
+        }
+        return set.stream().filter(string -> string.startsWith(prefix)).toArray(String[]::new);
     }
 
     @Override
@@ -293,5 +317,4 @@ final class Log4jWebInitializerImpl extends AbstractLifeCycle implements Log4jWe
             return LoaderUtil.getThreadContextClassLoader();
         }
     }
-
 }

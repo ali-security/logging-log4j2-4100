@@ -1,27 +1,27 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.pattern;
 
-import org.apache.logging.log4j.util.PerformanceSensitive;
-import org.apache.logging.log4j.util.ReadOnlyStringMap;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
-import org.apache.logging.log4j.util.TriConsumer;
+import org.apache.logging.log4j.util.PerformanceSensitive;
+import org.apache.logging.log4j.util.ReadOnlyStringMap;
 import org.apache.logging.log4j.util.StringBuilders;
+import org.apache.logging.log4j.util.TriConsumer;
 
 /**
  * Able to handle the contents of the LogEvent's MDC and either
@@ -31,7 +31,7 @@ import org.apache.logging.log4j.util.StringBuilders;
  * when this pattern converter has the option set.
  */
 @Plugin(name = "MdcPatternConverter", category = PatternConverter.CATEGORY)
-@ConverterKeys({ "X", "mdc", "MDC" })
+@ConverterKeys({"X", "mdc", "MDC"})
 @PerformanceSensitive("allocation")
 public final class MdcPatternConverter extends LogEventPatternConverter {
 
@@ -39,6 +39,7 @@ public final class MdcPatternConverter extends LogEventPatternConverter {
      * Name of property to output.
      */
     private final String key;
+
     private final String[] keys;
     private final boolean full;
 
@@ -104,7 +105,7 @@ public final class MdcPatternConverter extends LogEventPatternConverter {
                 return;
             }
             appendSelectedKeys(keys, contextData, toAppendTo);
-        } else if (contextData != null){
+        } else if (contextData != null) {
             // otherwise they just want a single key output
             final Object value = contextData.getValue(key);
             if (value != null) {
@@ -126,7 +127,8 @@ public final class MdcPatternConverter extends LogEventPatternConverter {
         }
     }
 
-    private static void appendSelectedKeys(final String[] keys, final ReadOnlyStringMap contextData, final StringBuilder sb) {
+    private static void appendSelectedKeys(
+            final String[] keys, final ReadOnlyStringMap contextData, final StringBuilder sb) {
         // Print all the keys in the array that have a value.
         final int start = sb.length();
         sb.append('{');
@@ -142,5 +144,10 @@ public final class MdcPatternConverter extends LogEventPatternConverter {
             }
         }
         sb.append('}');
+    }
+
+    @Override
+    public String emptyVariableOutput() {
+        return key == null ? "{}" : "";
     }
 }

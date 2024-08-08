@@ -1,18 +1,18 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.web;
 
@@ -21,7 +21,6 @@ import java.util.Map;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import javax.servlet.ServletContext;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.impl.ContextAnchor;
@@ -35,8 +34,7 @@ import org.apache.logging.log4j.core.impl.ContextAnchor;
  * @since 2.0.1
  */
 public final class WebLoggerContextUtils {
-    private WebLoggerContextUtils() {
-    }
+    private WebLoggerContextUtils() {}
 
     private static final Lock WEB_SUPPORT_LOOKUP = new ReentrantLock();
     private static final String SERVLET_CONTEXT = "__SERVLET_CONTEXT__";
@@ -64,7 +62,7 @@ public final class WebLoggerContextUtils {
         final LoggerContext loggerContext = getWebLoggerContext(servletContext);
         if (loggerContext == null) {
             throw new IllegalStateException(
-                "No LoggerContext found in ServletContext attribute " + Log4jWebSupport.CONTEXT_ATTRIBUTE);
+                    "No LoggerContext found in ServletContext attribute " + Log4jWebSupport.CONTEXT_ATTRIBUTE);
         }
         return loggerContext;
     }
@@ -80,8 +78,8 @@ public final class WebLoggerContextUtils {
     public static Log4jWebLifeCycle getWebLifeCycle(final ServletContext servletContext) {
         WEB_SUPPORT_LOOKUP.lock();
         try {
-            Log4jWebLifeCycle webLifeCycle = (Log4jWebLifeCycle) servletContext.getAttribute(
-                Log4jWebSupport.SUPPORT_ATTRIBUTE);
+            Log4jWebLifeCycle webLifeCycle =
+                    (Log4jWebLifeCycle) servletContext.getAttribute(Log4jWebSupport.SUPPORT_ATTRIBUTE);
             if (webLifeCycle == null) {
                 webLifeCycle = Log4jWebInitializerImpl.initialize(servletContext);
             }
@@ -112,7 +110,7 @@ public final class WebLoggerContextUtils {
         };
     }
 
-    public static Map.Entry<String, Object> createExternalEntry(ServletContext servletContext) {
+    public static Map.Entry<String, Object> createExternalEntry(final ServletContext servletContext) {
         return new AbstractMap.SimpleEntry<>(SERVLET_CONTEXT, servletContext);
     }
 
@@ -134,7 +132,7 @@ public final class WebLoggerContextUtils {
             lc = LogManager.getContext(false);
         }
 
-        Object obj = lc != null ? lc.getObject(SERVLET_CONTEXT) : null;
+        final Object obj = lc != null ? lc.getObject(SERVLET_CONTEXT) : null;
         if (obj instanceof ServletContext) {
             return (ServletContext) obj;
         }

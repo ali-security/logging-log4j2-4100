@@ -1,25 +1,24 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.config.builder.api;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.core.Filter;
 import org.apache.logging.log4j.core.LoggerContext;
@@ -33,7 +32,6 @@ import org.apache.logging.log4j.core.util.Builder;
  * @since 2.4
  */
 public interface ConfigurationBuilder<T extends Configuration> extends Builder<T> {
-
 
     /**
      * Adds a ScriptComponent.
@@ -92,7 +90,6 @@ public interface ConfigurationBuilder<T extends Configuration> extends Builder<T
      */
     ConfigurationBuilder<T> addProperty(String key, String value);
 
-
     /**
      * Returns a builder for creating Async Loggers.
      * @param name The name of the Logger.
@@ -109,7 +106,6 @@ public interface ConfigurationBuilder<T extends Configuration> extends Builder<T
      */
     ScriptFileComponentBuilder newScriptFile(String path);
 
-
     /**
      * Returns a builder for creating Async Loggers.
      * @param name The name of the script file.
@@ -117,7 +113,6 @@ public interface ConfigurationBuilder<T extends Configuration> extends Builder<T
      * @return A new ScriptFileComponentBuilder.
      */
     ScriptFileComponentBuilder newScriptFile(String name, String path);
-
 
     /**
      * Returns a builder for creating Appenders.
@@ -133,7 +128,6 @@ public interface ConfigurationBuilder<T extends Configuration> extends Builder<T
      * @return A new AppenderRefComponentBuilder.
      */
     AppenderRefComponentBuilder newAppenderRef(String ref);
-
 
     /**
      * Returns a builder for creating Async Loggers.
@@ -190,7 +184,6 @@ public interface ConfigurationBuilder<T extends Configuration> extends Builder<T
      */
     RootLoggerComponentBuilder newAsyncRootLogger();
 
-
     /**
      * Returns a builder for creating the async root Logger.
      * @param includeLocation If true include location information.
@@ -204,7 +197,6 @@ public interface ConfigurationBuilder<T extends Configuration> extends Builder<T
      * @return A new RootLoggerComponentBuilder.
      */
     RootLoggerComponentBuilder newAsyncRootLogger(Level level);
-
 
     /**
      * Returns a builder for creating the async root Logger.
@@ -220,7 +212,6 @@ public interface ConfigurationBuilder<T extends Configuration> extends Builder<T
      * @return A new RootLoggerComponentBuilder.
      */
     RootLoggerComponentBuilder newAsyncRootLogger(String level);
-
 
     /**
      * Returns a builder for creating the async root Logger.
@@ -459,7 +450,6 @@ public interface ConfigurationBuilder<T extends Configuration> extends Builder<T
      * @return this builder instance.
      */
     ConfigurationBuilder<T> setStatusLevel(Level level);
-
 
     /**
      * Sets whether the logging should include constructing Plugins.

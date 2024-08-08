@@ -1,18 +1,18 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.appender;
 
@@ -20,12 +20,10 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.logging.log4j.core.Appender;
 import org.apache.logging.log4j.core.Core;
 import org.apache.logging.log4j.core.Filter;
 import org.apache.logging.log4j.core.Layout;
-import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.Property;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
@@ -38,7 +36,11 @@ import org.apache.logging.log4j.core.util.Integers;
 /**
  * File Appender.
  */
-@Plugin(name = "RandomAccessFile", category = Core.CATEGORY_NAME, elementType = Appender.ELEMENT_TYPE, printObject = true)
+@Plugin(
+        name = "RandomAccessFile",
+        category = Core.CATEGORY_NAME,
+        elementType = Appender.ELEMENT_TYPE,
+        printObject = true)
 public final class RandomAccessFileAppender extends AbstractOutputStreamAppender<RandomAccessFileManager> {
 
     /**
@@ -62,28 +64,40 @@ public final class RandomAccessFileAppender extends AbstractOutputStreamAppender
         @PluginBuilderAttribute("advertiseURI")
         private String advertiseURI;
 
+        public Builder() {
+            this.withBufferSize(RandomAccessFileManager.DEFAULT_BUFFER_SIZE);
+        }
+
         @Override
         public RandomAccessFileAppender build() {
             final String name = getName();
             if (name == null) {
-                LOGGER.error("No name provided for FileAppender");
+                LOGGER.error("No name provided for RandomAccessFileAppender");
                 return null;
             }
 
             if (fileName == null) {
-                LOGGER.error("No filename provided for FileAppender with name " + name);
+                LOGGER.error("No filename provided for RandomAccessFileAppender with name {}", name);
                 return null;
             }
             final Layout<? extends Serializable> layout = getOrCreateLayout();
             final boolean immediateFlush = isImmediateFlush();
-            final RandomAccessFileManager manager = RandomAccessFileManager.getFileManager(fileName, append,
-                    immediateFlush, getBufferSize(), advertiseURI, layout, null);
+            final RandomAccessFileManager manager = RandomAccessFileManager.getFileManager(
+                    fileName, append, immediateFlush, getBufferSize(), advertiseURI, layout, null);
             if (manager == null) {
                 return null;
             }
 
-            return new RandomAccessFileAppender(name, layout, getFilter(), manager, fileName, isIgnoreExceptions(),
-                    immediateFlush, advertise ? getConfiguration().getAdvertiser() : null, getPropertyArray());
+            return new RandomAccessFileAppender(
+                    name,
+                    layout,
+                    getFilter(),
+                    manager,
+                    fileName,
+                    isIgnoreExceptions(),
+                    immediateFlush,
+                    advertise ? getConfiguration().getAdvertiser() : null,
+                    getPropertyArray());
         }
 
         public B setFileName(final String fileName) {
@@ -105,22 +119,26 @@ public final class RandomAccessFileAppender extends AbstractOutputStreamAppender
             this.advertiseURI = advertiseURI;
             return asBuilder();
         }
-
     }
 
     private final String fileName;
     private Object advertisement;
     private final Advertiser advertiser;
 
-    private RandomAccessFileAppender(final String name, final Layout<? extends Serializable> layout,
-            final Filter filter, final RandomAccessFileManager manager, final String filename,
-            final boolean ignoreExceptions, final boolean immediateFlush, final Advertiser advertiser,
+    private RandomAccessFileAppender(
+            final String name,
+            final Layout<? extends Serializable> layout,
+            final Filter filter,
+            final RandomAccessFileManager manager,
+            final String filename,
+            final boolean ignoreExceptions,
+            final boolean immediateFlush,
+            final Advertiser advertiser,
             final Property[] properties) {
 
         super(name, layout, filter, ignoreExceptions, immediateFlush, properties, manager);
         if (advertiser != null) {
-            final Map<String, String> configuration = new HashMap<>(
-                    layout.getContentFormat());
+            final Map<String, String> configuration = new HashMap<>(layout.getContentFormat());
             configuration.putAll(manager.getContentFormat());
             configuration.put("contentType", layout.getContentType());
             configuration.put("name", name);
@@ -139,26 +157,6 @@ public final class RandomAccessFileAppender extends AbstractOutputStreamAppender
         }
         setStopped();
         return true;
-    }
-
-    /**
-     * Write the log entry rolling over the file when required.
-     *
-     * @param event The LogEvent.
-     */
-    @Override
-    public void append(final LogEvent event) {
-
-        // Leverage the nice batching behaviour of async Loggers/Appenders:
-        // we can signal the file manager that it needs to flush the buffer
-        // to disk at the end of a batch.
-        // From a user's point of view, this means that all log events are
-        // _always_ available in the log file, without incurring the overhead
-        // of immediateFlush=true.
-        getManager().setEndOfBatch(event.isEndOfBatch()); // FIXME manager's EndOfBatch threadlocal can be deleted
-
-        // LOG4J2-1292 utilize gc-free Layout.encode() method: taken care of in superclass
-        super.append(event);
     }
 
     /**
@@ -224,14 +222,18 @@ public final class RandomAccessFileAppender extends AbstractOutputStreamAppender
         final int bufferSize = Integers.parseInt(bufferSizeStr, RandomAccessFileManager.DEFAULT_BUFFER_SIZE);
 
         return RandomAccessFileAppender.<B>newBuilder()
-        .setAdvertise(isAdvertise)
-        .setAdvertiseURI(advertiseURI)
-        .setAppend(isAppend)
-        .withBufferSize(bufferSize)
-        .setConfiguration(configuration)
-        .setFileName(fileName).setFilter(filter).setIgnoreExceptions(ignoreExceptions)
-            .withImmediateFlush(isFlush).setLayout(layout).setName(name)
-            .build();
+                .setAdvertise(isAdvertise)
+                .setAdvertiseURI(advertiseURI)
+                .setAppend(isAppend)
+                .withBufferSize(bufferSize)
+                .setConfiguration(configuration)
+                .setFileName(fileName)
+                .setFilter(filter)
+                .setIgnoreExceptions(ignoreExceptions)
+                .withImmediateFlush(isFlush)
+                .setLayout(layout)
+                .setName(name)
+                .build();
     }
 
     /**
@@ -242,5 +244,4 @@ public final class RandomAccessFileAppender extends AbstractOutputStreamAppender
     public static <B extends Builder<B>> B newBuilder() {
         return new Builder<B>().asBuilder();
     }
-
 }

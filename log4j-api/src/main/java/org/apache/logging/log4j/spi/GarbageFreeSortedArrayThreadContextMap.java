@@ -1,18 +1,18 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.spi;
 
@@ -20,11 +20,10 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-
-import org.apache.logging.log4j.util.ReadOnlyStringMap;
-import org.apache.logging.log4j.util.StringMap;
 import org.apache.logging.log4j.util.PropertiesUtil;
+import org.apache.logging.log4j.util.ReadOnlyStringMap;
 import org.apache.logging.log4j.util.SortedArrayStringMap;
+import org.apache.logging.log4j.util.StringMap;
 
 /**
  * {@code SortedArrayStringMap}-based implementation of the {@code ThreadContextMap} interface that attempts not to
@@ -35,7 +34,7 @@ import org.apache.logging.log4j.util.SortedArrayStringMap;
  * </p>
  * @since 2.7
  */
-class GarbageFreeSortedArrayThreadContextMap implements ReadOnlyThreadContextMap, ObjectThreadContextMap  {
+class GarbageFreeSortedArrayThreadContextMap implements ReadOnlyThreadContextMap, ObjectThreadContextMap {
 
     /**
      * Property name ({@value} ) for selecting {@code InheritableThreadLocal} (value "true") or plain
@@ -53,42 +52,23 @@ class GarbageFreeSortedArrayThreadContextMap implements ReadOnlyThreadContextMap
      */
     protected static final String PROPERTY_NAME_INITIAL_CAPACITY = "log4j2.ThreadContext.initial.capacity";
 
+    private final int initialCapacity;
     protected final ThreadLocal<StringMap> localMap;
-    
-    private static volatile int initialCapacity;
-    private static volatile boolean inheritableMap;
-
-    /**
-     * Initializes static variables based on system properties. Normally called when this class is initialized by the VM
-     * and when Log4j is reconfigured.
-     */
-    static void init() {
-        final PropertiesUtil properties = PropertiesUtil.getProperties();
-        initialCapacity = properties.getIntegerProperty(PROPERTY_NAME_INITIAL_CAPACITY, DEFAULT_INITIAL_CAPACITY);
-        inheritableMap = properties.getBooleanProperty(INHERITABLE_MAP);
-    }
-    
-    static {
-        init();
-    }
 
     public GarbageFreeSortedArrayThreadContextMap() {
-        this.localMap = createThreadLocalMap();
+        this(PropertiesUtil.getProperties());
     }
 
-    // LOG4J2-479: by default, use a plain ThreadLocal, only use InheritableThreadLocal if configured.
-    // (This method is package protected for JUnit tests.)
-    private ThreadLocal<StringMap> createThreadLocalMap() {
-        if (inheritableMap) {
-            return new InheritableThreadLocal<StringMap>() {
-                @Override
-                protected StringMap childValue(final StringMap parentValue) {
-                    return parentValue != null ? createStringMap(parentValue) : null;
+    GarbageFreeSortedArrayThreadContextMap(final PropertiesUtil properties) {
+        initialCapacity = properties.getIntegerProperty(PROPERTY_NAME_INITIAL_CAPACITY, DEFAULT_INITIAL_CAPACITY);
+        localMap = properties.getBooleanProperty(INHERITABLE_MAP)
+                ? new InheritableThreadLocal<StringMap>() {
+                    @Override
+                    protected StringMap childValue(final StringMap parentValue) {
+                        return parentValue != null ? createStringMap(parentValue) : null;
+                    }
                 }
-            };
-        }
-        // if not inheritable, return plain ThreadLocal with null as initial value
-        return new ThreadLocal<>();
+                : new ThreadLocal<>();
     }
 
     /**

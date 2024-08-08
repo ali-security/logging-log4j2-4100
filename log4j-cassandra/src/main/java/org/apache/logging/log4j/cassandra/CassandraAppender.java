@@ -1,18 +1,18 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.cassandra;
 
@@ -37,11 +37,19 @@ import org.apache.logging.log4j.core.util.Clock;
  * @see SocketAddress
  * @see ColumnMapping
  */
-@Plugin(name = "Cassandra", category = Core.CATEGORY_NAME, elementType = CassandraAppender.ELEMENT_TYPE, printObject = true)
+@Plugin(
+        name = "Cassandra",
+        category = Core.CATEGORY_NAME,
+        elementType = CassandraAppender.ELEMENT_TYPE,
+        printObject = true)
 public class CassandraAppender extends AbstractDatabaseAppender<CassandraManager> {
 
-    private CassandraAppender(final String name, final Filter filter, final boolean ignoreExceptions,
-                              final Property[] properties, final CassandraManager manager) {
+    private CassandraAppender(
+            final String name,
+            final Filter filter,
+            final boolean ignoreExceptions,
+            final Property[] properties,
+            final CassandraManager manager) {
         super(name, filter, null, ignoreExceptions, properties, manager);
     }
 
@@ -51,7 +59,7 @@ public class CassandraAppender extends AbstractDatabaseAppender<CassandraManager
     }
 
     public static class Builder<B extends Builder<B>> extends AbstractAppender.Builder<B>
-        implements org.apache.logging.log4j.core.util.Builder<CassandraAppender> {
+            implements org.apache.logging.log4j.core.util.Builder<CassandraAppender> {
 
         /**
          * List of Cassandra node contact points. Addresses without a port (or port set to 0) will use the default
@@ -59,7 +67,7 @@ public class CassandraAppender extends AbstractDatabaseAppender<CassandraManager
          */
         @PluginElement("ContactPoints")
         @Required(message = "No Cassandra servers provided")
-        private SocketAddress[] contactPoints = new SocketAddress[]{SocketAddress.getLoopback()};
+        private SocketAddress[] contactPoints = new SocketAddress[] {SocketAddress.getLoopback()};
 
         /**
          * List of column mappings to convert a LogEvent into a database row.
@@ -175,12 +183,21 @@ public class CassandraAppender extends AbstractDatabaseAppender<CassandraManager
 
         @Override
         public CassandraAppender build() {
-            final CassandraManager manager = CassandraManager.getManager(getName(), contactPoints, columns, useTls,
-                clusterName, keyspace, table, username, password, useClockForTimestampGenerator, bufferSize, batched,
-                batchType);
+            final CassandraManager manager = CassandraManager.getManager(
+                    getName(),
+                    contactPoints,
+                    columns,
+                    useTls,
+                    clusterName,
+                    keyspace,
+                    table,
+                    username,
+                    password,
+                    useClockForTimestampGenerator,
+                    bufferSize,
+                    batched,
+                    batchType);
             return new CassandraAppender(getName(), getFilter(), isIgnoreExceptions(), null, manager);
         }
-
     }
-
 }

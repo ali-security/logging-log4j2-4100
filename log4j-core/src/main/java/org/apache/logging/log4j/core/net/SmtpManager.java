@@ -1,27 +1,27 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.net;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Date;
 import java.util.Properties;
-
 import javax.activation.DataSource;
 import javax.mail.Authenticator;
 import javax.mail.Message;
@@ -36,30 +36,22 @@ import javax.mail.internet.MimeMultipart;
 import javax.mail.internet.MimeUtility;
 import javax.mail.util.ByteArrayDataSource;
 import javax.net.ssl.SSLSocketFactory;
-
 import org.apache.logging.log4j.LoggingException;
 import org.apache.logging.log4j.core.Layout;
 import org.apache.logging.log4j.core.LogEvent;
-import org.apache.logging.log4j.core.appender.AbstractManager;
-import org.apache.logging.log4j.core.appender.ManagerFactory;
 import org.apache.logging.log4j.core.config.Configuration;
-import org.apache.logging.log4j.core.impl.Log4jLogEvent;
-import org.apache.logging.log4j.core.impl.MutableLogEvent;
 import org.apache.logging.log4j.core.layout.AbstractStringLayout.Serializer;
 import org.apache.logging.log4j.core.layout.PatternLayout;
 import org.apache.logging.log4j.core.net.ssl.SslConfiguration;
 import org.apache.logging.log4j.core.util.CyclicBuffer;
-import org.apache.logging.log4j.core.util.NameUtil;
 import org.apache.logging.log4j.core.util.NetUtils;
-import org.apache.logging.log4j.message.ReusableMessage;
 import org.apache.logging.log4j.util.PropertiesUtil;
-import org.apache.logging.log4j.util.Strings;
 
 /**
  * Manager for sending SMTP events.
  */
-public class SmtpManager extends AbstractManager {
-    private static final SMTPManagerFactory FACTORY = new SMTPManagerFactory();
+public class SmtpManager extends MailManager {
+    public static final SMTPManagerFactory FACTORY = new SMTPManagerFactory();
 
     private final Session session;
 
@@ -69,98 +61,81 @@ public class SmtpManager extends AbstractManager {
 
     private final FactoryData data;
 
-    private static MimeMessage createMimeMessage(final FactoryData data, final Session session, final LogEvent appendEvent)
-            throws MessagingException {
-        return new MimeMessageBuilder(session).setFrom(data.from).setReplyTo(data.replyto)
-                .setRecipients(Message.RecipientType.TO, data.to).setRecipients(Message.RecipientType.CC, data.cc)
-                .setRecipients(Message.RecipientType.BCC, data.bcc).setSubject(data.subject.toSerializable(appendEvent))
+    private static MimeMessage createMimeMessage(
+            final FactoryData data, final Session session, final LogEvent appendEvent) throws MessagingException {
+        return new MimeMessageBuilder(session)
+                .setFrom(data.getFrom())
+                .setReplyTo(data.getReplyTo())
+                .setRecipients(Message.RecipientType.TO, data.getTo())
+                .setRecipients(Message.RecipientType.CC, data.getCc())
+                .setRecipients(Message.RecipientType.BCC, data.getBcc())
+                .setSubject(data.getSubjectSerializer().toSerializable(appendEvent))
                 .build();
     }
 
-    protected SmtpManager(final String name, final Session session, final MimeMessage message,
-                          final FactoryData data) {
+    protected SmtpManager(final String name, final Session session, final MimeMessage message, final FactoryData data) {
         super(null, name);
         this.session = session;
         this.message = message;
         this.data = data;
-        this.buffer = new CyclicBuffer<>(LogEvent.class, data.numElements);
+        this.buffer = new CyclicBuffer<>(LogEvent.class, data.getBufferSize());
     }
 
-    public void add(LogEvent event) {
-        if (event instanceof Log4jLogEvent && event.getMessage() instanceof ReusableMessage) {
-            ((Log4jLogEvent) event).makeMessageImmutable();
-        } else if (event instanceof MutableLogEvent) {
-            event = ((MutableLogEvent) event).createMemento();
-        }
-        buffer.add(event);
+    @Override
+    public void add(final LogEvent event) {
+        buffer.add(event.toImmutable());
     }
 
+    @Deprecated
     public static SmtpManager getSmtpManager(
-                                             final Configuration config,
-                                             final String to, final String cc, final String bcc,
-                                             final String from, final String replyTo,
-                                             final String subject, String protocol, final String host,
-                                             final int port, final String username, final String password,
-                                             final boolean isDebug, final String filterName, final int numElements,
-                                             final SslConfiguration sslConfiguration) {
-        if (Strings.isEmpty(protocol)) {
-            protocol = "smtp";
-        }
+            final Configuration config,
+            final String to,
+            final String cc,
+            final String bcc,
+            final String from,
+            final String replyTo,
+            final String subject,
+            final String protocol,
+            final String host,
+            final int port,
+            final String username,
+            final String password,
+            final boolean isDebug,
+            final String filterName,
+            final int numElements,
+            final SslConfiguration sslConfiguration) {
+        final Serializer subjectSerializer = PatternLayout.newSerializerBuilder()
+                .setConfiguration(config)
+                .setPattern(subject)
+                .build();
+        final FactoryData data = new FactoryData(
+                to,
+                cc,
+                bcc,
+                from,
+                replyTo,
+                subject,
+                subjectSerializer,
+                protocol,
+                host,
+                port,
+                username,
+                password,
+                isDebug,
+                numElements,
+                sslConfiguration,
+                filterName);
 
-        final StringBuilder sb = new StringBuilder();
-        if (to != null) {
-            sb.append(to);
-        }
-        sb.append(':');
-        if (cc != null) {
-            sb.append(cc);
-        }
-        sb.append(':');
-        if (bcc != null) {
-            sb.append(bcc);
-        }
-        sb.append(':');
-        if (from != null) {
-            sb.append(from);
-        }
-        sb.append(':');
-        if (replyTo != null) {
-            sb.append(replyTo);
-        }
-        sb.append(':');
-        if (subject != null) {
-            sb.append(subject);
-        }
-        sb.append(':');
-        sb.append(protocol).append(':').append(host).append(':').append("port").append(':');
-        if (username != null) {
-            sb.append(username);
-        }
-        sb.append(':');
-        if (password != null) {
-            sb.append(password);
-        }
-        sb.append(isDebug ? ":debug:" : "::");
-        sb.append(filterName);
-
-        final String name = "SMTP:" + NameUtil.md5(sb.toString());
-        final Serializer subjectSerializer = PatternLayout.newSerializerBuilder().setConfiguration(config).setPattern(subject).build();
-
-        return getManager(name, FACTORY, new FactoryData(to, cc, bcc, from, replyTo, subjectSerializer,
-            protocol, host, port, username, password, isDebug, numElements, sslConfiguration));
+        return (SmtpManager) getManager(data.getManagerName(), FACTORY, data);
     }
 
-    /**
-     * Send the contents of the cyclic buffer as an e-mail message.
-     * @param layout The layout for formatting the events.
-     * @param appendEvent The event that triggered the send.
-     */
+    @Override
     public void sendEvents(final Layout<?> layout, final LogEvent appendEvent) {
         if (message == null) {
             connect(appendEvent);
         }
         try {
-            final LogEvent[] priorEvents = buffer.removeAll();
+            final LogEvent[] priorEvents = removeAllBufferedEvents();
             // LOG4J-310: log appendEvent even if priorEvents is empty
 
             final byte[] rawBytes = formatContentToBytes(priorEvents, appendEvent, layout);
@@ -172,23 +147,32 @@ public class SmtpManager extends AbstractManager {
             final InternetHeaders headers = getHeaders(contentType, encoding);
             final MimeMultipart mp = getMimeMultipart(encodedBytes, headers);
 
-            sendMultipartMessage(message, mp);
+            final String subject = data.getSubjectSerializer().toSerializable(appendEvent);
+
+            sendMultipartMessage(message, mp, subject);
         } catch (final MessagingException | IOException | RuntimeException e) {
             logError("Caught exception while sending e-mail notification.", e);
             throw new LoggingException("Error occurred while sending email", e);
         }
     }
 
-    protected byte[] formatContentToBytes(final LogEvent[] priorEvents, final LogEvent appendEvent,
-                                          final Layout<?> layout) throws IOException {
+    LogEvent[] removeAllBufferedEvents() {
+        return buffer.removeAll();
+    }
+
+    protected byte[] formatContentToBytes(
+            final LogEvent[] priorEvents, final LogEvent appendEvent, final Layout<?> layout) throws IOException {
         final ByteArrayOutputStream raw = new ByteArrayOutputStream();
         writeContent(priorEvents, appendEvent, layout, raw);
         return raw.toByteArray();
     }
 
-    private void writeContent(final LogEvent[] priorEvents, final LogEvent appendEvent, final Layout<?> layout,
-                              final ByteArrayOutputStream out)
-        throws IOException {
+    private void writeContent(
+            final LogEvent[] priorEvents,
+            final LogEvent appendEvent,
+            final Layout<?> layout,
+            final ByteArrayOutputStream out)
+            throws IOException {
         writeHeader(layout, out);
         writeBuffer(priorEvents, appendEvent, layout, out);
         writeFooter(layout, out);
@@ -201,8 +185,9 @@ public class SmtpManager extends AbstractManager {
         }
     }
 
-    protected void writeBuffer(final LogEvent[] priorEvents, final LogEvent appendEvent, final Layout<?> layout,
-                               final OutputStream out) throws IOException {
+    protected void writeBuffer(
+            final LogEvent[] priorEvents, final LogEvent appendEvent, final Layout<?> layout, final OutputStream out)
+            throws IOException {
         for (final LogEvent priorEvent : priorEvents) {
             final byte[] bytes = layout.toByteArray(priorEvent);
             out.write(bytes);
@@ -225,7 +210,7 @@ public class SmtpManager extends AbstractManager {
     }
 
     protected byte[] encodeContentToBytes(final byte[] rawBytes, final String encoding)
-        throws MessagingException, IOException {
+            throws MessagingException, IOException {
         final ByteArrayOutputStream encoded = new ByteArrayOutputStream();
         encodeContent(rawBytes, encoding, encoded);
         return encoded.toByteArray();
@@ -246,13 +231,17 @@ public class SmtpManager extends AbstractManager {
     }
 
     protected MimeMultipart getMimeMultipart(final byte[] encodedBytes, final InternetHeaders headers)
-        throws MessagingException {
+            throws MessagingException {
         final MimeMultipart mp = new MimeMultipart();
         final MimeBodyPart part = new MimeBodyPart(headers, encodedBytes);
         mp.addBodyPart(part);
         return mp;
     }
 
+    /**
+     * @deprecated Please use the {@link #sendMultipartMessage(MimeMessage, MimeMultipart, String)} method instead.
+     */
+    @Deprecated
     protected void sendMultipartMessage(final MimeMessage msg, final MimeMultipart mp) throws MessagingException {
         synchronized (msg) {
             msg.setContent(mp);
@@ -261,43 +250,16 @@ public class SmtpManager extends AbstractManager {
         }
     }
 
-    /**
-     * Factory data.
-     */
-    private static class FactoryData {
-        private final String to;
-        private final String cc;
-        private final String bcc;
-        private final String from;
-        private final String replyto;
-        private final Serializer subject;
-        private final String protocol;
-        private final String host;
-        private final int port;
-        private final String username;
-        private final String password;
-        private final boolean isDebug;
-        private final int numElements;
-        private final SslConfiguration sslConfiguration;
-
-        public FactoryData(final String to, final String cc, final String bcc, final String from, final String replyTo,
-                           final Serializer subjectSerializer, final String protocol, final String host, final int port,
-                           final String username, final String password, final boolean isDebug, final int numElements,
-                           final SslConfiguration sslConfiguration) {
-            this.to = to;
-            this.cc = cc;
-            this.bcc = bcc;
-            this.from = from;
-            this.replyto = replyTo;
-            this.subject = subjectSerializer;
-            this.protocol = protocol;
-            this.host = host;
-            this.port = port;
-            this.username = username;
-            this.password = password;
-            this.isDebug = isDebug;
-            this.numElements = numElements;
-            this.sslConfiguration = sslConfiguration;
+    @SuppressFBWarnings(
+            value = "SMTP_HEADER_INJECTION",
+            justification = "False positive, since MimeMessage#setSubject does actually escape new lines.")
+    protected void sendMultipartMessage(final MimeMessage msg, final MimeMultipart mp, final String subject)
+            throws MessagingException {
+        synchronized (msg) {
+            msg.setContent(mp);
+            msg.setSentDate(new Date());
+            msg.setSubject(subject);
+            Transport.send(msg);
         }
     }
 
@@ -316,43 +278,46 @@ public class SmtpManager extends AbstractManager {
     /**
      * Factory to create the SMTP Manager.
      */
-    private static class SMTPManagerFactory implements ManagerFactory<SmtpManager, FactoryData> {
+    public static class SMTPManagerFactory implements MailManagerFactory {
 
         @Override
         public SmtpManager createManager(final String name, final FactoryData data) {
-            final String prefix = "mail." + data.protocol;
+            final String smtpProtocol = data.getSmtpProtocol();
+            final String prefix = "mail." + smtpProtocol;
 
             final Properties properties = PropertiesUtil.getSystemProperties();
-            properties.setProperty("mail.transport.protocol", data.protocol);
+            properties.setProperty("mail.transport.protocol", smtpProtocol);
             if (properties.getProperty("mail.host") == null) {
                 // Prevent an UnknownHostException in Java 7
                 properties.setProperty("mail.host", NetUtils.getLocalHostname());
             }
 
-            if (null != data.host) {
-                properties.setProperty(prefix + ".host", data.host);
+            final String smtpHost = data.getSmtpHost();
+            if (null != smtpHost) {
+                properties.setProperty(prefix + ".host", smtpHost);
             }
-            if (data.port > 0) {
-                properties.setProperty(prefix + ".port", String.valueOf(data.port));
+            if (data.getSmtpPort() > 0) {
+                properties.setProperty(prefix + ".port", String.valueOf(data.getSmtpPort()));
             }
 
-            final Authenticator authenticator = buildAuthenticator(data.username, data.password);
+            final Authenticator authenticator = buildAuthenticator(data.getSmtpUsername(), data.getSmtpPassword());
             if (null != authenticator) {
                 properties.setProperty(prefix + ".auth", "true");
             }
 
-            if (data.protocol.equals("smtps")) {
-                final SslConfiguration sslConfiguration = data.sslConfiguration;
+            if (smtpProtocol.equals("smtps")) {
+                final SslConfiguration sslConfiguration = data.getSslConfiguration();
                 if (sslConfiguration != null) {
                     final SSLSocketFactory sslSocketFactory = sslConfiguration.getSslSocketFactory();
                     properties.put(prefix + ".ssl.socketFactory", sslSocketFactory);
-                    properties.setProperty(prefix + ".ssl.checkserveridentity", Boolean.toString(sslConfiguration.isVerifyHostName()));
+                    properties.setProperty(
+                            prefix + ".ssl.checkserveridentity", Boolean.toString(sslConfiguration.isVerifyHostName()));
                 }
             }
 
             final Session session = Session.getInstance(properties, authenticator);
-            session.setProtocolForAddress("rfc822", data.protocol);
-            session.setDebug(data.isDebug);
+            session.setProtocolForAddress("rfc822", smtpProtocol);
+            session.setDebug(data.isSmtpDebug());
             return new SmtpManager(name, session, null, data);
         }
 
@@ -360,7 +325,7 @@ public class SmtpManager extends AbstractManager {
             if (null != password && null != username) {
                 return new Authenticator() {
                     private final PasswordAuthentication passwordAuthentication =
-                        new PasswordAuthentication(username, password);
+                            new PasswordAuthentication(username, password);
 
                     @Override
                     protected PasswordAuthentication getPasswordAuthentication() {

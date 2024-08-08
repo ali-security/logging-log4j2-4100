@@ -1,21 +1,24 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.config.json;
 
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
@@ -25,10 +28,6 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.AbstractConfiguration;
 import org.apache.logging.log4j.core.config.Configuration;
@@ -37,8 +36,8 @@ import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.apache.logging.log4j.core.config.Node;
 import org.apache.logging.log4j.core.config.Reconfigurable;
 import org.apache.logging.log4j.core.config.plugins.util.PluginType;
-import org.apache.logging.log4j.core.config.plugins.util.ResolverUtil;
 import org.apache.logging.log4j.core.config.status.StatusConfiguration;
+import org.apache.logging.log4j.core.util.Integers;
 import org.apache.logging.log4j.core.util.Patterns;
 
 /**
@@ -46,7 +45,6 @@ import org.apache.logging.log4j.core.util.Patterns;
  */
 public class JsonConfiguration extends AbstractConfiguration implements Reconfigurable {
 
-    private static final String[] VERBOSE_CLASSES = new String[] { ResolverUtil.class.getName() };
     private final List<Status> status = new ArrayList<>();
     private JsonNode root;
 
@@ -66,12 +64,12 @@ public class JsonConfiguration extends AbstractConfiguration implements Reconfig
                 }
             }
             processAttributes(rootNode, root);
-            final StatusConfiguration statusConfig = new StatusConfiguration().withVerboseClasses(VERBOSE_CLASSES)
-                    .withStatus(getDefaultStatus());
+            final StatusConfiguration statusConfig = new StatusConfiguration().withStatus(getDefaultStatus());
             int monitorIntervalSeconds = 0;
-            for (final Map.Entry<String, String> entry : rootNode.getAttributes().entrySet()) {
+            for (final Map.Entry<String, String> entry :
+                    rootNode.getAttributes().entrySet()) {
                 final String key = entry.getKey();
-                final String value = getStrSubstitutor().replace(entry.getValue());
+                final String value = getConfigurationStrSubstitutor().replace(entry.getValue());
                 // TODO: this duplicates a lot of the XmlConfiguration constructor
                 if ("status".equalsIgnoreCase(key)) {
                     statusConfig.withStatus(value);
@@ -81,14 +79,12 @@ public class JsonConfiguration extends AbstractConfiguration implements Reconfig
                     isShutdownHookEnabled = !"disable".equalsIgnoreCase(value);
                 } else if ("shutdownTimeout".equalsIgnoreCase(key)) {
                     shutdownTimeoutMillis = Long.parseLong(value);
-                } else if ("verbose".equalsIgnoreCase(entry.getKey())) {
-                    statusConfig.withVerbosity(value);
                 } else if ("packages".equalsIgnoreCase(key)) {
                     pluginPackages.addAll(Arrays.asList(value.split(Patterns.COMMA_SEPARATOR)));
                 } else if ("name".equalsIgnoreCase(key)) {
                     setName(value);
                 } else if ("monitorInterval".equalsIgnoreCase(key)) {
-                    monitorIntervalSeconds = Integer.parseInt(value);
+                    monitorIntervalSeconds = Integers.parseInt(value);
                 } else if ("advertiser".equalsIgnoreCase(key)) {
                     createAdvertiser(value, configSource, buffer, "application/json");
                 }
@@ -168,7 +164,8 @@ public class JsonConfiguration extends AbstractConfiguration implements Reconfig
                         } else {
                             LOGGER.debug("Processing {} {}[{}]", pluginType, entry.getKey(), i);
                         }
-                        final Iterator<Map.Entry<String, JsonNode>> itemIter = n.get(i).fields();
+                        final Iterator<Map.Entry<String, JsonNode>> itemIter =
+                                n.get(i).fields();
                         final List<Node> itemChildren = item.getChildren();
                         while (itemIter.hasNext()) {
                             final Map.Entry<String, JsonNode> itemEntry = itemIter.next();
@@ -183,7 +180,6 @@ public class JsonConfiguration extends AbstractConfiguration implements Reconfig
                                     itemChildren.add(constructNode(entryName, item, array.get(j)));
                                 }
                             }
-
                         }
                         children.add(item);
                     }
@@ -203,8 +199,11 @@ public class JsonConfiguration extends AbstractConfiguration implements Reconfig
             t = type.getElementName() + ':' + type.getPluginClass();
         }
 
-        final String p = node.getParent() == null ? "null"
-                : node.getParent().getName() == null ? LoggerConfig.ROOT : node.getParent().getName();
+        final String p = node.getParent() == null
+                ? "null"
+                : node.getParent().getName() == null
+                        ? LoggerConfig.ROOT
+                        : node.getParent().getName();
         LOGGER.debug("Returning {} with parent {} of type {}", node.getName(), p, t);
         return node;
     }

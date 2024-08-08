@@ -1,31 +1,52 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.util;
 
-import java.util.Map.Entry;
-
 import static java.lang.Character.toLowerCase;
+
+import java.util.Map.Entry;
 
 /**
  * <em>Consider this class private.</em>
  */
+@InternalApi
 public final class StringBuilders {
-    private StringBuilders() {
+
+    private static final Class<?> timeClass;
+    private static final Class<?> dateClass;
+
+    static {
+        Class<?> clazz;
+        try {
+            clazz = Class.forName("java.sql.Time");
+        } catch (ClassNotFoundException ex) {
+            clazz = null;
+        }
+        timeClass = clazz;
+
+        try {
+            clazz = Class.forName("java.sql.Date");
+        } catch (ClassNotFoundException ex) {
+            clazz = null;
+        }
+        dateClass = clazz;
     }
+
+    private StringBuilders() {}
 
     /**
      * Appends in the following format: double quoted value.
@@ -58,7 +79,11 @@ public final class StringBuilders {
      * @return the specified StringBuilder
      */
     public static StringBuilder appendKeyDqValue(final StringBuilder sb, final String key, final Object value) {
-        return sb.append(key).append(Chars.EQ).append(Chars.DQUOTE).append(value).append(Chars.DQUOTE);
+        return sb.append(key)
+                .append(Chars.EQ)
+                .append(Chars.DQUOTE)
+                .append(value)
+                .append(Chars.DQUOTE);
     }
 
     /**
@@ -97,10 +122,26 @@ public final class StringBuilders {
             stringBuilder.append(((Float) obj).floatValue());
         } else if (obj instanceof Byte) {
             stringBuilder.append(((Byte) obj).byteValue());
+        } else if (isTime(obj) || isDate(obj) || obj instanceof java.time.temporal.Temporal) {
+            stringBuilder.append(obj);
         } else {
             return false;
         }
         return true;
+    }
+
+    /*
+       Check to see if obj is an instance of java.sql.Time without requiring the java.sql module.
+    */
+    private static boolean isTime(final Object obj) {
+        return timeClass != null && timeClass.isAssignableFrom(obj.getClass());
+    }
+
+    /*
+        Check to see if obj is an instance of java.sql.Date without requiring the java.sql module.
+    */
+    private static boolean isDate(final Object obj) {
+        return dateClass != null && dateClass.isAssignableFrom(obj.getClass());
     }
 
     /**
@@ -115,8 +156,13 @@ public final class StringBuilders {
      * @param rightLength length of the section in the right CharSequence
      * @return true if equal, false otherwise
      */
-    public static boolean equals(final CharSequence left, final int leftOffset, final int leftLength,
-                                    final CharSequence right, final int rightOffset, final int rightLength) {
+    public static boolean equals(
+            final CharSequence left,
+            final int leftOffset,
+            final int leftLength,
+            final CharSequence right,
+            final int rightOffset,
+            final int rightLength) {
         if (leftLength == rightLength) {
             for (int i = 0; i < rightLength; i++) {
                 if (left.charAt(i + leftOffset) != right.charAt(i + rightOffset)) {
@@ -140,8 +186,13 @@ public final class StringBuilders {
      * @param rightLength length of the section in the right CharSequence
      * @return true if equal ignoring case, false otherwise
      */
-    public static boolean equalsIgnoreCase(final CharSequence left, final int leftOffset, final int leftLength,
-                                              final CharSequence right, final int rightOffset, final int rightLength) {
+    public static boolean equalsIgnoreCase(
+            final CharSequence left,
+            final int leftOffset,
+            final int leftLength,
+            final CharSequence right,
+            final int rightOffset,
+            final int rightLength) {
         if (leftLength == rightLength) {
             for (int i = 0; i < rightLength; i++) {
                 if (toLowerCase(left.charAt(i + leftOffset)) != toLowerCase(right.charAt(i + rightOffset))) {

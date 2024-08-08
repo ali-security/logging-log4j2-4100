@@ -1,45 +1,102 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package org.apache.logging.log4j.core.net;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
-
 import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
-
 import org.apache.logging.log4j.core.appender.AbstractManager;
 import org.apache.logging.log4j.core.appender.ManagerFactory;
 import org.apache.logging.log4j.core.util.JndiCloser;
+import org.apache.logging.log4j.util.PropertiesUtil;
 
 /**
- * Manages a JNDI {@link javax.naming.Context}.
+ * Manages a JNDI {@link javax.naming.directory.DirContext}.
  *
  * @since 2.1
  */
 public class JndiManager extends AbstractManager {
 
     private static final JndiManagerFactory FACTORY = new JndiManagerFactory();
+    private static final String PREFIX = "log4j2.enableJndi";
+    private static final String JAVA_SCHEME = "java";
 
-    private final Context context;
+    private final InitialContext context;
 
-    private JndiManager(final String name, final Context context) {
+    private static boolean isJndiEnabled(final String subKey) {
+        return PropertiesUtil.getProperties().getBooleanProperty(PREFIX + subKey, false);
+    }
+
+    /**
+     * Tests whether <em>any</em> JNDI system properties are currently enabled.
+     *
+     * @return whether <em>any</em> JNDI system properties are currently enabled.
+     */
+    public static boolean isJndiEnabled() {
+        // The value is not cached to allow complex stacks to effect this setting.
+        return isJndiContextSelectorEnabled() || isJndiJdbcEnabled() || isJndiJmsEnabled() || isJndiLookupEnabled();
+    }
+
+    /**
+     * Tests whether the JNDI system properties for ContextSelector is currently enabled.
+     *
+     * @return whether the JNDI system properties for ContextSelector is currently enabled.
+     */
+    public static boolean isJndiContextSelectorEnabled() {
+        // The value is not cached to allow complex stacks to effect this setting.
+        return isJndiEnabled("ContextSelector");
+    }
+
+    /**
+     * Tests whether the JNDI system properties for JDBC is currently enabled.
+     *
+     * @return whether the JNDI system properties for JDBC is currently enabled.
+     */
+    public static boolean isJndiJdbcEnabled() {
+        // The value is not cached to allow complex stacks to effect this setting.
+        return isJndiEnabled("Jdbc");
+    }
+
+    /**
+     * Tests whether the JNDI system properties for JMS is currently enabled.
+     *
+     * @return whether the JNDI system properties for JMS is currently enabled.
+     */
+    public static boolean isJndiJmsEnabled() {
+        // The value is not cached to allow complex stacks to effect this setting.
+        return isJndiEnabled("Jms");
+    }
+
+    /**
+     * Tests whether the JNDI system properties for Lookup is currently enabled.
+     *
+     * @return whether the JNDI system properties for Lookup is currently enabled.
+     */
+    public static boolean isJndiLookupEnabled() {
+        // The value is not cached to allow complex stacks to effect this setting.
+        return isJndiEnabled("Lookup");
+    }
+
+    private JndiManager(final String name, final InitialContext context) {
         super(null, name);
         this.context = context;
     }
@@ -76,14 +133,20 @@ public class JndiManager extends AbstractManager {
      * @param additionalProperties      Any additional JNDI environment properties to set or {@code null} for none.
      * @return the JndiManager for the provided parameters.
      */
-    public static JndiManager getJndiManager(final String initialContextFactoryName,
+    public static JndiManager getJndiManager(
+            final String initialContextFactoryName,
             final String providerURL,
             final String urlPkgPrefixes,
             final String securityPrincipal,
             final String securityCredentials,
             final Properties additionalProperties) {
-        final Properties properties = createProperties(initialContextFactoryName, providerURL, urlPkgPrefixes,
-                securityPrincipal, securityCredentials, additionalProperties);
+        final Properties properties = createProperties(
+                initialContextFactoryName,
+                providerURL,
+                urlPkgPrefixes,
+                securityPrincipal,
+                securityCredentials,
+                additionalProperties);
         return getManager(createManagerName(), FACTORY, properties);
     }
 
@@ -122,8 +185,12 @@ public class JndiManager extends AbstractManager {
      * @return the Properties for the provided parameters.
      * @since 2.9
      */
-    public static Properties createProperties(final String initialContextFactoryName, final String providerURL,
-            final String urlPkgPrefixes, final String securityPrincipal, final String securityCredentials,
+    public static Properties createProperties(
+            final String initialContextFactoryName,
+            final String providerURL,
+            final String urlPkgPrefixes,
+            final String securityPrincipal,
+            final String securityCredentials,
             final Properties additionalProperties) {
         if (initialContextFactoryName == null) {
             return null;
@@ -133,8 +200,10 @@ public class JndiManager extends AbstractManager {
         if (providerURL != null) {
             properties.setProperty(Context.PROVIDER_URL, providerURL);
         } else {
-            LOGGER.warn("The JNDI InitialContextFactory class name [{}] was provided, but there was no associated "
-                    + "provider URL. This is likely to cause problems.", initialContextFactoryName);
+            LOGGER.warn(
+                    "The JNDI InitialContextFactory class name [{}] was provided, but there was no associated "
+                            + "provider URL. This is likely to cause problems.",
+                    initialContextFactoryName);
         }
         if (urlPkgPrefixes != null) {
             properties.setProperty(Context.URL_PKG_PREFIXES, urlPkgPrefixes);
@@ -144,7 +213,8 @@ public class JndiManager extends AbstractManager {
             if (securityCredentials != null) {
                 properties.setProperty(Context.SECURITY_CREDENTIALS, securityCredentials);
             } else {
-                LOGGER.warn("A security principal [{}] was provided, but with no corresponding security credentials.",
+                LOGGER.warn(
+                        "A security principal [{}] was provided, but with no corresponding security credentials.",
                         securityPrincipal);
             }
         }
@@ -167,19 +237,38 @@ public class JndiManager extends AbstractManager {
      * @return the named object if it could be located.
      * @throws  NamingException if a naming exception is encountered
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "BanJNDI"})
+    @SuppressFBWarnings(
+            value = "LDAP_INJECTION",
+            justification = "This method only accepts an empty or 'java:' URI scheme.")
     public <T> T lookup(final String name) throws NamingException {
-        return (T) this.context.lookup(name);
+        if (context == null) {
+            return null;
+        }
+        try {
+            final URI uri = new URI(name);
+            if (uri.getScheme() == null || uri.getScheme().equals(JAVA_SCHEME)) {
+                return (T) this.context.lookup(name);
+            }
+            LOGGER.warn("Unsupported JNDI URI - {}", name);
+        } catch (URISyntaxException ex) {
+            LOGGER.warn("Invalid JNDI URI - {}", name);
+        }
+        return null;
     }
 
     private static class JndiManagerFactory implements ManagerFactory<JndiManager, Properties> {
 
         @Override
         public JndiManager createManager(final String name, final Properties data) {
+            if (!isJndiEnabled()) {
+                throw new IllegalStateException(
+                        String.format("JNDI must be enabled by setting one of the %s* properties to true", PREFIX));
+            }
             try {
                 return new JndiManager(name, new InitialContext(data));
             } catch (final NamingException e) {
-                LOGGER.error("Error creating JNDI InitialContext.", e);
+                LOGGER.error("Error creating JNDI InitialContext for '{}'.", name, e);
                 return null;
             }
         }
@@ -189,5 +278,4 @@ public class JndiManager extends AbstractManager {
     public String toString() {
         return "JndiManager [context=" + context + ", count=" + count + "]";
     }
-
 }

@@ -1,23 +1,23 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j;
 
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -36,8 +36,7 @@ import java.util.Map;
  */
 public class CloseableThreadContext {
 
-    private CloseableThreadContext() {
-    }
+    private CloseableThreadContext() {}
 
     /**
      * Pushes new diagnostic context information on to the Thread Context Stack. The information will be popped off when
@@ -105,12 +104,11 @@ public class CloseableThreadContext {
         private int pushCount = 0;
         private final Map<String, String> originalValues = new HashMap<>();
 
-        private Instance() {
-        }
+        private Instance() {}
 
         /**
-         * Pushes new diagnostic context information on to the Thread Context Stack. The information will be popped off when
-         * the instance is closed.
+         * Pushes new diagnostic context information on to the Thread Context Stack.
+         * The information will be popped off when the instance is closed.
          *
          * @param message The new diagnostic context information.
          * @return the instance that will back out the changes when closed.
@@ -122,8 +120,8 @@ public class CloseableThreadContext {
         }
 
         /**
-         * Pushes new diagnostic context information on to the Thread Context Stack. The information will be popped off when
-         * the instance is closed.
+         * Pushes new diagnostic context information on to the Thread Context Stack.
+         * The information will be popped off when the instance is closed.
          *
          * @param message The new diagnostic context information.
          * @param args    Parameters for the message.
@@ -137,8 +135,8 @@ public class CloseableThreadContext {
 
         /**
          * Populates the Thread Context Map with the supplied key/value pair. Any existing key in the
-         * {@link ThreadContext} will be replaced with the supplied value, and restored back to their original value when
-         * the instance is closed.
+         * {@link ThreadContext} will be replaced with the supplied value,
+         * and restored back to their original value when the instance is closed.
          *
          * @param key   The  key to be added
          * @param value The value to be added
@@ -155,8 +153,8 @@ public class CloseableThreadContext {
 
         /**
          * Populates the Thread Context Map with the supplied key/value pairs. Any existing keys in the
-         * {@link ThreadContext} will be replaced with the supplied values, and restored back to their original value when
-         * the instance is closed.
+         * {@link ThreadContext} will be replaced with the supplied values,
+         * and restored back to their original value when the instance is closed.
          *
          * @param values The map of key/value pairs to be added
          * @return a new instance that will back out the changes when closed.
@@ -194,7 +192,8 @@ public class CloseableThreadContext {
          * Values pushed to the {@link ThreadContext} <em>stack</em> will be popped off.
          * </p>
          * <p>
-         * Values put on the {@link ThreadContext} <em>map</em> will be removed, or restored to their original values it they already existed.
+         * Values put on the {@link ThreadContext} <em>map</em> will be removed,
+         * or restored to their original values it they already existed.
          * </p>
          */
         @Override
@@ -204,16 +203,22 @@ public class CloseableThreadContext {
         }
 
         private void closeMap() {
-            for (final Iterator<Map.Entry<String, String>> it = originalValues.entrySet().iterator(); it.hasNext(); ) {
-                final Map.Entry<String, String> entry = it.next();
+            final Map<String, String> valuesToReplace = new HashMap<>(originalValues.size());
+            final List<String> keysToRemove = new ArrayList<>(originalValues.size());
+            for (final Map.Entry<String, String> entry : originalValues.entrySet()) {
                 final String key = entry.getKey();
                 final String originalValue = entry.getValue();
                 if (null == originalValue) {
-                    ThreadContext.remove(key);
+                    keysToRemove.add(key);
                 } else {
-                    ThreadContext.put(key, originalValue);
+                    valuesToReplace.put(key, originalValue);
                 }
-                it.remove();
+            }
+            if (!valuesToReplace.isEmpty()) {
+                ThreadContext.putAll(valuesToReplace);
+            }
+            if (!keysToRemove.isEmpty()) {
+                ThreadContext.removeAll(keysToRemove);
             }
         }
 

@@ -1,20 +1,22 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.util;
+
+import static org.apache.logging.log4j.util.StringBuilders.trimToMaxSize;
 
 import java.util.Iterator;
 import java.util.Locale;
@@ -22,46 +24,59 @@ import java.util.Objects;
 
 /**
  * <em>Consider this class private.</em>
- * 
- * @see <a href="http://commons.apache.org/proper/commons-lang/">Apache Commons Lang</a>
+ *
+ * @see <a href="https://commons.apache.org/proper/commons-lang/index.html">Apache Commons Lang</a>
  */
+@InternalApi
 public final class Strings {
+
+    // 518 allows the `StringBuilder` to resize three times from its initial size.
+    // This should be sufficient for most use cases.
+    private static final int MAX_FORMAT_BUFFER_LENGTH = 518;
+
+    private static final ThreadLocal<StringBuilder> FORMAT_BUFFER_REF = ThreadLocal.withInitial(StringBuilder::new);
 
     /**
      * The empty string.
      */
     public static final String EMPTY = "";
-    
+
+    private static final String COMMA_DELIMITED_RE = "\\s*,\\s*";
+
+    /**
+     * The empty array.
+     */
+    public static final String[] EMPTY_ARRAY = {};
+
     /**
      * OS-dependent line separator, defaults to {@code "\n"} if the system property {@code ""line.separator"} cannot be
      * read.
      */
-    public static final String LINE_SEPARATOR = PropertiesUtil.getProperties().getStringProperty("line.separator",
-            "\n");
+    public static final String LINE_SEPARATOR = System.lineSeparator();
 
     /**
      * Returns a double quoted string.
-     * 
+     *
      * @param str a String
      * @return {@code "str"}
      */
     public static String dquote(final String str) {
         return Chars.DQUOTE + str + Chars.DQUOTE;
     }
-    
+
     /**
      * Checks if a String is blank. A blank string is one that is either
      * {@code null}, empty, or all characters are {@link Character#isWhitespace(char)}.
      *
      * @param s the String to check, may be {@code null}
-     * @return {@code true} if the String is {@code null}, empty, or or all characters are {@link Character#isWhitespace(char)}
+     * @return {@code true} if the String is {@code null}, empty, or all characters are {@link Character#isWhitespace(char)}
      */
     public static boolean isBlank(final String s) {
         if (s == null || s.isEmpty()) {
             return true;
         }
         for (int i = 0; i < s.length(); i++) {
-            char c = s.charAt(i);
+            final char c = s.charAt(i);
             if (!Character.isWhitespace(c)) {
                 return false;
             }
@@ -192,6 +207,10 @@ public final class Strings {
         return buf.toString();
     }
 
+    public static String[] splitList(final String string) {
+        return string != null ? string.split(COMMA_DELIMITED_RE) : new String[0];
+    }
+
     /**
      * <p>Gets the leftmost {@code len} characters of a String.</p>
      *
@@ -211,7 +230,7 @@ public final class Strings {
      * <p>
      * Copied from Apache Commons Lang org.apache.commons.lang3.StringUtils.
      * </p>
-     * 
+     *
      * @param str  the String to get the leftmost characters from, may be null
      * @param len  the length of the required String
      * @return the leftmost characters, {@code null} if null String input
@@ -231,14 +250,14 @@ public final class Strings {
 
     /**
      * Returns a quoted string.
-     * 
+     *
      * @param str a String
      * @return {@code 'str'}
      */
     public static String quote(final String str) {
         return Chars.QUOTE + str + Chars.QUOTE;
     }
-    
+
     /**
      * <p>
      * Removes control characters (char &lt;= 32) from both ends of this String returning {@code null} if the String is
@@ -273,13 +292,44 @@ public final class Strings {
     }
 
     /**
-     * Shorthand for {@code str.toUpperCase(Locale.ROOT);}
+     * Shorthand for {@code str.toLowerCase(Locale.ROOT);}
      * @param str The string to upper case.
+     * @return a new string
+     * @see String#toLowerCase(Locale)
+     */
+    public static String toRootLowerCase(final String str) {
+        return str.toLowerCase(Locale.ROOT);
+    }
+
+    /**
+     * Shorthand for {@code str.toUpperCase(Locale.ROOT);}
+     * @param str The string to lower case.
      * @return a new string
      * @see String#toLowerCase(Locale)
      */
     public static String toRootUpperCase(final String str) {
         return str.toUpperCase(Locale.ROOT);
+    }
+
+    /**
+     * Concatenates 2 Strings without allocation.
+     * @param str1 the first string.
+     * @param str2 the second string.
+     * @return the concatenated String.
+     */
+    public static String concat(final String str1, final String str2) {
+        if (isEmpty(str1)) {
+            return str2;
+        } else if (isEmpty(str2)) {
+            return str1;
+        }
+        final StringBuilder sb = FORMAT_BUFFER_REF.get();
+        try {
+            return sb.append(str1).append(str2).toString();
+        } finally {
+            trimToMaxSize(sb, MAX_FORMAT_BUFFER_LENGTH);
+            sb.setLength(0);
+        }
     }
 
     /**
@@ -294,11 +344,15 @@ public final class Strings {
         if (count < 0) {
             throw new IllegalArgumentException("count");
         }
-        StringBuilder sb = new StringBuilder(str.length() * count);
-        for (int index = 0; index < count; index++) {
-            sb.append(str);
+        final StringBuilder sb = FORMAT_BUFFER_REF.get();
+        try {
+            for (int index = 0; index < count; index++) {
+                sb.append(str);
+            }
+            return sb.toString();
+        } finally {
+            trimToMaxSize(sb, MAX_FORMAT_BUFFER_LENGTH);
+            sb.setLength(0);
         }
-        return sb.toString();
     }
-
 }

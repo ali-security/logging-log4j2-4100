@@ -1,21 +1,22 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.appender.rolling;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -26,7 +27,6 @@ import java.util.List;
 import java.util.SortedMap;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.Deflater;
-
 import org.apache.logging.log4j.core.Core;
 import org.apache.logging.log4j.core.appender.rolling.action.Action;
 import org.apache.logging.log4j.core.appender.rolling.action.CompositeAction;
@@ -87,7 +87,7 @@ public class DirectWriteRolloverStrategy extends AbstractRolloverStrategy implem
         public DirectWriteRolloverStrategy build() {
             int maxIndex = Integer.MAX_VALUE;
             if (maxFiles != null) {
-                maxIndex = Integer.parseInt(maxFiles);
+                maxIndex = Integers.parseInt(maxFiles);
                 if (maxIndex < 0) {
                     maxIndex = Integer.MAX_VALUE;
                 } else if (maxIndex < 2) {
@@ -96,8 +96,13 @@ public class DirectWriteRolloverStrategy extends AbstractRolloverStrategy implem
                 }
             }
             final int compressionLevel = Integers.parseInt(compressionLevelStr, Deflater.DEFAULT_COMPRESSION);
-            return new DirectWriteRolloverStrategy(maxIndex, compressionLevel, config.getStrSubstitutor(),
-                    customActions, stopCustomActionsOnError, tempCompressedFilePattern);
+            return new DirectWriteRolloverStrategy(
+                    maxIndex,
+                    compressionLevel,
+                    config.getStrSubstitutor(),
+                    customActions,
+                    stopCustomActionsOnError,
+                    tempCompressedFilePattern);
         }
 
         public String getMaxFiles() {
@@ -217,19 +222,21 @@ public class DirectWriteRolloverStrategy extends AbstractRolloverStrategy implem
             @PluginAttribute(value = "stopCustomActionsOnError", defaultBoolean = true)
                     final boolean stopCustomActionsOnError,
             @PluginConfiguration final Configuration config) {
-            return newBuilder().withMaxFiles(maxFiles)
-                    .withCompressionLevelStr(compressionLevelStr)
-                    .withCustomActions(customActions)
-                    .withStopCustomActionsOnError(stopCustomActionsOnError)
-                    .withConfig(config)
-                    .build();
-            // @formatter:on
+        return newBuilder()
+                .withMaxFiles(maxFiles)
+                .withCompressionLevelStr(compressionLevelStr)
+                .withCustomActions(customActions)
+                .withStopCustomActionsOnError(stopCustomActionsOnError)
+                .withConfig(config)
+                .build();
+        // @formatter:on
     }
 
     /**
      * Index for most recent log file.
      */
     private final int maxFiles;
+
     private final int compressionLevel;
     private final List<Action> customActions;
     private final boolean stopCustomActionsOnError;
@@ -247,9 +254,12 @@ public class DirectWriteRolloverStrategy extends AbstractRolloverStrategy implem
      * @deprecated Since 2.9 Added tempCompressedFilePatternString parameter
      */
     @Deprecated
-    protected DirectWriteRolloverStrategy(final int maxFiles, final int compressionLevel,
-                                          final StrSubstitutor strSubstitutor, final Action[] customActions,
-                                          final boolean stopCustomActionsOnError) {
+    protected DirectWriteRolloverStrategy(
+            final int maxFiles,
+            final int compressionLevel,
+            final StrSubstitutor strSubstitutor,
+            final Action[] customActions,
+            final boolean stopCustomActionsOnError) {
         this(maxFiles, compressionLevel, strSubstitutor, customActions, stopCustomActionsOnError, null);
     }
 
@@ -262,14 +272,18 @@ public class DirectWriteRolloverStrategy extends AbstractRolloverStrategy implem
      * @param tempCompressedFilePatternString File pattern of the working file
      *                                     used during compression, if null no temporary file are used
      */
-    protected DirectWriteRolloverStrategy(final int maxFiles, final int compressionLevel,
-                                          final StrSubstitutor strSubstitutor, final Action[] customActions,
-                                          final boolean stopCustomActionsOnError, final String tempCompressedFilePatternString) {
+    protected DirectWriteRolloverStrategy(
+            final int maxFiles,
+            final int compressionLevel,
+            final StrSubstitutor strSubstitutor,
+            final Action[] customActions,
+            final boolean stopCustomActionsOnError,
+            final String tempCompressedFilePatternString) {
         super(strSubstitutor);
         this.maxFiles = maxFiles;
         this.compressionLevel = compressionLevel;
         this.stopCustomActionsOnError = stopCustomActionsOnError;
-        this.customActions = customActions == null ? Collections.<Action> emptyList() : Arrays.asList(customActions);
+        this.customActions = customActions == null ? Collections.<Action>emptyList() : Arrays.asList(customActions);
         this.tempCompressedFilePattern =
                 tempCompressedFilePatternString != null ? new PatternProcessor(tempCompressedFilePatternString) : null;
     }
@@ -314,8 +328,10 @@ public class DirectWriteRolloverStrategy extends AbstractRolloverStrategy implem
     public String getCurrentFileName(final RollingFileManager manager) {
         if (currentFileName == null) {
             final SortedMap<Integer, Path> eligibleFiles = getEligibleFiles(manager);
-            final int fileIndex = eligibleFiles.size() > 0 ? (nextIndex > 0 ? nextIndex : eligibleFiles.size()) : 1;
+            final int fileIndex = eligibleFiles.size() > 0 ? (nextIndex > 0 ? nextIndex : eligibleFiles.lastKey()) : 1;
             final StringBuilder buf = new StringBuilder(255);
+            // LOG4J2-3339 - Always use the current time for new direct write files.
+            manager.getPatternProcessor().setCurrentFileTime(System.currentTimeMillis());
             manager.getPatternProcessor().formatFileName(strSubstitutor, buf, true, fileIndex);
             final int suffixLength = suffixLength(buf.toString());
             final String name = suffixLength > 0 ? buf.substring(0, buf.length() - suffixLength) : buf.toString();
@@ -337,6 +353,9 @@ public class DirectWriteRolloverStrategy extends AbstractRolloverStrategy implem
      * @throws SecurityException if an error occurs.
      */
     @Override
+    @SuppressFBWarnings(
+            value = "PATH_TRAVERSAL_IN",
+            justification = "The name of the accessed files is based on a configuration value.")
     public RolloverDescription rollover(final RollingFileManager manager) throws SecurityException {
         LOGGER.debug("Rolling " + currentFileName);
         if (maxFiles < 0) {
@@ -366,30 +385,29 @@ public class DirectWriteRolloverStrategy extends AbstractRolloverStrategy implem
                     parentFile.mkdirs();
                 }
                 compressAction = new CompositeAction(
-                        Arrays.asList(fileExtension.createCompressAction(sourceName, tmpCompressedName,
-                                true, compressionLevel),
-                                new FileRenameAction(tmpCompressedNameFile,
-                                        new File(compressedName), true)),
+                        Arrays.asList(
+                                fileExtension.createCompressAction(
+                                        sourceName, tmpCompressedName, true, compressionLevel),
+                                new FileRenameAction(tmpCompressedNameFile, new File(compressedName), true)),
                         true);
             } else {
-                compressAction = fileExtension.createCompressAction(sourceName, compressedName,
-                      true, compressionLevel);
+                compressAction = fileExtension.createCompressAction(sourceName, compressedName, true, compressionLevel);
             }
         }
 
         if (compressAction != null && manager.isAttributeViewEnabled()) {
-            // Propagate posix attribute view to compressed file
+            // Propagate POSIX attribute view to compressed file
             // @formatter:off
             final Action posixAttributeViewAction = PosixViewAttributeAction.newBuilder()
-                                                    .withBasePath(compressedName)
-                                                    .withFollowLinks(false)
-                                                    .withMaxDepth(1)
-                                                    .withPathConditions(new PathCondition[0])
-                                                    .withSubst(getStrSubstitutor())
-                                                    .withFilePermissions(manager.getFilePermissions())
-                                                    .withFileOwner(manager.getFileOwner())
-                                                    .withFileGroup(manager.getFileGroup())
-                                                    .build();
+                    .withBasePath(compressedName)
+                    .withFollowLinks(false)
+                    .withMaxDepth(1)
+                    .withPathConditions(PathCondition.EMPTY_ARRAY)
+                    .withSubst(getStrSubstitutor())
+                    .withFilePermissions(manager.getFilePermissions())
+                    .withFileOwner(manager.getFileOwner())
+                    .withFileGroup(manager.getFileGroup())
+                    .build();
             // @formatter:on
             compressAction = new CompositeAction(Arrays.asList(compressAction, posixAttributeViewAction), false);
         }
@@ -402,5 +420,4 @@ public class DirectWriteRolloverStrategy extends AbstractRolloverStrategy implem
     public String toString() {
         return "DirectWriteRolloverStrategy(maxFiles=" + maxFiles + ')';
     }
-
 }

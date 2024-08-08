@@ -1,18 +1,18 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.util;
 
@@ -62,6 +62,11 @@ public class Unbox {
      * Such memory leaks will not occur if only JDK classes are stored in ThreadLocals.
      * </p>
      */
+    /*
+     * https://errorprone.info/bugpattern/ThreadLocalUsage
+     * Instance thread locals are not a problem here, since this class is a singleton.
+     */
+    @SuppressWarnings("ThreadLocalUsage")
     private static class WebSafeState {
         private final ThreadLocal<StringBuilder[]> ringBuffer = new ThreadLocal<>();
         private final ThreadLocal<int[]> current = new ThreadLocal<>();
@@ -81,24 +86,12 @@ public class Unbox {
             result.setLength(0);
             return result;
         }
-
-        public boolean isBoxedPrimitive(final StringBuilder text) {
-            final StringBuilder[] array = ringBuffer.get();
-            if (array == null) {
-                return false;
-            }
-            for (int i = 0; i < array.length; i++) {
-                if (text == array[i]) {
-                    return true;
-                }
-            }
-            return false;
-        }
     }
 
     private static class State {
         private final StringBuilder[] ringBuffer = new StringBuilder[RINGBUFFER_SIZE];
         private int current;
+
         State() {
             for (int i = 0; i < ringBuffer.length; i++) {
                 ringBuffer[i] = new StringBuilder(21);
@@ -110,16 +103,8 @@ public class Unbox {
             result.setLength(0);
             return result;
         }
-
-        public boolean isBoxedPrimitive(final StringBuilder text) {
-            for (int i = 0; i < ringBuffer.length; i++) {
-                if (text == ringBuffer[i]) {
-                    return true;
-                }
-            }
-            return false;
-        }
     }
+
     private static ThreadLocal<State> threadLocalState = new ThreadLocal<>();
     private static WebSafeState webSafeState = new WebSafeState();
 
@@ -128,19 +113,22 @@ public class Unbox {
     }
 
     private static int calculateRingBufferSize(final String propertyName) {
-        final String userPreferredRBSize = PropertiesUtil.getProperties().getStringProperty(propertyName,
-                String.valueOf(RINGBUFFER_MIN_SIZE));
+        final String userPreferredRBSize =
+                PropertiesUtil.getProperties().getStringProperty(propertyName, String.valueOf(RINGBUFFER_MIN_SIZE));
         try {
-            int size = Integer.parseInt(userPreferredRBSize);
+            int size = Integer.parseInt(userPreferredRBSize.trim());
             if (size < RINGBUFFER_MIN_SIZE) {
                 size = RINGBUFFER_MIN_SIZE;
-                LOGGER.warn("Invalid {} {}, using minimum size {}.", propertyName, userPreferredRBSize,
+                LOGGER.warn(
+                        "Invalid {} {}, using minimum size {}.",
+                        propertyName,
+                        userPreferredRBSize,
                         RINGBUFFER_MIN_SIZE);
             }
             return ceilingNextPowerOfTwo(size);
         } catch (final Exception ex) {
-            LOGGER.warn("Invalid {} {}, using default size {}.", propertyName, userPreferredRBSize,
-                    RINGBUFFER_MIN_SIZE);
+            LOGGER.warn(
+                    "Invalid {} {}, using default size {}.", propertyName, userPreferredRBSize, RINGBUFFER_MIN_SIZE);
             return RINGBUFFER_MIN_SIZE;
         }
     }

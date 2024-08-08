@@ -2,7 +2,7 @@
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
@@ -14,20 +14,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.log4j;
-
-import org.apache.log4j.helpers.QuietWriter;
-import org.apache.log4j.spi.ErrorHandler;
-import org.apache.log4j.spi.LoggingEvent;
-import org.apache.logging.log4j.status.StatusLogger;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.io.UnsupportedEncodingException;
 import java.io.Writer;
-
+import org.apache.log4j.helpers.QuietWriter;
+import org.apache.log4j.spi.ErrorHandler;
+import org.apache.log4j.spi.LoggingEvent;
+import org.apache.logging.log4j.status.StatusLogger;
 
 /**
  * WriterAppender appends log events to a {@link Writer} or an
@@ -53,7 +51,7 @@ public class WriterAppender extends AppenderSkeleton {
 
     /**
      * The encoding to use when writing.  <p>The
-     * <code>encoding</code> variable is set to <code>null</null> by
+     * <code>encoding</code> variable is set to <code>null</code> by
      * default which results in the utilization of the system's default
      * encoding.
      */
@@ -65,19 +63,19 @@ public class WriterAppender extends AppenderSkeleton {
      */
     protected QuietWriter qw;
 
-
     /**
      * This default constructor does nothing.
      */
-    public WriterAppender() {
-    }
+    public WriterAppender() {}
 
     /**
      * Instantiate a WriterAppender and set the output destination to a
      * new {@link OutputStreamWriter} initialized with <code>os</code>
      * as its {@link OutputStream}.
+     * @param layout The Layout.
+     * @param os The OutputStream.
      */
-    public WriterAppender(Layout layout, OutputStream os) {
+    public WriterAppender(final Layout layout, final OutputStream os) {
         this(layout, new OutputStreamWriter(os));
     }
 
@@ -87,8 +85,11 @@ public class WriterAppender extends AppenderSkeleton {
      *
      * <p>The <code>writer</code> must have been previously opened by
      * the user.
+     *
+     * @param layout The Layout.
+     * @param writer The Writer.
      */
-    public WriterAppender(Layout layout, Writer writer) {
+    public WriterAppender(final Layout layout, final Writer writer) {
         this.layout = layout;
         this.setWriter(writer);
     }
@@ -117,7 +118,7 @@ public class WriterAppender extends AppenderSkeleton {
      *
      * @param value the value to set the immediate flush setting to.
      */
-    public void setImmediateFlush(boolean value) {
+    public void setImmediateFlush(final boolean value) {
         immediateFlush = value;
     }
 
@@ -125,9 +126,7 @@ public class WriterAppender extends AppenderSkeleton {
      * Does nothing.
      */
     @Override
-    public void activateOptions() {
-    }
-
+    public void activateOptions() {}
 
     /**
      * This method is called by the {@link AppenderSkeleton#doAppend}
@@ -141,7 +140,7 @@ public class WriterAppender extends AppenderSkeleton {
      * layout.
      */
     @Override
-    public void append(LoggingEvent event) {
+    public void append(final LoggingEvent event) {
 
         // Reminder: the nesting of calls is:
         //
@@ -183,7 +182,6 @@ public class WriterAppender extends AppenderSkeleton {
         }
         return true;
     }
-
 
     /**
      * Close this appender instance. The underlying stream or writer is
@@ -231,19 +229,15 @@ public class WriterAppender extends AppenderSkeleton {
      * @param os The OutputStream.
      * @return The OutputStreamWriter.
      */
-    protected OutputStreamWriter createWriter(OutputStream os) {
+    protected OutputStreamWriter createWriter(final OutputStream os) {
         OutputStreamWriter retval = null;
 
-        String enc = getEncoding();
+        final String enc = getEncoding();
         if (enc != null) {
             try {
                 retval = new OutputStreamWriter(os, enc);
-            } catch (IOException e) {
-                if (e instanceof InterruptedIOException) {
-                    Thread.currentThread().interrupt();
-                }
-                LOGGER.warn("Error initializing output writer.");
-                LOGGER.warn("Unsupported encoding?");
+            } catch (final UnsupportedEncodingException e) {
+                LOGGER.warn("Error initializing output writer: encoding {} is not supported.", enc, e);
             }
         }
         if (retval == null) {
@@ -256,17 +250,16 @@ public class WriterAppender extends AppenderSkeleton {
         return encoding;
     }
 
-    public void setEncoding(String value) {
+    public void setEncoding(final String value) {
         encoding = value;
     }
-
 
     /**
      * Set the {@link ErrorHandler} for this WriterAppender and also the
      * underlying {@link QuietWriter} if any.
      */
     @Override
-    public synchronized void setErrorHandler(ErrorHandler eh) {
+    public synchronized void setErrorHandler(final ErrorHandler eh) {
         if (eh == null) {
             LOGGER.warn("You have tried to set a null error-handler.");
         } else {
@@ -291,13 +284,12 @@ public class WriterAppender extends AppenderSkeleton {
      *
      * @param writer An already opened Writer.
      */
-    public synchronized void setWriter(Writer writer) {
+    public synchronized void setWriter(final Writer writer) {
         reset();
         this.qw = new QuietWriter(writer, errorHandler);
-        //this.tp = new TracerPrintWriter(qw);
+        // this.tp = new TracerPrintWriter(qw);
         writeHeader();
     }
-
 
     /**
      * Actual writing occurs here.
@@ -308,13 +300,13 @@ public class WriterAppender extends AppenderSkeleton {
      *
      * @since 0.9.0
      */
-    protected void subAppend(LoggingEvent event) {
+    protected void subAppend(final LoggingEvent event) {
         this.qw.write(this.layout.format(event));
 
         if (layout.ignoresThrowable()) {
-            String[] s = event.getThrowableStrRep();
+            final String[] s = event.getThrowableStrRep();
             if (s != null) {
-                int len = s.length;
+                final int len = s.length;
                 for (int i = 0; i < len; i++) {
                     this.qw.write(s[i]);
                     this.qw.write(Layout.LINE_SEP);
@@ -326,7 +318,6 @@ public class WriterAppender extends AppenderSkeleton {
             this.qw.flush();
         }
     }
-
 
     /**
      * The WriterAppender requires a layout. Hence, this method returns
@@ -346,9 +337,8 @@ public class WriterAppender extends AppenderSkeleton {
     protected void reset() {
         closeWriter();
         this.qw = null;
-        //this.tp = null;
+        // this.tp = null;
     }
-
 
     /**
      * Write a footer as produced by the embedded layout's {@link
@@ -356,7 +346,7 @@ public class WriterAppender extends AppenderSkeleton {
      */
     protected void writeFooter() {
         if (layout != null) {
-            String f = layout.getFooter();
+            final String f = layout.getFooter();
             if (f != null && this.qw != null) {
                 this.qw.write(f);
                 this.qw.flush();
@@ -370,7 +360,7 @@ public class WriterAppender extends AppenderSkeleton {
      */
     protected void writeHeader() {
         if (layout != null) {
-            String h = layout.getHeader();
+            final String h = layout.getHeader();
             if (h != null && this.qw != null) {
                 this.qw.write(h);
             }

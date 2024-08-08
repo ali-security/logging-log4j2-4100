@@ -1,22 +1,24 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.message;
 
-import org.apache.logging.log4j.util.Chars;
+import static org.apache.logging.log4j.util.Chars.LF;
+import static org.apache.logging.log4j.util.Chars.SPACE;
+
 import org.apache.logging.log4j.util.StringBuilders;
 
 /**
@@ -27,10 +29,8 @@ class BasicThreadInformation implements ThreadInformation {
     private static final int HASH_MULTIPLIER = 31;
     private final long id;
     private final String name;
-    private final String longName;
     private final Thread.State state;
     private final int priority;
-    private final boolean isAlive;
     private final boolean isDaemon;
     private final String threadGroupName;
 
@@ -41,10 +41,10 @@ class BasicThreadInformation implements ThreadInformation {
     BasicThreadInformation(final Thread thread) {
         this.id = thread.getId();
         this.name = thread.getName();
-        this.longName = thread.toString();
+
         this.state = thread.getState();
         this.priority = thread.getPriority();
-        this.isAlive = thread.isAlive();
+
         this.isDaemon = thread.isDaemon();
         final ThreadGroup group = thread.getThreadGroup();
         threadGroupName = group == null ? null : group.getName();
@@ -55,7 +55,7 @@ class BasicThreadInformation implements ThreadInformation {
         if (this == o) {
             return true;
         }
-        if (o == null || getClass() != o.getClass()) {
+        if (!(o instanceof BasicThreadInformation)) {
             return false;
         }
 
@@ -64,11 +64,7 @@ class BasicThreadInformation implements ThreadInformation {
         if (id != that.id) {
             return false;
         }
-        if (name != null ? !name.equals(that.name) : that.name != null) {
-            return false;
-        }
-
-        return true;
+        return name != null ? name.equals(that.name) : that.name == null;
     }
 
     @Override
@@ -84,7 +80,7 @@ class BasicThreadInformation implements ThreadInformation {
      */
     @Override
     public void printThreadInfo(final StringBuilder sb) {
-        StringBuilders.appendDqValue(sb, name).append(Chars.SPACE);
+        StringBuilders.appendDqValue(sb, name).append(SPACE);
         if (isDaemon) {
             sb.append("daemon ");
         }
@@ -92,8 +88,8 @@ class BasicThreadInformation implements ThreadInformation {
         if (threadGroupName != null) {
             StringBuilders.appendKeyDqValue(sb, "group", threadGroupName);
         }
-        sb.append('\n');
-        sb.append("\tThread state: ").append(state.name()).append('\n');
+        sb.append(LF);
+        sb.append("\tThread state: ").append(state.name()).append(LF);
     }
 
     /**
@@ -104,7 +100,7 @@ class BasicThreadInformation implements ThreadInformation {
     @Override
     public void printStack(final StringBuilder sb, final StackTraceElement[] trace) {
         for (final StackTraceElement element : trace) {
-            sb.append("\tat ").append(element).append('\n');
+            sb.append("\tat ").append(element).append(LF);
         }
     }
 }

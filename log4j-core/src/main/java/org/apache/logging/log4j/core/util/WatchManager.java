@@ -1,23 +1,25 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.util;
 
+import aQute.bnd.annotation.Cardinality;
+import aQute.bnd.annotation.Resolution;
+import aQute.bnd.annotation.spi.ServiceConsumer;
 import java.io.File;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -30,13 +32,13 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-
+import java.util.stream.Collectors;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.AbstractLifeCycle;
 import org.apache.logging.log4j.core.config.ConfigurationFileWatcher;
 import org.apache.logging.log4j.core.config.ConfigurationScheduler;
 import org.apache.logging.log4j.status.StatusLogger;
-import org.apache.logging.log4j.util.LoaderUtil;
+import org.apache.logging.log4j.util.ServiceLoaderUtil;
 
 /**
  * Manages {@link FileWatcher}s.
@@ -44,6 +46,7 @@ import org.apache.logging.log4j.util.LoaderUtil;
  * @see FileWatcher
  * @see ConfigurationScheduler
  */
+@ServiceConsumer(value = WatchEventService.class, resolution = Resolution.OPTIONAL, cardinality = Cardinality.MULTIPLE)
 public class WatchManager extends AbstractLifeCycle {
 
     private final class ConfigurationMonitor {
@@ -84,10 +87,10 @@ public class WatchManager extends AbstractLifeCycle {
         private static final byte VARIANT = (byte) 0x80;
         private static final int SEQUENCE_MASK = 0x3FFF;
 
-
         public static UUID get() {
-            final long time = ((System.currentTimeMillis() * HUNDRED_NANOS_PER_MILLI) +
-                    NUM_100NS_INTERVALS_SINCE_UUID_EPOCH) + (COUNT.incrementAndGet() % HUNDRED_NANOS_PER_MILLI);
+            final long time =
+                    ((System.currentTimeMillis() * HUNDRED_NANOS_PER_MILLI) + NUM_100NS_INTERVALS_SINCE_UUID_EPOCH)
+                            + (COUNT.incrementAndGet() % HUNDRED_NANOS_PER_MILLI);
             final long timeLow = (time & LOW_MASK) << SHIFT_4;
             final long timeMid = (time & MID_MASK) >> SHIFT_2;
             final long timeHi = (time & HIGH_MASK) >> SHIFT_6;
@@ -95,6 +98,7 @@ public class WatchManager extends AbstractLifeCycle {
             return new UUID(most, COUNT.incrementAndGet());
         }
     }
+
     private final class WatchRunnable implements Runnable {
 
         // Use a hard class reference here in case a refactoring changes the class name.
@@ -109,9 +113,13 @@ public class WatchManager extends AbstractLifeCycle {
                 if (monitor.getWatcher().isModified()) {
                     final long lastModified = monitor.getWatcher().getLastModified();
                     if (logger.isInfoEnabled()) {
-                        logger.info("Source '{}' was modified on {} ({}), previous modification was on {} ({})", source,
-                            millisToString(lastModified), lastModified, millisToString(monitor.lastModifiedMillis),
-                            monitor.lastModifiedMillis);
+                        logger.info(
+                                "Source '{}' was modified on {} ({}), previous modification was on {} ({})",
+                                source,
+                                millisToString(lastModified),
+                                lastModified,
+                                millisToString(monitor.lastModifiedMillis),
+                                monitor.lastModifiedMillis);
                     }
                     monitor.lastModifiedMillis = lastModified;
                     monitor.getWatcher().modified();
@@ -120,7 +128,8 @@ public class WatchManager extends AbstractLifeCycle {
             logger.trace("{} run ended.", SIMPLE_NAME);
         }
     }
-    private static Logger logger = StatusLogger.getLogger();
+
+    private static final Logger logger = StatusLogger.getLogger();
     private final ConcurrentMap<Source, ConfigurationMonitor> watchers = new ConcurrentHashMap<>();
     private int intervalSeconds = 0;
     private ScheduledFuture<?> future;
@@ -134,7 +143,9 @@ public class WatchManager extends AbstractLifeCycle {
 
     public WatchManager(final ConfigurationScheduler scheduler) {
         this.scheduler = Objects.requireNonNull(scheduler, "scheduler");
-        eventServiceList = getEventServices();
+        eventServiceList = ServiceLoaderUtil.safeStream(
+                        WatchEventService.class, ServiceLoader.load(WatchEventService.class), logger)
+                .collect(Collectors.toList());
     }
 
     public void checkFiles() {
@@ -153,22 +164,6 @@ public class WatchManager extends AbstractLifeCycle {
             map.put(entry.getKey(), entry.getValue().getWatcher());
         }
         return map;
-    }
-
-    private List<WatchEventService> getEventServices() {
-        List<WatchEventService> list = new ArrayList<>();
-        for (final ClassLoader classLoader : LoaderUtil.getClassLoaders()) {
-            try {
-                final ServiceLoader<WatchEventService> serviceLoader = ServiceLoader
-                    .load(WatchEventService.class, classLoader);
-                for (final WatchEventService service : serviceLoader) {
-                    list.add(service);
-                }
-            } catch (final Throwable ex) {
-                LOGGER.debug("Unable to retrieve WatchEventService from ClassLoader {}", classLoader, ex);
-            }
-        }
-        return list;
     }
 
     public UUID getId() {
@@ -197,7 +192,8 @@ public class WatchManager extends AbstractLifeCycle {
             if (entry.getValue().getWatcher() instanceof ConfigurationFileWatcher) {
                 map.put(entry.getKey().getFile(), (FileWatcher) entry.getValue().getWatcher());
             } else {
-                map.put(entry.getKey().getFile(), new WrappedFileWatcher((FileWatcher) entry.getValue().getWatcher()));
+                map.put(entry.getKey().getFile(), new WrappedFileWatcher((FileWatcher)
+                        entry.getValue().getWatcher()));
             }
         }
         return map;
@@ -243,7 +239,7 @@ public class WatchManager extends AbstractLifeCycle {
         if (file == null) {
             return;
         }
-        Source source = new Source(file);
+        final Source source = new Source(file);
         reset(source);
     }
 
@@ -264,13 +260,17 @@ public class WatchManager extends AbstractLifeCycle {
         }
         final ConfigurationMonitor monitor = watchers.get(source);
         if (monitor != null) {
-            Watcher watcher = monitor.getWatcher();
+            final Watcher watcher = monitor.getWatcher();
             if (watcher.isModified()) {
                 final long lastModifiedMillis = watcher.getLastModified();
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Resetting file monitor for '{}' from {} ({}) to {} ({})", source.getLocation(),
-                        millisToString(monitor.lastModifiedMillis), monitor.lastModifiedMillis,
-                        millisToString(lastModifiedMillis), lastModifiedMillis);
+                    logger.debug(
+                            "Resetting file monitor for '{}' from {} ({}) to {} ({})",
+                            source.getLocation(),
+                            millisToString(monitor.lastModifiedMillis),
+                            monitor.lastModifiedMillis,
+                            millisToString(lastModifiedMillis),
+                            lastModifiedMillis);
                 }
                 monitor.setLastModifiedMillis(lastModifiedMillis);
             }
@@ -293,8 +293,8 @@ public class WatchManager extends AbstractLifeCycle {
         super.start();
 
         if (intervalSeconds > 0) {
-            future = scheduler
-                .scheduleWithFixedDelay(new WatchRunnable(), intervalSeconds, intervalSeconds, TimeUnit.SECONDS);
+            future = scheduler.scheduleWithFixedDelay(
+                    new WatchRunnable(), intervalSeconds, intervalSeconds, TimeUnit.SECONDS);
         }
         for (WatchEventService service : eventServiceList) {
             service.subscribe(this);
@@ -315,7 +315,7 @@ public class WatchManager extends AbstractLifeCycle {
     @Override
     public String toString() {
         return "WatchManager [intervalSeconds=" + intervalSeconds + ", watchers=" + watchers + ", scheduler="
-            + scheduler + ", future=" + future + "]";
+                + scheduler + ", future=" + future + "]";
     }
 
     /**
@@ -337,8 +337,7 @@ public class WatchManager extends AbstractLifeCycle {
      * @since 2.11.0
      */
     public void unwatchFile(final File file) {
-        Source source = new Source(file);
-        unwatch(source);
+        unwatch(new Source(file));
     }
 
     /**
@@ -351,8 +350,11 @@ public class WatchManager extends AbstractLifeCycle {
         watcher.watching(source);
         final long lastModified = watcher.getLastModified();
         if (logger.isDebugEnabled()) {
-            logger.debug("Watching configuration '{}' for lastModified {} ({})", source, millisToString(lastModified),
-                lastModified);
+            logger.debug(
+                    "Watching configuration '{}' for lastModified {} ({})",
+                    source,
+                    millisToString(lastModified),
+                    lastModified);
         }
         watchers.put(source, new ConfigurationMonitor(lastModified, watcher));
     }
@@ -370,7 +372,7 @@ public class WatchManager extends AbstractLifeCycle {
         } else {
             watcher = new WrappedFileWatcher(fileWatcher);
         }
-        Source source = new Source(file);
+        final Source source = new Source(file);
         watch(source, watcher);
     }
 }

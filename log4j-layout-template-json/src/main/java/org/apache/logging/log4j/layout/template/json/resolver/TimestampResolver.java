@@ -1,30 +1,31 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.layout.template.json.resolver;
 
-import org.apache.logging.log4j.core.LogEvent;
-import org.apache.logging.log4j.core.time.Instant;
-import org.apache.logging.log4j.core.util.datetime.FastDateFormat;
-import org.apache.logging.log4j.layout.template.json.JsonTemplateLayoutDefaults;
-import org.apache.logging.log4j.layout.template.json.util.JsonWriter;
-
-import java.util.Calendar;
 import java.util.Locale;
 import java.util.TimeZone;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+import org.apache.logging.log4j.core.LogEvent;
+import org.apache.logging.log4j.core.time.Instant;
+import org.apache.logging.log4j.core.time.MutableInstant;
+import org.apache.logging.log4j.layout.template.json.JsonTemplateLayoutDefaults;
+import org.apache.logging.log4j.layout.template.json.util.InstantFormatter;
+import org.apache.logging.log4j.layout.template.json.util.JsonWriter;
 
 /**
  * Timestamp resolver.
@@ -191,7 +192,7 @@ import java.util.TimeZone;
  * </tr>
  * </table>
  */
-final class TimestampResolver implements EventResolver {
+public final class TimestampResolver implements EventResolver {
 
     private final EventResolver internalResolver;
 
@@ -199,67 +200,46 @@ final class TimestampResolver implements EventResolver {
         this.internalResolver = createResolver(config);
     }
 
-    private static EventResolver createResolver(
-            final TemplateResolverConfig config) {
+    private static EventResolver createResolver(final TemplateResolverConfig config) {
         final boolean patternProvided = config.exists("pattern");
         final boolean epochProvided = config.exists("epoch");
         if (patternProvided && epochProvided) {
-            throw new IllegalArgumentException(
-                    "conflicting configuration options are provided: " + config);
+            throw new IllegalArgumentException("conflicting configuration options are provided: " + config);
         }
-        return epochProvided
-                ? createEpochResolver(config)
-                : createFormatResolver(config);
+        return epochProvided ? createEpochResolver(config) : createPatternResolver(config);
     }
 
-    /**
-     * Context for GC-free formatted timestamp resolver.
-     */
-    private static final class FormatResolverContext {
+    private static final class PatternResolverContext {
 
-        private final FastDateFormat timestampFormat;
+        private final InstantFormatter formatter;
 
-        private final Calendar calendar;
+        private final StringBuilder lastFormattedInstantBuffer = new StringBuilder();
 
-        private final StringBuilder formattedTimestampBuilder;
+        private final MutableInstant lastFormattedInstant = new MutableInstant();
 
-        private FormatResolverContext(
-                final TimeZone timeZone,
-                final Locale locale,
-                final FastDateFormat timestampFormat) {
-            this.timestampFormat = timestampFormat;
-            this.formattedTimestampBuilder = new StringBuilder();
-            this.calendar = Calendar.getInstance(timeZone, locale);
-            timestampFormat.format(calendar, formattedTimestampBuilder);
+        private PatternResolverContext(final String pattern, final TimeZone timeZone, final Locale locale) {
+            this.formatter = InstantFormatter.newBuilder()
+                    .setPattern(pattern)
+                    .setTimeZone(timeZone)
+                    .setLocale(locale)
+                    .build();
+            lastFormattedInstant.initFromEpochSecond(-1, 0);
         }
 
-        private static FormatResolverContext fromConfig(
-                final TemplateResolverConfig config) {
-            final String format = readFormat(config);
+        private static PatternResolverContext fromConfig(final TemplateResolverConfig config) {
+            final String pattern = readPattern(config);
             final TimeZone timeZone = readTimeZone(config);
-            final Locale locale = readLocale(config);
-            final FastDateFormat fastDateFormat =
-                    FastDateFormat.getInstance(format, timeZone, locale);
-            return new FormatResolverContext(timeZone, locale, fastDateFormat);
+            final Locale locale = config.getLocale(new String[] {"pattern", "locale"});
+            return new PatternResolverContext(pattern, timeZone, locale);
         }
 
-        private static String readFormat(final TemplateResolverConfig config) {
-            final String format = config.getString(new String[]{"pattern", "format"});
-            if (format == null) {
-                return JsonTemplateLayoutDefaults.getTimestampFormatPattern();
-            }
-            try {
-                FastDateFormat.getInstance(format);
-            } catch (final IllegalArgumentException error) {
-                throw new IllegalArgumentException(
-                        "invalid timestamp format: " + config,
-                        error);
-            }
-            return format;
+        private static String readPattern(final TemplateResolverConfig config) {
+            final String format = config.getString(new String[] {"pattern", "format"});
+            return format != null ? format : JsonTemplateLayoutDefaults.getTimestampFormatPattern();
         }
 
         private static TimeZone readTimeZone(final TemplateResolverConfig config) {
-            final String timeZoneId = config.getString(new String[]{"pattern", "timeZone"});
+            final String timeZoneId = config.getString(new String[] {"pattern", "timeZone"});
             if (timeZoneId == null) {
                 return JsonTemplateLayoutDefaults.getTimeZone();
             }
@@ -271,107 +251,84 @@ final class TimestampResolver implements EventResolver {
                 }
             }
             if (!found) {
-                throw new IllegalArgumentException(
-                        "invalid timestamp time zone: " + config);
+                throw new IllegalArgumentException("invalid timestamp time zone: " + config);
             }
             return TimeZone.getTimeZone(timeZoneId);
         }
-
-        private static Locale readLocale(final TemplateResolverConfig config) {
-            final String locale = config.getString(new String[]{"pattern", "locale"});
-            if (locale == null) {
-                return JsonTemplateLayoutDefaults.getLocale();
-            }
-            final String[] localeFields = locale.split("_", 3);
-            switch (localeFields.length) {
-                case 1: return new Locale(localeFields[0]);
-                case 2: return new Locale(localeFields[0], localeFields[1]);
-                case 3: return new Locale(localeFields[0], localeFields[1], localeFields[2]);
-            }
-            throw new IllegalArgumentException("invalid timestamp locale: " + config);
-        }
-
     }
 
-    /**
-     * GC-free formatted timestamp resolver.
-     */
-    private static final class FormatResolver implements EventResolver {
+    private static final class PatternResolver implements EventResolver {
 
-        private final FormatResolverContext formatResolverContext;
+        private final Lock lock = new ReentrantLock();
 
-        private FormatResolver(final FormatResolverContext formatResolverContext) {
-            this.formatResolverContext = formatResolverContext;
+        private final PatternResolverContext patternResolverContext;
+
+        private PatternResolver(final PatternResolverContext patternResolverContext) {
+            this.patternResolverContext = patternResolverContext;
         }
 
         @Override
-        public synchronized void resolve(
-                final LogEvent logEvent,
-                final JsonWriter jsonWriter) {
+        public void resolve(final LogEvent logEvent, final JsonWriter jsonWriter) {
+            lock.lock();
+            try {
+                unsynchronizedResolve(logEvent, jsonWriter);
+            } finally {
+                lock.unlock();
+            }
+        }
+
+        private void unsynchronizedResolve(final LogEvent logEvent, final JsonWriter jsonWriter) {
 
             // Format timestamp if it doesn't match the last cached one.
-            final long timestampMillis = logEvent.getTimeMillis();
-            if (formatResolverContext.calendar.getTimeInMillis() != timestampMillis) {
+            final boolean instantMatching = patternResolverContext.formatter.isInstantMatching(
+                    patternResolverContext.lastFormattedInstant, logEvent.getInstant());
+            if (!instantMatching) {
 
                 // Format the timestamp.
-                formatResolverContext.formattedTimestampBuilder.setLength(0);
-                formatResolverContext.calendar.setTimeInMillis(timestampMillis);
-                formatResolverContext.timestampFormat.format(
-                        formatResolverContext.calendar,
-                        formatResolverContext.formattedTimestampBuilder);
+                patternResolverContext.lastFormattedInstantBuffer.setLength(0);
+                patternResolverContext.lastFormattedInstant.initFrom(logEvent.getInstant());
+                patternResolverContext.formatter.format(
+                        patternResolverContext.lastFormattedInstant, patternResolverContext.lastFormattedInstantBuffer);
 
                 // Write the formatted timestamp.
                 final StringBuilder jsonWriterStringBuilder = jsonWriter.getStringBuilder();
                 final int startIndex = jsonWriterStringBuilder.length();
-                jsonWriter.writeString(formatResolverContext.formattedTimestampBuilder);
+                jsonWriter.writeString(patternResolverContext.lastFormattedInstantBuffer);
 
                 // Cache the written value.
-                formatResolverContext.formattedTimestampBuilder.setLength(0);
-                formatResolverContext.formattedTimestampBuilder.append(
-                        jsonWriterStringBuilder,
-                        startIndex,
-                        jsonWriterStringBuilder.length());
+                patternResolverContext.lastFormattedInstantBuffer.setLength(0);
+                patternResolverContext.lastFormattedInstantBuffer.append(
+                        jsonWriterStringBuilder, startIndex, jsonWriterStringBuilder.length());
 
             }
 
             // Write the cached formatted timestamp.
             else {
-                jsonWriter.writeRawString(
-                        formatResolverContext.formattedTimestampBuilder);
+                jsonWriter.writeRawString(patternResolverContext.lastFormattedInstantBuffer);
             }
-
         }
-
     }
 
-    private static EventResolver createFormatResolver(
-            final TemplateResolverConfig config) {
-        final FormatResolverContext formatResolverContext =
-                FormatResolverContext.fromConfig(config);
-        return new FormatResolver(formatResolverContext);
+    private static EventResolver createPatternResolver(final TemplateResolverConfig config) {
+        final PatternResolverContext patternResolverContext = PatternResolverContext.fromConfig(config);
+        return new PatternResolver(patternResolverContext);
     }
 
-    private static EventResolver createEpochResolver(
-            final TemplateResolverConfig config) {
-        final String unit = config.getString(new String[]{"epoch", "unit"});
-        final Boolean rounded = config.getBoolean(new String[]{"epoch", "rounded"});
+    private static EventResolver createEpochResolver(final TemplateResolverConfig config) {
+        final String unit = config.getString(new String[] {"epoch", "unit"});
+        final Boolean rounded = config.getBoolean(new String[] {"epoch", "rounded"});
         if ("nanos".equals(unit) && !Boolean.FALSE.equals(rounded)) {
             return EPOCH_NANOS_RESOLVER;
         } else if ("millis".equals(unit)) {
-            return !Boolean.TRUE.equals(rounded)
-                    ? EPOCH_MILLIS_RESOLVER
-                    : EPOCH_MILLIS_ROUNDED_RESOLVER;
+            return !Boolean.TRUE.equals(rounded) ? EPOCH_MILLIS_RESOLVER : EPOCH_MILLIS_ROUNDED_RESOLVER;
         } else if ("millis.nanos".equals(unit) && rounded == null) {
-                return EPOCH_MILLIS_NANOS_RESOLVER;
+            return EPOCH_MILLIS_NANOS_RESOLVER;
         } else if ("secs".equals(unit)) {
-            return !Boolean.TRUE.equals(rounded)
-                    ? EPOCH_SECS_RESOLVER
-                    : EPOCH_SECS_ROUNDED_RESOLVER;
+            return !Boolean.TRUE.equals(rounded) ? EPOCH_SECS_RESOLVER : EPOCH_SECS_ROUNDED_RESOLVER;
         } else if ("secs.nanos".equals(unit) && rounded == null) {
             return EPOCH_SECS_NANOS_RESOLVER;
         }
-        throw new IllegalArgumentException(
-                "invalid epoch configuration: " + config);
+        throw new IllegalArgumentException("invalid epoch configuration: " + config);
     }
 
     private static final class EpochResolutionRecord {
@@ -379,119 +336,112 @@ final class TimestampResolver implements EventResolver {
         private static final int MAX_LONG_LENGTH =
                 String.valueOf(Long.MAX_VALUE).length();
 
-        private Instant instant;
+        private final MutableInstant instant = new MutableInstant();
 
-        private char[] resolution = new char[
-                /* integral: */ MAX_LONG_LENGTH +
-                /* dot: */ 1 +
-                /* fractional: */ MAX_LONG_LENGTH];
+        private final char[] resolution =
+                new char[ /* integral: */MAX_LONG_LENGTH + /* dot: */ 1 + /* fractional: */ MAX_LONG_LENGTH];
 
         private int resolutionLength;
 
-        private EpochResolutionRecord() {}
-
+        private EpochResolutionRecord() {
+            instant.initFromEpochSecond(-1, 0);
+        }
     }
 
-    private static abstract class EpochResolver implements EventResolver {
+    private abstract static class EpochResolver implements EventResolver {
 
-        private final EpochResolutionRecord resolutionRecord =
-                new EpochResolutionRecord();
+        private final Lock lock = new ReentrantLock();
+
+        private final EpochResolutionRecord resolutionRecord = new EpochResolutionRecord();
 
         @Override
-        public synchronized void resolve(
-                final LogEvent logEvent,
-                final JsonWriter jsonWriter) {
+        public void resolve(final LogEvent logEvent, final JsonWriter jsonWriter) {
+            lock.lock();
+            try {
+                unsynchronizedResolve(logEvent, jsonWriter);
+            } finally {
+                lock.unlock();
+            }
+        }
+
+        private void unsynchronizedResolve(final LogEvent logEvent, final JsonWriter jsonWriter) {
             final Instant logEventInstant = logEvent.getInstant();
             if (logEventInstant.equals(resolutionRecord.instant)) {
-                jsonWriter.writeRawString(
-                        resolutionRecord.resolution,
-                        0,
-                        resolutionRecord.resolutionLength);
+                jsonWriter.writeRawString(resolutionRecord.resolution, 0, resolutionRecord.resolutionLength);
             } else {
-                resolutionRecord.instant = logEventInstant;
+                resolutionRecord.instant.initFrom(logEventInstant);
                 final StringBuilder stringBuilder = jsonWriter.getStringBuilder();
                 final int startIndex = stringBuilder.length();
                 resolve(logEventInstant, jsonWriter);
                 resolutionRecord.resolutionLength = stringBuilder.length() - startIndex;
-                stringBuilder.getChars(
-                        startIndex,
-                        stringBuilder.length(),
-                        resolutionRecord.resolution,
-                        0);
+                stringBuilder.getChars(startIndex, stringBuilder.length(), resolutionRecord.resolution, 0);
             }
         }
 
         abstract void resolve(Instant logEventInstant, JsonWriter jsonWriter);
-
     }
 
-    private static final EventResolver EPOCH_NANOS_RESOLVER =
-            new EpochResolver() {
-                @Override
-                void resolve(final Instant logEventInstant, final JsonWriter jsonWriter) {
-                    final long nanos = epochNanos(logEventInstant);
-                    jsonWriter.writeNumber(nanos);
-                }
-            };
+    private static final EventResolver EPOCH_NANOS_RESOLVER = new EpochResolver() {
+        @Override
+        void resolve(final Instant logEventInstant, final JsonWriter jsonWriter) {
+            final long nanos = epochNanos(logEventInstant);
+            jsonWriter.writeNumber(nanos);
+        }
+    };
 
-    private static final EventResolver EPOCH_MILLIS_RESOLVER =
-            new EpochResolver() {
-                @Override
-                void resolve(final Instant logEventInstant, final JsonWriter jsonWriter) {
-                    final StringBuilder jsonWriterStringBuilder = jsonWriter.getStringBuilder();
-                    final long nanos = epochNanos(logEventInstant);
-                    jsonWriterStringBuilder.append(nanos);
-                    jsonWriterStringBuilder.insert(jsonWriterStringBuilder.length() - 6, '.');
-                }
-            };
+    private static final EventResolver EPOCH_MILLIS_RESOLVER = new EpochResolver() {
+        @Override
+        void resolve(final Instant logEventInstant, final JsonWriter jsonWriter) {
+            final StringBuilder jsonWriterStringBuilder = jsonWriter.getStringBuilder();
+            final long nanos = epochNanos(logEventInstant);
+            jsonWriterStringBuilder.append(nanos);
+            jsonWriterStringBuilder.insert(jsonWriterStringBuilder.length() - 6, '.');
+        }
+    };
 
-    private static final EventResolver EPOCH_MILLIS_ROUNDED_RESOLVER =
-            new EpochResolver() {
-                @Override
-                void resolve(final Instant logEventInstant, final JsonWriter jsonWriter) {
-                    jsonWriter.writeNumber(logEventInstant.getEpochMillisecond());
-                }
-            };
+    private static final EventResolver EPOCH_MILLIS_ROUNDED_RESOLVER = new EpochResolver() {
+        @Override
+        void resolve(final Instant logEventInstant, final JsonWriter jsonWriter) {
+            jsonWriter.writeNumber(logEventInstant.getEpochMillisecond());
+        }
+    };
 
-    private static final EventResolver EPOCH_MILLIS_NANOS_RESOLVER =
-            new EpochResolver() {
-                @Override
-                void resolve(final Instant logEventInstant, final JsonWriter jsonWriter) {
-                    final long nanos = epochNanos(logEventInstant);
-                    final long fraction = nanos % 1_000_000L;
-                    jsonWriter.writeNumber(fraction);
-                }
-            };
+    private static final EventResolver EPOCH_MILLIS_NANOS_RESOLVER = new EpochResolver() {
+        @Override
+        void resolve(final Instant logEventInstant, final JsonWriter jsonWriter) {
+            final long nanos = epochNanos(logEventInstant);
+            final long fraction = nanos % 1_000_000L;
+            jsonWriter.writeNumber(fraction);
+        }
+    };
 
-    private static final EventResolver EPOCH_SECS_RESOLVER =
-            new EpochResolver() {
-                @Override
-                void resolve(final Instant logEventInstant, final JsonWriter jsonWriter) {
-                    final StringBuilder jsonWriterStringBuilder = jsonWriter.getStringBuilder();
-                    final long nanos = epochNanos(logEventInstant);
-                    jsonWriterStringBuilder.append(nanos);
-                    jsonWriterStringBuilder.insert(jsonWriterStringBuilder.length() - 9, '.');
-                }
-            };
+    private static final EventResolver EPOCH_SECS_RESOLVER = new EpochResolver() {
+        @Override
+        void resolve(final Instant logEventInstant, final JsonWriter jsonWriter) {
+            final StringBuilder jsonWriterStringBuilder = jsonWriter.getStringBuilder();
+            final long nanos = epochNanos(logEventInstant);
+            jsonWriterStringBuilder.append(nanos);
+            jsonWriterStringBuilder.insert(jsonWriterStringBuilder.length() - 9, '.');
+        }
+    };
 
-    private static final EventResolver EPOCH_SECS_ROUNDED_RESOLVER =
-            new EpochResolver() {
-                @Override
-                void resolve(final Instant logEventInstant, final JsonWriter jsonWriter) {
-                    jsonWriter.writeNumber(logEventInstant.getEpochSecond());
-                }
-            };
+    private static final EventResolver EPOCH_SECS_ROUNDED_RESOLVER = new EpochResolver() {
+        @Override
+        void resolve(final Instant logEventInstant, final JsonWriter jsonWriter) {
+            jsonWriter.writeNumber(logEventInstant.getEpochSecond());
+        }
+    };
 
-    private static final EventResolver EPOCH_SECS_NANOS_RESOLVER =
-            new EpochResolver() {
-                @Override
-                void resolve(final Instant logEventInstant, final JsonWriter jsonWriter) {
-                    jsonWriter.writeNumber(logEventInstant.getNanoOfSecond());
-                }
-            };
+    private static final EventResolver EPOCH_SECS_NANOS_RESOLVER = new EpochResolver() {
+        @Override
+        void resolve(final Instant logEventInstant, final JsonWriter jsonWriter) {
+            jsonWriter.writeNumber(logEventInstant.getNanoOfSecond());
+        }
+    };
 
-    private static long epochNanos(Instant instant) {
-        return 1_000_000_000L * instant.getEpochSecond() + instant.getNanoOfSecond();
+    private static long epochNanos(final Instant instant) {
+        final long nanos = Math.multiplyExact(1_000_000_000L, instant.getEpochSecond());
+        return Math.addExact(nanos, instant.getNanoOfSecond());
     }
 
     static String getName() {
@@ -499,10 +449,7 @@ final class TimestampResolver implements EventResolver {
     }
 
     @Override
-    public void resolve(
-            final LogEvent logEvent,
-            final JsonWriter jsonWriter) {
+    public void resolve(final LogEvent logEvent, final JsonWriter jsonWriter) {
         internalResolver.resolve(logEvent, jsonWriter);
     }
-
 }

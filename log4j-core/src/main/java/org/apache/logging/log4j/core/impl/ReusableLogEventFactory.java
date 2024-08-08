@@ -1,23 +1,22 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.impl;
 
 import java.util.List;
-
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.ThreadContext;
@@ -38,7 +37,7 @@ public class ReusableLogEventFactory implements LogEventFactory, LocationAwareLo
     private static final ThreadNameCachingStrategy THREAD_NAME_CACHING_STRATEGY = ThreadNameCachingStrategy.create();
     private static final Clock CLOCK = ClockFactory.getClock();
 
-    private static ThreadLocal<MutableLogEvent> mutableLogEventThreadLocal = new ThreadLocal<>();
+    private static final ThreadLocal<MutableLogEvent> mutableLogEventThreadLocal = new ThreadLocal<>();
     private final ContextDataInjector injector = ContextDataInjectorFactory.createInjector();
 
     /**
@@ -54,9 +53,14 @@ public class ReusableLogEventFactory implements LogEventFactory, LocationAwareLo
      * @return The LogEvent.
      */
     @Override
-    public LogEvent createEvent(final String loggerName, final Marker marker,
-        final String fqcn, final Level level, final Message message,
-        final List<Property> properties, final Throwable t) {
+    public LogEvent createEvent(
+            final String loggerName,
+            final Marker marker,
+            final String fqcn,
+            final Level level,
+            final Message message,
+            final List<Property> properties,
+            final Throwable t) {
         return createEvent(loggerName, marker, fqcn, null, level, message, properties, t);
     }
 
@@ -74,24 +78,19 @@ public class ReusableLogEventFactory implements LogEventFactory, LocationAwareLo
      * @return The LogEvent.
      */
     @Override
-    public LogEvent createEvent(final String loggerName, final Marker marker, final String fqcn,
-                                final StackTraceElement location, final Level level, final Message message,
-                                final List<Property> properties, final Throwable t) {
-        MutableLogEvent result = mutableLogEventThreadLocal.get();
-        if (result == null || result.reserved) {
-            final boolean initThreadLocal = result == null;
-            result = new MutableLogEvent();
-
-            // usually no need to re-initialize thread-specific fields since the event is stored in a ThreadLocal
-            result.setThreadId(Thread.currentThread().getId());
-            result.setThreadName(Thread.currentThread().getName()); // Thread.getName() allocates Objects on each call
-            result.setThreadPriority(Thread.currentThread().getPriority());
-            if (initThreadLocal) {
-                mutableLogEventThreadLocal.set(result);
-            }
-        }
+    public LogEvent createEvent(
+            final String loggerName,
+            final Marker marker,
+            final String fqcn,
+            final StackTraceElement location,
+            final Level level,
+            final Message message,
+            final List<Property> properties,
+            final Throwable t) {
+        final MutableLogEvent result = getOrCreateMutableLogEvent();
         result.reserved = true;
-        result.clear(); // ensure any previously cached values (thrownProxy, source, etc.) are cleared
+        // No need to clear here, values are cleared in release when reserved is set to false.
+        // If the event was dirty we'd create a new one.
 
         result.setLoggerName(loggerName);
         result.setMarker(marker);
@@ -101,12 +100,52 @@ public class ReusableLogEventFactory implements LogEventFactory, LocationAwareLo
         result.initTime(CLOCK, Log4jLogEvent.getNanoClock());
         result.setThrown(t);
         result.setSource(location);
-        result.setContextData(injector.injectContextData(properties, (StringMap) result.getContextData()));
-        result.setContextStack(ThreadContext.getDepth() == 0 ? ThreadContext.EMPTY_STACK : ThreadContext.cloneStack());// mutable copy
+        if (injector != null) {
+            result.setContextData(injector.injectContextData(properties, (StringMap) result.getContextData()));
+        } else {
+            StringMap reusable = (StringMap) result.getContextData();
+            copyProperties(properties, reusable);
+            ContextData.addAll(reusable);
+        }
+        result.setContextStack(
+                ThreadContext.getDepth() == 0 ? ThreadContext.EMPTY_STACK : ThreadContext.cloneStack()); // mutable copy
 
         if (THREAD_NAME_CACHING_STRATEGY == ThreadNameCachingStrategy.UNCACHED) {
             result.setThreadName(Thread.currentThread().getName()); // Thread.getName() allocates Objects on each call
             result.setThreadPriority(Thread.currentThread().getPriority());
+        }
+        return result;
+    }
+
+    /**
+     * Copies key-value pairs from the specified property list into the specified {@code StringMap}.
+     *
+     * @param properties list of configuration properties, may be {@code null}
+     * @param result the {@code StringMap} object to add the key-values to. Must be non-{@code null}.
+     */
+    private static void copyProperties(final List<Property> properties, final StringMap result) {
+        if (properties != null) {
+            for (int i = 0; i < properties.size(); i++) {
+                final Property prop = properties.get(i);
+                result.putValue(prop.getName(), prop.getValue());
+            }
+        }
+    }
+
+    private static MutableLogEvent getOrCreateMutableLogEvent() {
+        final MutableLogEvent result = mutableLogEventThreadLocal.get();
+        return result == null || result.reserved ? createInstance(result) : result;
+    }
+
+    private static MutableLogEvent createInstance(final MutableLogEvent existing) {
+        final MutableLogEvent result = new MutableLogEvent();
+
+        // usually no need to re-initialize thread-specific fields since the event is stored in a ThreadLocal
+        result.setThreadId(Thread.currentThread().getId());
+        result.setThreadName(Thread.currentThread().getName()); // Thread.getName() allocates Objects on each call
+        result.setThreadPriority(Thread.currentThread().getPriority());
+        if (existing == null) {
+            mutableLogEventThreadLocal.set(result);
         }
         return result;
     }

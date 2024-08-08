@@ -2,20 +2,21 @@
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package org.apache.logging.log4j.core.config.plugins.util;
+
+import static org.apache.logging.log4j.util.Strings.toRootLowerCase;
 
 import java.io.IOException;
 import java.net.URI;
@@ -30,7 +31,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
-
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
 import org.apache.logging.log4j.core.config.plugins.PluginAliases;
@@ -54,23 +54,21 @@ public class PluginRegistry {
     /**
      * Contains plugins found in Log4j2Plugins.dat cache files in the main CLASSPATH.
      */
-    private final AtomicReference<Map<String, List<PluginType<?>>>> pluginsByCategoryRef =
-        new AtomicReference<>();
+    private final AtomicReference<Map<String, List<PluginType<?>>>> pluginsByCategoryRef = new AtomicReference<>();
 
     /**
      * Contains plugins found in Log4j2Plugins.dat cache files in OSGi Bundles.
      */
     private final ConcurrentMap<Long, Map<String, List<PluginType<?>>>> pluginsByCategoryByBundleId =
-        new ConcurrentHashMap<>();
+            new ConcurrentHashMap<>();
 
     /**
      * Contains plugins found by searching for annotated classes at runtime.
      */
     private final ConcurrentMap<String, Map<String, List<PluginType<?>>>> pluginsByCategoryByPackage =
-        new ConcurrentHashMap<>();
+            new ConcurrentHashMap<>();
 
-    private PluginRegistry() {
-    }
+    private PluginRegistry() {}
 
     /**
      * Returns the global PluginRegistry instance.
@@ -170,7 +168,8 @@ public class PluginRegistry {
         }
         final Map<String, List<PluginType<?>>> newPluginsByCategory = new HashMap<>();
         int pluginCount = 0;
-        for (final Map.Entry<String, Map<String, PluginEntry>> outer : cache.getAllCategories().entrySet()) {
+        for (final Map.Entry<String, Map<String, PluginEntry>> outer :
+                cache.getAllCategories().entrySet()) {
             final String categoryLowerCase = outer.getKey();
             final List<PluginType<?>> types = new ArrayList<>(outer.getValue().size());
             newPluginsByCategory.put(categoryLowerCase, types);
@@ -192,7 +191,7 @@ public class PluginRegistry {
         final int numPlugins = pluginCount;
         LOGGER.debug(() -> {
             final long endTime = System.nanoTime();
-            StringBuilder sb = new StringBuilder("Took ");
+            final StringBuilder sb = new StringBuilder("Took ");
             final DecimalFormat numFormat = new DecimalFormat("#0.000000");
             sb.append(numFormat.format((endTime - startTime) * 1e-9));
             sb.append(" seconds to load ").append(numPlugins);
@@ -227,15 +226,15 @@ public class PluginRegistry {
         final Map<String, List<PluginType<?>>> newPluginsByCategory = new HashMap<>();
         for (final Class<?> clazz : resolver.getClasses()) {
             final Plugin plugin = clazz.getAnnotation(Plugin.class);
-            final String categoryLowerCase = plugin.category().toLowerCase();
+            final String categoryLowerCase = toRootLowerCase(plugin.category());
             List<PluginType<?>> list = newPluginsByCategory.get(categoryLowerCase);
             if (list == null) {
                 newPluginsByCategory.put(categoryLowerCase, list = new ArrayList<>());
             }
             final PluginEntry mainEntry = new PluginEntry();
-            final String mainElementName = plugin.elementType().equals(
-                Plugin.EMPTY) ? plugin.name() : plugin.elementType();
-            mainEntry.setKey(plugin.name().toLowerCase());
+            final String mainElementName =
+                    plugin.elementType().equals(Plugin.EMPTY) ? plugin.name() : plugin.elementType();
+            mainEntry.setKey(toRootLowerCase(plugin.name()));
             mainEntry.setName(plugin.name());
             mainEntry.setCategory(plugin.category());
             mainEntry.setClassName(clazz.getName());
@@ -247,9 +246,9 @@ public class PluginRegistry {
             if (pluginAliases != null) {
                 for (final String alias : pluginAliases.value()) {
                     final PluginEntry aliasEntry = new PluginEntry();
-                    final String aliasElementName = plugin.elementType().equals(
-                        Plugin.EMPTY) ? alias.trim() : plugin.elementType();
-                    aliasEntry.setKey(alias.trim().toLowerCase());
+                    final String aliasElementName =
+                            plugin.elementType().equals(Plugin.EMPTY) ? alias.trim() : plugin.elementType();
+                    aliasEntry.setKey(toRootLowerCase(alias.trim()));
                     aliasEntry.setName(plugin.name());
                     aliasEntry.setCategory(plugin.category());
                     aliasEntry.setClassName(clazz.getName());
@@ -262,7 +261,7 @@ public class PluginRegistry {
         }
         LOGGER.debug(() -> {
             final long endTime = System.nanoTime();
-            StringBuilder sb = new StringBuilder("Took ");
+            final StringBuilder sb = new StringBuilder("Took ");
             final DecimalFormat numFormat = new DecimalFormat("#0.000000");
             sb.append(numFormat.format((endTime - startTime) * 1e-9));
             sb.append(" seconds to load ").append(resolver.getClasses().size());

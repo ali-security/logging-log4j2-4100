@@ -1,24 +1,23 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.appender.rewrite;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-
 import org.apache.logging.log4j.core.Appender;
 import org.apache.logging.log4j.core.Core;
 import org.apache.logging.log4j.core.Filter;
@@ -33,6 +32,7 @@ import org.apache.logging.log4j.core.config.plugins.PluginAttribute;
 import org.apache.logging.log4j.core.config.plugins.PluginConfiguration;
 import org.apache.logging.log4j.core.config.plugins.PluginElement;
 import org.apache.logging.log4j.core.config.plugins.PluginFactory;
+import org.apache.logging.log4j.core.impl.LocationAware;
 import org.apache.logging.log4j.core.util.Booleans;
 
 /**
@@ -46,9 +46,14 @@ public final class RewriteAppender extends AbstractAppender {
     private final RewritePolicy rewritePolicy;
     private final AppenderRef[] appenderRefs;
 
-    private RewriteAppender(final String name, final Filter filter, final boolean ignoreExceptions,
-                            final AppenderRef[] appenderRefs, final RewritePolicy rewritePolicy,
-                            final Configuration config, final Property[] properties) {
+    private RewriteAppender(
+            final String name,
+            final Filter filter,
+            final boolean ignoreExceptions,
+            final AppenderRef[] appenderRefs,
+            final RewritePolicy rewritePolicy,
+            final Configuration config,
+            final Property[] properties) {
         super(name, filter, null, ignoreExceptions, properties);
         this.config = config;
         this.rewritePolicy = rewritePolicy;
@@ -61,8 +66,8 @@ public final class RewriteAppender extends AbstractAppender {
             final String name = ref.getRef();
             final Appender appender = config.getAppender(name);
             if (appender != null) {
-                final Filter filter = appender instanceof AbstractAppender ?
-                    ((AbstractAppender) appender).getFilter() : null;
+                final Filter filter =
+                        appender instanceof AbstractAppender ? ((AbstractAppender) appender).getFilter() : null;
                 appenders.put(name, new AppenderControl(appender, ref.getLevel(), filter));
             } else {
                 LOGGER.error("Appender " + ref + " cannot be located. Reference ignored");
@@ -115,5 +120,16 @@ public final class RewriteAppender extends AbstractAppender {
             return null;
         }
         return new RewriteAppender(name, filter, ignoreExceptions, appenderRefs, rewritePolicy, config, null);
+    }
+
+    @Override
+    public boolean requiresLocation() {
+        for (final AppenderControl control : appenders.values()) {
+            final Appender appender = control.getAppender();
+            if (appender instanceof LocationAware && ((LocationAware) appender).requiresLocation()) {
+                return true;
+            }
+        }
+        return false;
     }
 }

@@ -2,11 +2,11 @@
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,17 +16,16 @@
  */
 package org.apache.logging.log4j.io;
 
+import static org.junit.Assert.assertEquals;
+import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.mock;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.StringWriter;
 import java.io.Writer;
-
 import org.junit.Before;
 import org.junit.Test;
-
-import static org.junit.Assert.*;
-import static org.mockito.BDDMockito.then;
-import static org.mockito.Mockito.mock;
 
 public abstract class AbstractLoggerWriterTest extends AbstractStreamTest {
     protected StringWriter wrapped;
@@ -66,12 +65,11 @@ public abstract class AbstractLoggerWriterTest extends AbstractStreamTest {
     public void testFlush() throws IOException {
         final OutputStream out = mock(OutputStream.class);
 
-        try (final OutputStream filteredOut =
-            IoBuilder.forLogger(getExtendedLogger())
+        try (final OutputStream filteredOut = IoBuilder.forLogger(getExtendedLogger())
                 .filter(out)
                 .setLevel(LEVEL)
                 .buildOutputStream()) {
-        	filteredOut.flush();
+            filteredOut.flush();
         }
 
         then(out).should().flush();

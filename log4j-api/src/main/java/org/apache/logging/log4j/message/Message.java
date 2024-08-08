@@ -1,18 +1,18 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.message;
 
@@ -69,17 +69,15 @@ public interface Message extends Serializable {
     String getFormattedMessage();
 
     /**
-     * Gets the format portion of the Message.
+     * This method has unclear semantics and inconsistent implementations – its usage is strongly discouraged.
      *
-     * @return The message format. Some implementations, such as ParameterizedMessage, will use this as
-     * the message "pattern". Other Messages may simply return an empty String.
-     * TODO Do all messages have a format?  What syntax?  Using a Formatter object could be cleaner.
-     * (RG) In SimpleMessage the format is identical to the formatted message. In ParameterizedMessage and
-     * StructuredDataMessage it is not. It is up to the Message implementer to determine what this
-     * method will return. A Formatter is inappropriate as this is very specific to the Message
-     * implementation so it isn't clear to me how having a Formatter separate from the Message would be cleaner.
+     * @deprecated Deprecated since version {@code 2.24.0}.
+     * Use {@link MultiformatMessage} instead to implement messages that can format themselves in one or more encodings.
      */
-    String getFormat();
+    @Deprecated
+    default String getFormat() {
+        return null;
+    }
 
     /**
      * Gets parameter values, if any.

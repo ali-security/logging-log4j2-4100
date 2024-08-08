@@ -1,18 +1,18 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.message;
 
@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.Arrays;
+import org.apache.logging.log4j.util.Constants;
 
 /**
  * Handles messages that contain an Object[].
@@ -29,12 +30,10 @@ import java.util.Arrays;
  * <p>
  * {@code logger.debug(new ObjectArrayMessage(1, 2, "Bob"));}
  * </p>
- * 
+ *
  * @since 2.4
  */
 public final class ObjectArrayMessage implements Message {
-
-    private static final Object[] EMPTY_OBJECT_ARRAY = new Object[0];
 
     private static final long serialVersionUID = -5903272448334166185L;
 
@@ -43,12 +42,12 @@ public final class ObjectArrayMessage implements Message {
 
     /**
      * Creates the ObjectMessage.
-     * 
+     *
      * @param obj
      *            The Object to format.
      */
     public ObjectArrayMessage(final Object... obj) {
-        this.array = obj == null ? EMPTY_OBJECT_ARRAY : obj;
+        this.array = obj == null ? Constants.EMPTY_OBJECT_ARRAY : obj;
     }
 
     private boolean equalObjectsOrStrings(final Object[] left, final Object[] right) {
@@ -70,7 +69,7 @@ public final class ObjectArrayMessage implements Message {
 
     /**
      * Returns the object formatted using its toString method.
-     * 
+     *
      * @return the String representation of the object.
      */
     @Override
@@ -80,7 +79,7 @@ public final class ObjectArrayMessage implements Message {
 
     /**
      * Returns the formatted object message.
-     * 
+     *
      * @return the formatted object message.
      */
     @Override
@@ -94,7 +93,7 @@ public final class ObjectArrayMessage implements Message {
 
     /**
      * Returns the object as if it were a parameter.
-     * 
+     *
      * @return The object.
      */
     @Override

@@ -1,22 +1,25 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.message;
 
 import java.io.Serializable;
+import org.apache.logging.log4j.util.StringBuilderFormattable;
+import org.apache.logging.log4j.util.StringBuilders;
+import org.apache.logging.log4j.util.Strings;
 
 /**
  * Default factory for flow messages.
@@ -28,6 +31,8 @@ public class DefaultFlowMessageFactory implements FlowMessageFactory, Serializab
     private static final String EXIT_DEFAULT_PREFIX = "Exit";
     private static final String ENTRY_DEFAULT_PREFIX = "Enter";
     private static final long serialVersionUID = 8578655591131397576L;
+
+    public static final FlowMessageFactory INSTANCE = new DefaultFlowMessageFactory();
 
     private final String entryText;
     private final String exitText;
@@ -49,7 +54,7 @@ public class DefaultFlowMessageFactory implements FlowMessageFactory, Serializab
         this.exitText = exitText;
     }
 
-    private static class AbstractFlowMessage implements FlowMessage {
+    private static class AbstractFlowMessage implements FlowMessage, StringBuilderFormattable {
 
         private static final long serialVersionUID = 1L;
         private final Message message;
@@ -71,7 +76,7 @@ public class DefaultFlowMessageFactory implements FlowMessageFactory, Serializab
         @Override
         public String getFormat() {
             if (message != null) {
-                return text + ": " + message.getFormat();
+                return text + " " + message.getFormat();
             }
             return text;
         }
@@ -101,6 +106,15 @@ public class DefaultFlowMessageFactory implements FlowMessageFactory, Serializab
         public String getText() {
             return text;
         }
+
+        @Override
+        public void formatTo(final StringBuilder buffer) {
+            buffer.append(text);
+            if (message != null) {
+                buffer.append(" ");
+                StringBuilders.appendValue(buffer, message);
+            }
+        }
     }
 
     private static final class SimpleEntryMessage extends AbstractFlowMessage implements EntryMessage {
@@ -110,7 +124,6 @@ public class DefaultFlowMessageFactory implements FlowMessageFactory, Serializab
         SimpleEntryMessage(final String entryText, final Message message) {
             super(entryText, message);
         }
-
     }
 
     private static final class SimpleExitMessage extends AbstractFlowMessage implements ExitMessage {
@@ -121,15 +134,17 @@ public class DefaultFlowMessageFactory implements FlowMessageFactory, Serializab
         private final boolean isVoid;
 
         SimpleExitMessage(final String exitText, final EntryMessage message) {
-            super(exitText, message.getMessage());
+            this(exitText, message.getMessage());
+        }
+
+        SimpleExitMessage(final String exitText, final Message message) {
+            super(exitText, message);
             this.result = null;
             isVoid = true;
         }
 
         SimpleExitMessage(final String exitText, final Object result, final EntryMessage message) {
-            super(exitText, message.getMessage());
-            this.result = result;
-            isVoid = false;
+            this(exitText, result, message.getMessage());
         }
 
         SimpleExitMessage(final String exitText, final Object result, final Message message) {
@@ -164,6 +179,28 @@ public class DefaultFlowMessageFactory implements FlowMessageFactory, Serializab
         return exitText;
     }
 
+    @Override
+    public EntryMessage newEntryMessage(final String format, final Object... params) {
+        final boolean hasFormat = Strings.isNotEmpty(format);
+        final Message message;
+        if (params == null || params.length == 0) {
+            message = hasFormat ? ParameterizedMessageFactory.INSTANCE.newMessage(format) : null;
+        } else if (hasFormat) {
+            message = ParameterizedMessageFactory.INSTANCE.newMessage(format, params);
+        } else {
+            final StringBuilder sb = new StringBuilder("params(");
+            for (int i = 0; i < params.length; i++) {
+                if (i > 0) {
+                    sb.append(", ");
+                }
+                sb.append("{}");
+            }
+            sb.append(")");
+            message = ParameterizedMessageFactory.INSTANCE.newMessage(sb.toString(), params);
+        }
+        return newEntryMessage(message);
+    }
+
     /*
      * (non-Javadoc)
      *
@@ -175,10 +212,27 @@ public class DefaultFlowMessageFactory implements FlowMessageFactory, Serializab
     }
 
     private Message makeImmutable(final Message message) {
-        if (!(message instanceof ReusableMessage)) {
-            return message;
+        if (message instanceof ReusableMessage) {
+            return ((ReusableMessage) message).memento();
         }
-        return new SimpleMessage(message.getFormattedMessage());
+        return message;
+    }
+
+    @Override
+    public ExitMessage newExitMessage(final String format, final Object result) {
+        final boolean hasFormat = Strings.isNotEmpty(format);
+        final Message message;
+        if (result == null) {
+            message = hasFormat ? ParameterizedMessageFactory.INSTANCE.newMessage(format) : null;
+        } else {
+            message = ParameterizedMessageFactory.INSTANCE.newMessage(hasFormat ? format : "with({})", result);
+        }
+        return newExitMessage(message);
+    }
+
+    @Override
+    public ExitMessage newExitMessage(Message message) {
+        return new SimpleExitMessage(exitText, message);
     }
 
     /*

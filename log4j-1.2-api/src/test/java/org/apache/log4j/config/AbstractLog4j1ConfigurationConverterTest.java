@@ -1,3 +1,19 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to you under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.log4j.config;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -11,31 +27,12 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.List;
-
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
-
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.xml.sax.SAXException;
-
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
- */
 
 @RunWith(Parameterized.class)
 public abstract class AbstractLog4j1ConfigurationConverterTest {
@@ -62,7 +59,8 @@ public abstract class AbstractLog4j1ConfigurationConverterTest {
     public void test() throws Exception {
         final Path tempFile = Files.createTempFile("log4j2", ".xml");
         try {
-            final Log4j1ConfigurationConverter.CommandLineArguments cla = new Log4j1ConfigurationConverter.CommandLineArguments();
+            final Log4j1ConfigurationConverter.CommandLineArguments cla =
+                    new Log4j1ConfigurationConverter.CommandLineArguments();
             cla.setPathIn(pathIn);
             cla.setPathOut(tempFile);
             Log4j1ConfigurationConverter.run(cla);
@@ -73,14 +71,16 @@ public abstract class AbstractLog4j1ConfigurationConverterTest {
         }
     }
 
-    private void checkUnnecessaryEscaping(Path tempFile) throws IOException {
+    private void checkUnnecessaryEscaping(final Path tempFile) throws IOException {
         for (String line : Files.readAllLines(tempFile)) {
             assertFalse(line.endsWith("&#xd;"));
         }
-
     }
 
-    private void checkWellFormedXml(Path xmlFilePath) throws SAXException, IOException, ParserConfigurationException {
-        DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(xmlFilePath.toUri().toString());
+    private void checkWellFormedXml(final Path xmlFilePath)
+            throws SAXException, IOException, ParserConfigurationException {
+        DocumentBuilderFactory.newInstance()
+                .newDocumentBuilder()
+                .parse(xmlFilePath.toUri().toString());
     }
 }

@@ -1,25 +1,23 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.util.datetime;
 
 import java.text.DateFormat;
 import java.text.FieldPosition;
-import java.text.ParseException;
-import java.text.ParsePosition;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
@@ -72,37 +70,29 @@ import java.util.TimeZone;
  *
  * @since Apache Commons Lang 2.0
  */
-public class FastDateFormat extends Format implements DateParser, DatePrinter {
-
-    /**
-     * Required for serialization support.
-     *
-     * @see java.io.Serializable
-     */
-    @SuppressWarnings("unused")
-    private static final long serialVersionUID = 2L;
+public class FastDateFormat extends Format implements DatePrinter {
 
     /**
      * FULL locale dependent date or time style.
      */
     public static final int FULL = DateFormat.FULL;
-    
+
     /**
      * LONG locale dependent date or time style.
      */
     public static final int LONG = DateFormat.LONG;
-    
+
     /**
      * MEDIUM locale dependent date or time style.
      */
     public static final int MEDIUM = DateFormat.MEDIUM;
-    
+
     /**
      * SHORT locale dependent date or time style.
      */
     public static final int SHORT = DateFormat.SHORT;
 
-    private static final FormatCache<FastDateFormat> cache= new FormatCache<FastDateFormat>() {
+    private static final FormatCache<FastDateFormat> cache = new FormatCache<FastDateFormat>() {
         @Override
         protected FastDateFormat createInstance(final String pattern, final TimeZone timeZone, final Locale locale) {
             return new FastDateFormat(pattern, timeZone, locale);
@@ -110,9 +100,8 @@ public class FastDateFormat extends Format implements DateParser, DatePrinter {
     };
 
     private final FastDatePrinter printer;
-    private final FastDateParser parser;
 
-    //-----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
     /**
      * <p>Gets a formatter instance using the default pattern in the
      * default locale.</p>
@@ -182,7 +171,7 @@ public class FastDateFormat extends Format implements DateParser, DatePrinter {
         return cache.getInstance(pattern, timeZone, locale);
     }
 
-    //-----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
     /**
      * <p>Gets a date formatter instance using the specified style in the
      * default time zone and locale.</p>
@@ -244,7 +233,7 @@ public class FastDateFormat extends Format implements DateParser, DatePrinter {
         return cache.getDateInstance(style, timeZone, locale);
     }
 
-    //-----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
     /**
      * <p>Gets a time formatter instance using the specified style in the
      * default time zone and locale.</p>
@@ -306,7 +295,7 @@ public class FastDateFormat extends Format implements DateParser, DatePrinter {
         return cache.getTimeInstance(style, timeZone, locale);
     }
 
-    //-----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
     /**
      * <p>Gets a date/time formatter instance using the specified style
      * in the default time zone and locale.</p>
@@ -351,7 +340,8 @@ public class FastDateFormat extends Format implements DateParser, DatePrinter {
      *  pattern defined
      * @since 2.1
      */
-    public static FastDateFormat getDateTimeInstance(final int dateStyle, final int timeStyle, final TimeZone timeZone) {
+    public static FastDateFormat getDateTimeInstance(
+            final int dateStyle, final int timeStyle, final TimeZone timeZone) {
         return getDateTimeInstance(dateStyle, timeStyle, timeZone, null);
     }
     /**
@@ -373,7 +363,7 @@ public class FastDateFormat extends Format implements DateParser, DatePrinter {
     }
 
     // Constructor
-    //-----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
     /**
      * <p>Constructs a new FastDateFormat.</p>
      *
@@ -387,7 +377,7 @@ public class FastDateFormat extends Format implements DateParser, DatePrinter {
     }
 
     // Constructor
-    //-----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
     /**
      * <p>Constructs a new FastDateFormat.</p>
      *
@@ -397,13 +387,13 @@ public class FastDateFormat extends Format implements DateParser, DatePrinter {
      * @param centuryStart The start of the 100 year period to use as the "default century" for 2 digit year parsing.  If centuryStart is null, defaults to now - 80 years
      * @throws NullPointerException if pattern, timeZone, or locale is null.
      */
-    protected FastDateFormat(final String pattern, final TimeZone timeZone, final Locale locale, final Date centuryStart) {
-        printer= new FastDatePrinter(pattern, timeZone, locale);
-        parser= new FastDateParser(pattern, timeZone, locale, centuryStart);
+    protected FastDateFormat(
+            final String pattern, final TimeZone timeZone, final Locale locale, final Date centuryStart) {
+        printer = new FastDatePrinter(pattern, timeZone, locale);
     }
 
     // Format methods
-    //-----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
     /**
      * <p>Formats a {@code Date}, {@code Calendar} or
      * {@code Long} (milliseconds) object.</p>
@@ -489,51 +479,14 @@ public class FastDateFormat extends Format implements DateParser, DatePrinter {
      * @param buf  the buffer to format into
      * @return the specified string buffer
      * @since 3.5
-    */
+     */
     @Override
     public <B extends Appendable> B format(final Calendar calendar, final B buf) {
         return printer.format(calendar, buf);
     }
 
-    // Parsing
-    //-----------------------------------------------------------------------
-
-
-    /* (non-Javadoc)
-     * @see DateParser#parse(java.lang.String)
-     */
-    @Override
-    public Date parse(final String source) throws ParseException {
-        return parser.parse(source);
-    }
-
-    /* (non-Javadoc)
-     * @see DateParser#parse(java.lang.String, java.text.ParsePosition)
-     */
-    @Override
-    public Date parse(final String source, final ParsePosition pos) {
-        return parser.parse(source, pos);
-    }
-
-    /*
-     * (non-Javadoc)
-     * @see org.apache.commons.lang3.time.DateParser#parse(java.lang.String, java.text.ParsePosition, java.util.Calendar)
-     */
-    @Override
-    public boolean parse(final String source, final ParsePosition pos, final Calendar calendar) {
-        return parser.parse(source, pos, calendar);
-    }
-
-    /* (non-Javadoc)
-     * @see java.text.Format#parseObject(java.lang.String, java.text.ParsePosition)
-     */
-    @Override
-    public Object parseObject(final String source, final ParsePosition pos) {
-        return parser.parseObject(source, pos);
-    }
-
     // Accessors
-    //-----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
     /**
      * <p>Gets the pattern used by this formatter.</p>
      *
@@ -580,7 +533,7 @@ public class FastDateFormat extends Format implements DateParser, DatePrinter {
     }
 
     // Basics
-    //-----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
     /**
      * <p>Compares two objects for equality.</p>
      *
@@ -589,7 +542,7 @@ public class FastDateFormat extends Format implements DateParser, DatePrinter {
      */
     @Override
     public boolean equals(final Object obj) {
-        if (obj instanceof FastDateFormat == false) {
+        if (!(obj instanceof FastDateFormat)) {
             return false;
         }
         final FastDateFormat other = (FastDateFormat) obj;
@@ -614,6 +567,7 @@ public class FastDateFormat extends Format implements DateParser, DatePrinter {
      */
     @Override
     public String toString() {
-        return "FastDateFormat[" + printer.getPattern() + "," + printer.getLocale() + "," + printer.getTimeZone().getID() + "]";
+        return "FastDateFormat[" + printer.getPattern() + "," + printer.getLocale() + ","
+                + printer.getTimeZone().getID() + "]";
     }
 }

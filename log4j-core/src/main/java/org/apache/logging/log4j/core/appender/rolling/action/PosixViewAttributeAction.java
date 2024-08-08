@@ -1,21 +1,22 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.appender.rolling.action;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.nio.file.FileVisitResult;
 import java.nio.file.FileVisitor;
@@ -28,7 +29,6 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.List;
 import java.util.Set;
-
 import org.apache.logging.log4j.core.Core;
 import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
@@ -42,9 +42,9 @@ import org.apache.logging.log4j.core.util.FileUtils;
 import org.apache.logging.log4j.util.Strings;
 
 /**
- * File posix attribute view action.
+ * File POSIX attribute view action.
  *
- * Allow to define file permissions, user and group for log files on posix supported OS.
+ * Allow to define file permissions, user and group for log files on POSIX supported OS.
  */
 @Plugin(name = "PosixViewAttribute", category = Core.CATEGORY_NAME, printObject = true)
 public class PosixViewAttributeAction extends AbstractPathAction {
@@ -64,10 +64,15 @@ public class PosixViewAttributeAction extends AbstractPathAction {
      */
     private final String fileGroup;
 
-    private PosixViewAttributeAction(final String basePath, final boolean followSymbolicLinks,
-            final int maxDepth, final PathCondition[] pathConditions, final StrSubstitutor subst,
+    private PosixViewAttributeAction(
+            final String basePath,
+            final boolean followSymbolicLinks,
+            final int maxDepth,
+            final PathCondition[] pathConditions,
+            final StrSubstitutor subst,
             final Set<PosixFilePermission> filePermissions,
-            final String fileOwner, final String fileGroup) {
+            final String fileOwner,
+            final String fileGroup) {
         super(basePath, followSymbolicLinks, maxDepth, pathConditions, subst);
         this.filePermissions = filePermissions;
         this.fileOwner = fileOwner;
@@ -80,7 +85,7 @@ public class PosixViewAttributeAction extends AbstractPathAction {
     }
 
     /**
-     * Builder for the posix view attribute action.
+     * Builder for the POSIX view attribute action.
      */
     public static class Builder implements org.apache.logging.log4j.core.util.Builder<PosixViewAttributeAction> {
 
@@ -114,14 +119,19 @@ public class PosixViewAttributeAction extends AbstractPathAction {
         private String fileGroup;
 
         @Override
+        @SuppressFBWarnings(
+                value = "OVERLY_PERMISSIVE_FILE_PERMISSION",
+                justification = "File permissions are specified in a configuration file.")
         public PosixViewAttributeAction build() {
             if (Strings.isEmpty(basePath)) {
                 LOGGER.error("Posix file attribute view action not valid because base path is empty.");
                 return null;
             }
 
-            if (filePermissions == null && Strings.isEmpty(filePermissionsString)
-                        && Strings.isEmpty(fileOwner) && Strings.isEmpty(fileGroup)) {
+            if (filePermissions == null
+                    && Strings.isEmpty(filePermissionsString)
+                    && Strings.isEmpty(fileOwner)
+                    && Strings.isEmpty(fileGroup)) {
                 LOGGER.error("Posix file attribute view not valid because nor permissions, user or group defined.");
                 return null;
             }
@@ -131,10 +141,17 @@ public class PosixViewAttributeAction extends AbstractPathAction {
                 return null;
             }
 
-            return new PosixViewAttributeAction(basePath, followLinks, maxDepth, pathConditions,
+            return new PosixViewAttributeAction(
+                    basePath,
+                    followLinks,
+                    maxDepth,
+                    pathConditions,
                     subst != null ? subst : configuration.getStrSubstitutor(),
-                    filePermissions != null ? filePermissions :
-                                filePermissionsString != null ? PosixFilePermissions.fromString(filePermissionsString) : null,
+                    filePermissions != null
+                            ? filePermissions
+                            : filePermissionsString != null
+                                    ? PosixFilePermissions.fromString(filePermissionsString)
+                                    : null,
                     fileOwner,
                     fileGroup);
         }
@@ -162,7 +179,7 @@ public class PosixViewAttributeAction extends AbstractPathAction {
         }
 
         /**
-         * Define base path to apply condition before execute posix file attribute action.
+         * Define base path to apply condition before execute POSIX file attribute action.
          * @param basePath {@link AbstractPathAction#getBasePath()}
          * @return This builder
          */
@@ -182,7 +199,7 @@ public class PosixViewAttributeAction extends AbstractPathAction {
         }
 
         /**
-         * Define max folder depth to search for eligible files to apply posix attribute view.
+         * Define max folder depth to search for eligible files to apply POSIX attribute view.
          * @param maxDepth Max search depth
          * @return This builder
          */
@@ -203,7 +220,7 @@ public class PosixViewAttributeAction extends AbstractPathAction {
         }
 
         /**
-         * Define file permissions in posix format to apply during action execution eligible files.
+         * Define file permissions in POSIX format to apply during action execution eligible files.
          *
          * Example:
          * <p>rw-rw-rw
@@ -248,15 +265,14 @@ public class PosixViewAttributeAction extends AbstractPathAction {
     }
 
     @Override
-    protected FileVisitor<Path> createFileVisitor(final Path basePath,
-            final List<PathCondition> conditions) {
+    protected FileVisitor<Path> createFileVisitor(final Path basePath, final List<PathCondition> conditions) {
         return new SimpleFileVisitor<Path>() {
             @Override
             public FileVisitResult visitFile(final Path file, final BasicFileAttributes attrs) throws IOException {
                 for (final PathCondition pathFilter : conditions) {
                     final Path relative = basePath.relativize(file);
                     if (!pathFilter.accept(basePath, relative, attrs)) {
-                        LOGGER.trace("Not defining posix attribute base={}, relative={}", basePath, relative);
+                        LOGGER.trace("Not defining POSIX attribute base={}, relative={}", basePath, relative);
                         return FileVisitResult.CONTINUE;
                     }
                 }
@@ -267,9 +283,9 @@ public class PosixViewAttributeAction extends AbstractPathAction {
     }
 
     /**
-     * Returns posix file permissions if defined and the OS supports posix file attribute,
+     * Returns POSIX file permissions if defined and the OS supports POSIX file attribute,
      * null otherwise.
-     * @return File posix permissions
+     * @return File POSIX permissions
      * @see PosixFileAttributeView
      */
     public Set<PosixFilePermission> getFilePermissions() {
@@ -287,7 +303,7 @@ public class PosixViewAttributeAction extends AbstractPathAction {
     }
 
     /**
-     * Returns file group if defined and the OS supports posix/group file attribute view,
+     * Returns file group if defined and the OS supports POSIX/group file attribute view,
      * null otherwise.
      * @return File group
      * @see PosixFileAttributeView
@@ -303,5 +319,4 @@ public class PosixViewAttributeAction extends AbstractPathAction {
                 + ", getMaxDepth()=" + getMaxDepth() + ", getPathConditions()="
                 + getPathConditions() + "]";
     }
-
 }

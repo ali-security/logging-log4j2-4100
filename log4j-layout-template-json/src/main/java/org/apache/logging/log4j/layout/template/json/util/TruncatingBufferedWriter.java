@@ -1,23 +1,24 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.layout.template.json.util;
 
 import java.io.Writer;
 import java.util.Objects;
+import java.util.stream.IntStream;
 
 final class TruncatingBufferedWriter extends Writer implements CharSequence {
 
@@ -76,6 +77,11 @@ final class TruncatingBufferedWriter extends Writer implements CharSequence {
 
         // Check arguments.
         Objects.requireNonNull(source, "source");
+
+        if (source.length == 0) {
+            return;
+        }
+
         if (offset < 0 || offset >= source.length) {
             throw new IndexOutOfBoundsException("invalid offset: " + offset);
         }
@@ -96,7 +102,6 @@ final class TruncatingBufferedWriter extends Writer implements CharSequence {
             position += maxLength;
             truncated = true;
         }
-
     }
 
     @Override
@@ -119,7 +124,6 @@ final class TruncatingBufferedWriter extends Writer implements CharSequence {
             position += maxLength;
             truncated = true;
         }
-
     }
 
     @Override
@@ -127,6 +131,11 @@ final class TruncatingBufferedWriter extends Writer implements CharSequence {
 
         // Check arguments.
         Objects.requireNonNull(string, "string");
+
+        if (string.isEmpty()) {
+            return;
+        }
+
         if (offset < 0 || offset >= string.length()) {
             throw new IndexOutOfBoundsException("invalid offset: " + offset);
         }
@@ -147,7 +156,6 @@ final class TruncatingBufferedWriter extends Writer implements CharSequence {
             position += maxLength;
             truncated = true;
         }
-
     }
 
     @Override
@@ -158,9 +166,7 @@ final class TruncatingBufferedWriter extends Writer implements CharSequence {
 
     @Override
     public Writer append(final CharSequence seq) {
-        return seq == null
-                ? append("null", 0, 4)
-                : append(seq, 0, seq.length());
+        return seq == null ? append("null", 0, 4) : append(seq, 0, seq.length());
     }
 
     @Override
@@ -169,6 +175,11 @@ final class TruncatingBufferedWriter extends Writer implements CharSequence {
         // Short-circuit on null sequence.
         if (seq == null) {
             write("null");
+            return this;
+        }
+
+        // Short-circuit on empty sequence
+        if (seq.length() == 0) {
             return this;
         }
 
@@ -200,44 +211,11 @@ final class TruncatingBufferedWriter extends Writer implements CharSequence {
             truncated = true;
         }
         return this;
-
-    }
-
-    int indexOf(final CharSequence seq) {
-
-        // Short-circuit if there is nothing to match.
-        final int seqLength = seq.length();
-        if (seqLength == 0) {
-            return 0;
-        }
-
-        // Short-circuit if the given input is longer than the buffer.
-        if (seqLength > position) {
-            return -1;
-        }
-
-        // Perform the search.
-        for (int bufferIndex = 0; bufferIndex < position; bufferIndex++) {
-            boolean found = true;
-            for (int seqIndex = 0; seqIndex < seqLength; seqIndex++) {
-                final char s = seq.charAt(seqIndex);
-                final char b = buffer[bufferIndex + seqIndex];
-                if (s != b) {
-                    found = false;
-                    break;
-                }
-            }
-            if (found) {
-                return bufferIndex;
-            }
-        }
-        return -1;
-
     }
 
     @Override
     public int length() {
-        return position + 1;
+        return position;
     }
 
     @Override
@@ -247,7 +225,20 @@ final class TruncatingBufferedWriter extends Writer implements CharSequence {
 
     @Override
     public String subSequence(final int startIndex, final int endIndex) {
-        return new String(buffer, startIndex, endIndex - startIndex);
+        throw new UnsupportedOperationException(
+                "operation requires allocation, contradicting with the purpose of the class");
+    }
+
+    @Override
+    public IntStream chars() {
+        throw new UnsupportedOperationException(
+                "operation requires allocation, contradicting with the purpose of the class");
+    }
+
+    @Override
+    public IntStream codePoints() {
+        throw new UnsupportedOperationException(
+                "operation requires allocation, contradicting with the purpose of the class");
     }
 
     @Override
@@ -263,5 +254,4 @@ final class TruncatingBufferedWriter extends Writer implements CharSequence {
     public String toString() {
         return new String(buffer, 0, position);
     }
-
 }

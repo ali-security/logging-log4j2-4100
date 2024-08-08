@@ -1,52 +1,56 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.web;
 
-import javax.servlet.FilterChain;
-import javax.servlet.FilterConfig;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.BeforeEach;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.reset;
 
+import javax.servlet.FilterChain;
+import javax.servlet.FilterConfig;
+import javax.servlet.ServletContext;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
 @ExtendWith(MockitoExtension.class)
 public class Log4jServletFilterTest {
     @Mock(lenient = true) // because filterConfig is not used in testDestroy
     private FilterConfig filterConfig;
+
     @Mock(lenient = true) // because filterConfig is not used in testDestroy
     private ServletContext servletContext;
+
     @Mock
     private Log4jWebLifeCycle initializer;
+
     @Mock
     private ServletRequest request;
+
     @Mock
     private ServletResponse response;
+
     @Mock
     private FilterChain chain;
 
@@ -72,9 +76,9 @@ public class Log4jServletFilterTest {
 
     @Test
     public void testDestroy() {
-    	assertThrows(IllegalStateException.class, () -> {
-    		this.filter.destroy();
-    	});
+        assertThrows(IllegalStateException.class, () -> {
+            this.filter.destroy();
+        });
     }
 
     @Test
@@ -84,7 +88,8 @@ public class Log4jServletFilterTest {
         then(initializer).should().clearLoggerContext();
         reset(initializer);
 
-        given(request.getAttribute(Log4jServletFilter.ALREADY_FILTERED_ATTRIBUTE)).willReturn(null);
+        given(request.getAttribute(Log4jServletFilter.ALREADY_FILTERED_ATTRIBUTE))
+                .willReturn(null);
 
         this.filter.doFilter(request, response, chain);
 
@@ -93,6 +98,7 @@ public class Log4jServletFilterTest {
         then(chain).should().doFilter(same(request), same(response));
         then(chain).shouldHaveNoMoreInteractions();
         then(initializer).should().clearLoggerContext();
+        then(request).should().removeAttribute(Log4jServletFilter.ALREADY_FILTERED_ATTRIBUTE);
     }
 
     @Test
@@ -101,7 +107,8 @@ public class Log4jServletFilterTest {
 
         then(initializer).should().clearLoggerContext();
 
-        given(request.getAttribute(Log4jServletFilter.ALREADY_FILTERED_ATTRIBUTE)).willReturn(true);
+        given(request.getAttribute(Log4jServletFilter.ALREADY_FILTERED_ATTRIBUTE))
+                .willReturn(true);
 
         this.filter.doFilter(request, response, chain);
 

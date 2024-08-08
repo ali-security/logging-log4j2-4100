@@ -1,26 +1,28 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.util;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -31,7 +33,6 @@ import java.nio.file.attribute.UserPrincipal;
 import java.nio.file.attribute.UserPrincipalLookupService;
 import java.util.Objects;
 import java.util.Set;
-
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.status.StatusLogger;
 
@@ -47,8 +48,7 @@ public final class FileUtils {
 
     private static final Logger LOGGER = StatusLogger.getLogger();
 
-    private FileUtils() {
-    }
+    private FileUtils() {}
 
     /**
      * Tries to convert the specified URI to a file object. If this fails, <b>null</b> is returned.
@@ -56,6 +56,7 @@ public final class FileUtils {
      * @param uri the URI
      * @return the resulting file object
      */
+    @SuppressFBWarnings(value = "PATH_TRAVERSAL_IN", justification = "Currently `uri` comes from a configuration file.")
     public static File fileFromUri(URI uri) {
         if (uri == null) {
             return null;
@@ -77,7 +78,7 @@ public final class FileUtils {
                 LOGGER.warn("Invalid URI {}", uri);
             }
         } else {
-            File file = new File(uri.toString());
+            final File file = new File(uri.toString());
             try {
                 if (file.exists()) {
                     return file;
@@ -92,7 +93,8 @@ public final class FileUtils {
     }
 
     public static boolean isFile(final URL url) {
-        return url != null && (url.getProtocol().equals(PROTOCOL_FILE) || url.getProtocol().equals(JBOSS_FILE));
+        return url != null
+                && (url.getProtocol().equals(PROTOCOL_FILE) || url.getProtocol().equals(JBOSS_FILE));
     }
 
     public static String getFileExtension(final File file) {
@@ -105,41 +107,45 @@ public final class FileUtils {
 
     /**
      * Asserts that the given directory exists and creates it if necessary.
-     * 
+     *
      * @param dir the directory that shall exist
      * @param createDirectoryIfNotExisting specifies if the directory shall be created if it does not exist.
      * @throws java.io.IOException thrown if the directory could not be created.
      */
     public static void mkdir(final File dir, final boolean createDirectoryIfNotExisting) throws IOException {
         // commons io FileUtils.forceMkdir would be useful here, we just want to omit this dependency
-        if (!dir.exists()) {
-            if (!createDirectoryIfNotExisting) {
-                throw new IOException("The directory " + dir.getAbsolutePath() + " does not exist.");
-            }
-            if (!dir.mkdirs()) {
-                throw new IOException("Could not create directory " + dir.getAbsolutePath());
-            }
+
+        if (!dir.exists() && !createDirectoryIfNotExisting) {
+            throw new IOException("The directory " + dir.getAbsolutePath() + " does not exist.");
         }
-        if (!dir.isDirectory()) {
-            throw new IOException("File " + dir + " exists and is not a directory. Unable to create directory.");
+
+        try {
+            Files.createDirectories(dir.toPath());
+        } catch (FileAlreadyExistsException e) {
+            if (!dir.isDirectory()) {
+                throw new IOException("File " + dir + " exists and is not a directory. Unable to create directory.");
+            }
+        } catch (Exception e) {
+            throw new IOException("Could not create directory " + dir.getAbsolutePath());
         }
     }
-    
+
     /**
      * Creates the parent directories for the given File.
-     * 
-     * @param file
-     * @throws IOException
+     *
+     * @param file For which parent directory is to be created.
+     * @throws IOException Thrown if the directory could not be created.
      */
     public static void makeParentDirs(final File file) throws IOException {
-        final File parent = Objects.requireNonNull(file, "file").getCanonicalFile().getParentFile();
+        final File parent =
+                Objects.requireNonNull(file, "file").getCanonicalFile().getParentFile();
         if (parent != null) {
             mkdir(parent, true);
         }
     }
 
     /**
-     * Define file posix attribute view on a path/file.
+     * Define file POSIX attribute view on a path/file.
      *
      * @param path Target path
      * @param filePermissions Permissions to apply
@@ -147,14 +153,16 @@ public final class FileUtils {
      * @param fileGroup File group
      * @throws IOException If IO error during definition of file attribute view
      */
-    public static void defineFilePosixAttributeView(final Path path,
+    public static void defineFilePosixAttributeView(
+            final Path path,
             final Set<PosixFilePermission> filePermissions,
             final String fileOwner,
-            final String fileGroup) throws IOException {
+            final String fileGroup)
+            throws IOException {
         final PosixFileAttributeView view = Files.getFileAttributeView(path, PosixFileAttributeView.class);
         if (view != null) {
-            final UserPrincipalLookupService lookupService = FileSystems.getDefault()
-                    .getUserPrincipalLookupService();
+            final UserPrincipalLookupService lookupService =
+                    FileSystems.getDefault().getUserPrincipalLookupService();
             if (fileOwner != null) {
                 final UserPrincipal userPrincipal = lookupService.lookupPrincipalByName(fileOwner);
                 if (userPrincipal != null) {
@@ -180,9 +188,9 @@ public final class FileUtils {
     }
 
     /**
-     * Check if posix file attribute view is supported on the default FileSystem.
+     * Check if POSIX file attribute view is supported on the default FileSystem.
      *
-     * @return true if posix file attribute view supported, false otherwise
+     * @return true if POSIX file attribute view supported, false otherwise
      */
     public static boolean isFilePosixAttributeViewSupported() {
         return FileSystems.getDefault().supportedFileAttributeViews().contains("posix");

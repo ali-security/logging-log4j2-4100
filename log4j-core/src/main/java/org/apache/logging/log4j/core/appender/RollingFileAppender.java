@@ -1,18 +1,18 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.appender;
 
@@ -21,7 +21,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.Deflater;
-
 import org.apache.logging.log4j.core.Appender;
 import org.apache.logging.log4j.core.Core;
 import org.apache.logging.log4j.core.Filter;
@@ -47,7 +46,11 @@ import org.apache.logging.log4j.core.util.Integers;
 /**
  * An appender that writes to files and can roll over at intervals.
  */
-@Plugin(name = RollingFileAppender.PLUGIN_NAME, category = Core.CATEGORY_NAME, elementType = Appender.ELEMENT_TYPE, printObject = true)
+@Plugin(
+        name = RollingFileAppender.PLUGIN_NAME,
+        category = Core.CATEGORY_NAME,
+        elementType = Appender.ELEMENT_TYPE,
+        printObject = true)
 public final class RollingFileAppender extends AbstractOutputStreamAppender<RollingFileManager> {
 
     public static final String PLUGIN_NAME = "RollingFile";
@@ -102,58 +105,74 @@ public final class RollingFileAppender extends AbstractOutputStreamAppender<Roll
 
         @Override
         public RollingFileAppender build() {
+            if (!isValid()) {
+                return null;
+            }
             // Even though some variables may be annotated with @Required, we must still perform validation here for
             // call sites that build builders programmatically.
             final boolean isBufferedIo = isBufferedIo();
             final int bufferSize = getBufferSize();
-            if (getName() == null) {
-                LOGGER.error("RollingFileAppender '{}': No name provided.", getName());
-                return null;
-            }
 
             if (!isBufferedIo && bufferSize > 0) {
-                LOGGER.warn("RollingFileAppender '{}': The bufferSize is set to {} but bufferedIO is not true", getName(), bufferSize);
-            }
-
-            if (filePattern == null) {
-                LOGGER.error("RollingFileAppender '{}': No file name pattern provided.", getName());
-                return null;
-            }
-
-            if (policy == null) {
-                LOGGER.error("RollingFileAppender '{}': No TriggeringPolicy provided.", getName());
-                return null;
+                LOGGER.warn(
+                        "RollingFileAppender '{}': The bufferSize is set to {} but bufferedIO is not true",
+                        getName(),
+                        bufferSize);
             }
 
             if (strategy == null) {
                 if (fileName != null) {
                     strategy = DefaultRolloverStrategy.newBuilder()
-                                        .withCompressionLevelStr(String.valueOf(Deflater.DEFAULT_COMPRESSION))
-                                        .withConfig(getConfiguration())
-                                        .build();
+                            .withCompressionLevelStr(String.valueOf(Deflater.DEFAULT_COMPRESSION))
+                            .withConfig(getConfiguration())
+                            .build();
                 } else {
                     strategy = DirectWriteRolloverStrategy.newBuilder()
-                                        .withCompressionLevelStr(String.valueOf(Deflater.DEFAULT_COMPRESSION))
-                                        .withConfig(getConfiguration())
-                                        .build();
+                            .withCompressionLevelStr(String.valueOf(Deflater.DEFAULT_COMPRESSION))
+                            .withConfig(getConfiguration())
+                            .build();
                 }
             } else if (fileName == null && !(strategy instanceof DirectFileRolloverStrategy)) {
-                LOGGER.error("RollingFileAppender '{}': When no file name is provided a {} must be configured", getName(), DirectFileRolloverStrategy.class.getSimpleName());
+                LOGGER.error(
+                        "RollingFileAppender '{}': When no file name is provided a {} must be configured",
+                        getName(),
+                        DirectFileRolloverStrategy.class.getSimpleName());
                 return null;
             }
 
             final Layout<? extends Serializable> layout = getOrCreateLayout();
-            final RollingFileManager manager = RollingFileManager.getFileManager(fileName, filePattern, append,
-                    isBufferedIo, policy, strategy, advertiseUri, layout, bufferSize, isImmediateFlush(),
-                    createOnDemand, filePermissions, fileOwner, fileGroup, getConfiguration());
+            final RollingFileManager manager = RollingFileManager.getFileManager(
+                    fileName,
+                    filePattern,
+                    append,
+                    isBufferedIo,
+                    policy,
+                    strategy,
+                    advertiseUri,
+                    layout,
+                    bufferSize,
+                    isImmediateFlush(),
+                    createOnDemand,
+                    filePermissions,
+                    fileOwner,
+                    fileGroup,
+                    getConfiguration());
             if (manager == null) {
                 return null;
             }
 
             manager.initialize();
 
-            return new RollingFileAppender(getName(), layout, getFilter(), manager, fileName, filePattern,
-                    isIgnoreExceptions(), isImmediateFlush(), advertise ? getConfiguration().getAdvertiser() : null,
+            return new RollingFileAppender(
+                    getName(),
+                    layout,
+                    getFilter(),
+                    manager,
+                    fileName,
+                    filePattern,
+                    isIgnoreExceptions(),
+                    !isBufferedIo || isImmediateFlush(),
+                    advertise ? getConfiguration().getAdvertiser() : null,
                     getPropertyArray());
         }
 
@@ -264,7 +283,6 @@ public final class RollingFileAppender extends AbstractOutputStreamAppender<Roll
             this.fileGroup = fileGroup;
             return asBuilder();
         }
-
     }
 
     private static final int DEFAULT_BUFFER_SIZE = 8192;
@@ -274,9 +292,16 @@ public final class RollingFileAppender extends AbstractOutputStreamAppender<Roll
     private Object advertisement;
     private final Advertiser advertiser;
 
-    private RollingFileAppender(final String name, final Layout<? extends Serializable> layout, final Filter filter,
-            final RollingFileManager manager, final String fileName, final String filePattern,
-            final boolean ignoreExceptions, final boolean immediateFlush, final Advertiser advertiser,
+    private RollingFileAppender(
+            final String name,
+            final Layout<? extends Serializable> layout,
+            final Filter filter,
+            final RollingFileManager manager,
+            final String fileName,
+            final String filePattern,
+            final boolean ignoreExceptions,
+            final boolean immediateFlush,
+            final Advertiser advertiser,
             final Property[] properties) {
         super(name, layout, filter, ignoreExceptions, immediateFlush, properties, manager);
         if (advertiser != null) {
@@ -303,7 +328,7 @@ public final class RollingFileAppender extends AbstractOutputStreamAppender<Roll
 
     /**
      * Writes the log entry rolling over the file when required.
-
+     *
      * @param event The LogEvent.
      */
     @Override
@@ -377,21 +402,25 @@ public final class RollingFileAppender extends AbstractOutputStreamAppender<Roll
             final String advertise,
             final String advertiseUri,
             final Configuration config) {
-            // @formatter:on
+        // @formatter:on
         final int bufferSize = Integers.parseInt(bufferSizeStr, DEFAULT_BUFFER_SIZE);
         // @formatter:off
         return RollingFileAppender.<B>newBuilder()
-        .withAdvertise(Boolean.parseBoolean(advertise))
-        .withAdvertiseUri(advertiseUri)
-        .withAppend(Booleans.parseBoolean(append, true))
-        .withBufferedIo(Booleans.parseBoolean(bufferedIO, true))
-        .withBufferSize(bufferSize)
-        .setConfiguration(config)
-        .withFileName(fileName)
-        .withFilePattern(filePattern).setFilter(filter).setIgnoreExceptions(Booleans.parseBoolean(ignore, true))
-                .withImmediateFlush(Booleans.parseBoolean(immediateFlush, true)).setLayout(layout)
+                .withAdvertise(Boolean.parseBoolean(advertise))
+                .withAdvertiseUri(advertiseUri)
+                .withAppend(Booleans.parseBoolean(append, true))
+                .withBufferedIo(Booleans.parseBoolean(bufferedIO, true))
+                .withBufferSize(bufferSize)
+                .setConfiguration(config)
+                .withFileName(fileName)
+                .withFilePattern(filePattern)
+                .setFilter(filter)
+                .setIgnoreExceptions(Booleans.parseBoolean(ignore, true))
+                .withImmediateFlush(Booleans.parseBoolean(immediateFlush, true))
+                .setLayout(layout)
                 .withCreateOnDemand(false)
-                .withLocking(false).setName(name)
+                .withLocking(false)
+                .setName(name)
                 .withPolicy(policy)
                 .withStrategy(strategy)
                 .build();

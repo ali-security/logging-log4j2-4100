@@ -1,24 +1,24 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.appender.rolling;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.logging.log4j.core.Core;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
@@ -32,7 +32,6 @@ import org.apache.logging.log4j.core.util.Integers;
  */
 @Plugin(name = "TimeBasedTriggeringPolicy", category = Core.CATEGORY_NAME, printObject = true)
 public final class TimeBasedTriggeringPolicy extends AbstractTriggeringPolicy {
-
 
     public static class Builder implements org.apache.logging.log4j.core.util.Builder<TimeBasedTriggeringPolicy> {
 
@@ -63,21 +62,20 @@ public final class TimeBasedTriggeringPolicy extends AbstractTriggeringPolicy {
             return maxRandomDelay;
         }
 
-        public Builder withInterval(final int interval){
+        public Builder withInterval(final int interval) {
             this.interval = interval;
             return this;
         }
 
-        public Builder withModulate(final boolean modulate){
+        public Builder withModulate(final boolean modulate) {
             this.modulate = modulate;
             return this;
         }
 
-        public Builder withMaxRandomDelay(final int maxRandomDelay){
+        public Builder withMaxRandomDelay(final int maxRandomDelay) {
             this.maxRandomDelay = maxRandomDelay;
             return this;
         }
-
     }
 
     private long nextRolloverMillis;
@@ -106,6 +104,7 @@ public final class TimeBasedTriggeringPolicy extends AbstractTriggeringPolicy {
      * @param aManager The RollingFileManager.
      */
     @Override
+    @SuppressFBWarnings("PREDICTABLE_RANDOM")
     public void initialize(final RollingFileManager aManager) {
         this.manager = aManager;
         long current = aManager.getFileTime();
@@ -127,6 +126,7 @@ public final class TimeBasedTriggeringPolicy extends AbstractTriggeringPolicy {
      * @return true if a rollover should occur.
      */
     @Override
+    @SuppressFBWarnings("PREDICTABLE_RANDOM")
     public boolean isTriggeringEvent(final LogEvent event) {
         final long nowMillis = event.getTimeMillis();
         if (nowMillis >= nextRolloverMillis) {
@@ -147,8 +147,7 @@ public final class TimeBasedTriggeringPolicy extends AbstractTriggeringPolicy {
      */
     @Deprecated
     public static TimeBasedTriggeringPolicy createPolicy(
-            @PluginAttribute("interval") final String interval,
-            @PluginAttribute("modulate") final String modulate) {
+            @PluginAttribute("interval") final String interval, @PluginAttribute("modulate") final String modulate) {
         return newBuilder()
                 .withInterval(Integers.parseInt(interval, 1))
                 .withModulate(Boolean.parseBoolean(modulate))
@@ -165,5 +164,4 @@ public final class TimeBasedTriggeringPolicy extends AbstractTriggeringPolicy {
         return "TimeBasedTriggeringPolicy(nextRolloverMillis=" + nextRolloverMillis + ", interval=" + interval
                 + ", modulate=" + modulate + ")";
     }
-
 }

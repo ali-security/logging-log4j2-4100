@@ -1,39 +1,48 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core;
+
+import static java.util.Objects.requireNonNull;
 
 import java.io.ObjectStreamException;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogBuilder;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.LocationAwareReliabilityStrategy;
 import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.apache.logging.log4j.core.config.ReliabilityStrategy;
 import org.apache.logging.log4j.core.filter.CompositeFilter;
+import org.apache.logging.log4j.core.util.Constants;
+import org.apache.logging.log4j.message.DefaultFlowMessageFactory;
+import org.apache.logging.log4j.message.FlowMessageFactory;
 import org.apache.logging.log4j.message.Message;
 import org.apache.logging.log4j.message.MessageFactory;
+import org.apache.logging.log4j.message.ParameterizedMessageFactory;
+import org.apache.logging.log4j.message.ReusableMessageFactory;
 import org.apache.logging.log4j.message.SimpleMessage;
 import org.apache.logging.log4j.spi.AbstractLogger;
+import org.apache.logging.log4j.util.LoaderUtil;
 import org.apache.logging.log4j.util.Strings;
 import org.apache.logging.log4j.util.Supplier;
 
@@ -53,6 +62,10 @@ public class Logger extends AbstractLogger implements Supplier<LoggerConfig> {
 
     private static final long serialVersionUID = 1L;
 
+    private static final String MESSAGE_FACTORY_PROPERTY_NAME = "log4j2.messageFactory";
+
+    private static final String FLOW_MESSAGE_FACTORY_PROPERTY_NAME = "log4j2.flowMessageFactory";
+
     /**
      * Config should be consistent across threads.
      */
@@ -62,16 +75,75 @@ public class Logger extends AbstractLogger implements Supplier<LoggerConfig> {
     private final LoggerContext context;
 
     /**
-     * The constructor.
+     * Constructs an instance using the given {@link LoggerContext}, logger name, and {@link MessageFactory}.
      *
-     * @param context The LoggerContext this Logger is associated with.
-     * @param messageFactory The message factory.
-     * @param name The name of the Logger.
+     * @param context the {@link LoggerContext} this logger is associated with
+     * @param messageFactory The message factory to be used.
+     *                       If null, first the {@value #MESSAGE_FACTORY_PROPERTY_NAME} property will be used to instantiate the message factory.
+     *                       If the property is missing and the {@code log4j2.enableThreadLocals} property is not {@code false}, {@link ReusableMessageFactory} will be used.
+     *                       Otherwise, we will fall back to {@link ParameterizedMessageFactory}.
+     * @param name the logger name
      */
     protected Logger(final LoggerContext context, final String name, final MessageFactory messageFactory) {
-        super(name, messageFactory);
-        this.context = context;
-        privateConfig = new PrivateConfig(context.getConfiguration(), this);
+        this(context, name, messageFactory, null);
+    }
+
+    /**
+     * The canonical constructor.
+     *
+     * @param context the {@link LoggerContext} this logger is associated with
+     * @param messageFactory The message factory to be used.
+     *                       If null, first the {@value #MESSAGE_FACTORY_PROPERTY_NAME} property will be used to instantiate the message factory.
+     *                       If the property is missing and the {@code log4j2.enableThreadLocals} property is not {@code false}, {@link ReusableMessageFactory} will be used.
+     *                       Otherwise, we will fall back to {@link ParameterizedMessageFactory}.
+     * @param flowMessageFactory The flow message factory to be used.
+     *                           If null, first the {@value #FLOW_MESSAGE_FACTORY_PROPERTY_NAME} property will be used to instantiate the flow message factory.
+     *                           If the property is missing, {@link DefaultFlowMessageFactory} will be used.
+     * @param name the logger name
+     */
+    protected Logger(
+            final LoggerContext context,
+            final String name,
+            final MessageFactory messageFactory,
+            final FlowMessageFactory flowMessageFactory) {
+        super(name, getEffectiveMessageFactory(messageFactory), getEffectiveFlowMessageFactory(flowMessageFactory));
+        this.context = requireNonNull(context, "context");
+        this.privateConfig = new PrivateConfig(context.getConfiguration(), this);
+    }
+
+    private static MessageFactory getEffectiveMessageFactory(final MessageFactory messageFactory) {
+        return createInstanceFromFactoryProperty(
+                MessageFactory.class,
+                messageFactory,
+                MESSAGE_FACTORY_PROPERTY_NAME,
+                () -> Constants.ENABLE_THREADLOCALS
+                        ? ReusableMessageFactory.INSTANCE
+                        : ParameterizedMessageFactory.INSTANCE);
+    }
+
+    private static FlowMessageFactory getEffectiveFlowMessageFactory(final FlowMessageFactory flowMessageFactory) {
+        return createInstanceFromFactoryProperty(
+                FlowMessageFactory.class,
+                flowMessageFactory,
+                FLOW_MESSAGE_FACTORY_PROPERTY_NAME,
+                () -> DefaultFlowMessageFactory.INSTANCE);
+    }
+
+    private static <V> V createInstanceFromFactoryProperty(
+            final Class<V> instanceType,
+            final V providedInstance,
+            final String propertyName,
+            final java.util.function.Supplier<V> fallbackInstanceSupplier) {
+        if (providedInstance != null) {
+            return providedInstance;
+        }
+        try {
+            return LoaderUtil.newCheckedInstanceOfProperty(propertyName, instanceType, fallbackInstanceSupplier);
+        } catch (final Exception error) {
+            final String message =
+                    String.format("failed instantiating the class pointed by the `%s` property", propertyName);
+            throw new RuntimeException(message, error);
+        }
     }
 
     protected Object writeReplace() throws ObjectStreamException {
@@ -85,8 +157,9 @@ public class Logger extends AbstractLogger implements Supplier<LoggerConfig> {
      * @return The parent Logger.
      */
     public Logger getParent() {
-        final LoggerConfig lc = privateConfig.loggerConfig.getName().equals(getName()) ? privateConfig.loggerConfig
-                .getParent() : privateConfig.loggerConfig;
+        final LoggerConfig lc = privateConfig.loggerConfig.getName().equals(getName())
+                ? privateConfig.loggerConfig.getParent()
+                : privateConfig.loggerConfig;
         if (lc == null) {
             return null;
         }
@@ -146,20 +219,25 @@ public class Logger extends AbstractLogger implements Supplier<LoggerConfig> {
     }
 
     @Override
-    public void logMessage(final String fqcn, final Level level, final Marker marker, final Message message,
-            final Throwable t) {
+    public void logMessage(
+            final String fqcn, final Level level, final Marker marker, final Message message, final Throwable t) {
         final Message msg = message == null ? new SimpleMessage(Strings.EMPTY) : message;
         final ReliabilityStrategy strategy = privateConfig.loggerConfig.getReliabilityStrategy();
         strategy.log(this, getName(), fqcn, marker, level, msg, t);
     }
 
     @Override
-    protected void log(final Level level, final Marker marker, final String fqcn, final StackTraceElement location,
-        final Message message, final Throwable throwable) {
+    protected void log(
+            final Level level,
+            final Marker marker,
+            final String fqcn,
+            final StackTraceElement location,
+            final Message message,
+            final Throwable throwable) {
         final ReliabilityStrategy strategy = privateConfig.loggerConfig.getReliabilityStrategy();
         if (strategy instanceof LocationAwareReliabilityStrategy) {
-            ((LocationAwareReliabilityStrategy) strategy).log(this, getName(), fqcn, location, marker, level,
-                message, throwable);
+            ((LocationAwareReliabilityStrategy) strategy)
+                    .log(this, getName(), fqcn, location, marker, level, message, throwable);
         } else {
             strategy.log(this, getName(), fqcn, marker, level, message, throwable);
         }
@@ -186,65 +264,124 @@ public class Logger extends AbstractLogger implements Supplier<LoggerConfig> {
     }
 
     @Override
-    public boolean isEnabled(final Level level, final Marker marker, final String message, final Object p0,
-            final Object p1) {
+    public boolean isEnabled(
+            final Level level, final Marker marker, final String message, final Object p0, final Object p1) {
         return privateConfig.filter(level, marker, message, p0, p1);
     }
 
     @Override
-    public boolean isEnabled(final Level level, final Marker marker, final String message, final Object p0,
-            final Object p1, final Object p2) {
+    public boolean isEnabled(
+            final Level level,
+            final Marker marker,
+            final String message,
+            final Object p0,
+            final Object p1,
+            final Object p2) {
         return privateConfig.filter(level, marker, message, p0, p1, p2);
     }
 
     @Override
-    public boolean isEnabled(final Level level, final Marker marker, final String message, final Object p0,
-            final Object p1, final Object p2, final Object p3) {
+    public boolean isEnabled(
+            final Level level,
+            final Marker marker,
+            final String message,
+            final Object p0,
+            final Object p1,
+            final Object p2,
+            final Object p3) {
         return privateConfig.filter(level, marker, message, p0, p1, p2, p3);
     }
 
     @Override
-    public boolean isEnabled(final Level level, final Marker marker, final String message, final Object p0,
-            final Object p1, final Object p2, final Object p3,
+    public boolean isEnabled(
+            final Level level,
+            final Marker marker,
+            final String message,
+            final Object p0,
+            final Object p1,
+            final Object p2,
+            final Object p3,
             final Object p4) {
         return privateConfig.filter(level, marker, message, p0, p1, p2, p3, p4);
     }
 
     @Override
-    public boolean isEnabled(final Level level, final Marker marker, final String message, final Object p0,
-            final Object p1, final Object p2, final Object p3,
-            final Object p4, final Object p5) {
+    public boolean isEnabled(
+            final Level level,
+            final Marker marker,
+            final String message,
+            final Object p0,
+            final Object p1,
+            final Object p2,
+            final Object p3,
+            final Object p4,
+            final Object p5) {
         return privateConfig.filter(level, marker, message, p0, p1, p2, p3, p4, p5);
     }
 
     @Override
-    public boolean isEnabled(final Level level, final Marker marker, final String message, final Object p0,
-            final Object p1, final Object p2, final Object p3,
-            final Object p4, final Object p5, final Object p6) {
+    public boolean isEnabled(
+            final Level level,
+            final Marker marker,
+            final String message,
+            final Object p0,
+            final Object p1,
+            final Object p2,
+            final Object p3,
+            final Object p4,
+            final Object p5,
+            final Object p6) {
         return privateConfig.filter(level, marker, message, p0, p1, p2, p3, p4, p5, p6);
     }
 
     @Override
-    public boolean isEnabled(final Level level, final Marker marker, final String message, final Object p0,
-            final Object p1, final Object p2, final Object p3,
-            final Object p4, final Object p5, final Object p6,
+    public boolean isEnabled(
+            final Level level,
+            final Marker marker,
+            final String message,
+            final Object p0,
+            final Object p1,
+            final Object p2,
+            final Object p3,
+            final Object p4,
+            final Object p5,
+            final Object p6,
             final Object p7) {
         return privateConfig.filter(level, marker, message, p0, p1, p2, p3, p4, p5, p6, p7);
     }
 
     @Override
-    public boolean isEnabled(final Level level, final Marker marker, final String message, final Object p0,
-            final Object p1, final Object p2, final Object p3,
-            final Object p4, final Object p5, final Object p6,
-            final Object p7, final Object p8) {
+    public boolean isEnabled(
+            final Level level,
+            final Marker marker,
+            final String message,
+            final Object p0,
+            final Object p1,
+            final Object p2,
+            final Object p3,
+            final Object p4,
+            final Object p5,
+            final Object p6,
+            final Object p7,
+            final Object p8) {
         return privateConfig.filter(level, marker, message, p0, p1, p2, p3, p4, p5, p6, p7, p8);
     }
 
     @Override
-    public boolean isEnabled(final Level level, final Marker marker, final String message, final Object p0,
-            final Object p1, final Object p2, final Object p3,
-            final Object p4, final Object p5, final Object p6,
-            final Object p7, final Object p8, final Object p9) {
+    public boolean isEnabled(
+            final Level level,
+            final Marker marker,
+            final String message,
+            final Object p0,
+            final Object p1,
+            final Object p2,
+            final Object p3,
+            final Object p4,
+            final Object p5,
+            final Object p6,
+            final Object p7,
+            final Object p8,
+            final Object p9) {
         return privateConfig.filter(level, marker, message, p0, p1, p2, p3, p4, p5, p6, p7, p8, p9);
     }
 
@@ -299,7 +436,7 @@ public class Logger extends AbstractLogger implements Supplier<LoggerConfig> {
     public Iterator<Filter> getFilters() {
         final Filter filter = privateConfig.loggerConfig.getFilter();
         if (filter == null) {
-            return new ArrayList<Filter>().iterator();
+            return Collections.emptyIterator();
         } else if (filter instanceof CompositeFilter) {
             return ((CompositeFilter) filter).iterator();
         } else {
@@ -363,6 +500,16 @@ public class Logger extends AbstractLogger implements Supplier<LoggerConfig> {
         privateConfig.config.setLoggerAdditive(this, additive);
     }
 
+    @Override
+    public LogBuilder atLevel(final Level level) {
+        // A global filter might accept messages less specific than level.
+        // Therefore we return always a functional builder.
+        if (privateConfig.hasFilter()) {
+            return getLogBuilder(level);
+        }
+        return super.atLevel(level);
+    }
+
     /**
      * Associates this Logger with a new Configuration. This method is not
      * exposed through the public API.
@@ -393,6 +540,7 @@ public class Logger extends AbstractLogger implements Supplier<LoggerConfig> {
         public final LoggerConfig loggerConfig; // SUPPRESS CHECKSTYLE
         /** The current Configuration associated with the LoggerConfig. */
         public final Configuration config; // SUPPRESS CHECKSTYLE
+
         private final Level loggerConfigLevel;
         private final int intLevel;
         private final Logger logger;
@@ -428,6 +576,10 @@ public class Logger extends AbstractLogger implements Supplier<LoggerConfig> {
         // LOG4J2-151: changed visibility to public
         public void logEvent(final LogEvent event) {
             loggerConfig.log(event);
+        }
+
+        boolean hasFilter() {
+            return config.getFilter() != null;
         }
 
         boolean filter(final Level level, final Marker marker, final String msg) {
@@ -474,8 +626,7 @@ public class Logger extends AbstractLogger implements Supplier<LoggerConfig> {
             return level != null && intLevel >= level.intLevel();
         }
 
-        boolean filter(final Level level, final Marker marker, final String msg, final Object p0,
-                final Object p1) {
+        boolean filter(final Level level, final Marker marker, final String msg, final Object p0, final Object p1) {
             final Filter filter = config.getFilter();
             if (filter != null) {
                 final Filter.Result r = filter.filter(logger, level, marker, msg, p0, p1);
@@ -486,8 +637,13 @@ public class Logger extends AbstractLogger implements Supplier<LoggerConfig> {
             return level != null && intLevel >= level.intLevel();
         }
 
-        boolean filter(final Level level, final Marker marker, final String msg, final Object p0,
-                final Object p1, final Object p2) {
+        boolean filter(
+                final Level level,
+                final Marker marker,
+                final String msg,
+                final Object p0,
+                final Object p1,
+                final Object p2) {
             final Filter filter = config.getFilter();
             if (filter != null) {
                 final Filter.Result r = filter.filter(logger, level, marker, msg, p0, p1, p2);
@@ -498,8 +654,14 @@ public class Logger extends AbstractLogger implements Supplier<LoggerConfig> {
             return level != null && intLevel >= level.intLevel();
         }
 
-        boolean filter(final Level level, final Marker marker, final String msg, final Object p0,
-                final Object p1, final Object p2, final Object p3) {
+        boolean filter(
+                final Level level,
+                final Marker marker,
+                final String msg,
+                final Object p0,
+                final Object p1,
+                final Object p2,
+                final Object p3) {
             final Filter filter = config.getFilter();
             if (filter != null) {
                 final Filter.Result r = filter.filter(logger, level, marker, msg, p0, p1, p2, p3);
@@ -510,8 +672,14 @@ public class Logger extends AbstractLogger implements Supplier<LoggerConfig> {
             return level != null && intLevel >= level.intLevel();
         }
 
-        boolean filter(final Level level, final Marker marker, final String msg, final Object p0,
-                final Object p1, final Object p2, final Object p3,
+        boolean filter(
+                final Level level,
+                final Marker marker,
+                final String msg,
+                final Object p0,
+                final Object p1,
+                final Object p2,
+                final Object p3,
                 final Object p4) {
             final Filter filter = config.getFilter();
             if (filter != null) {
@@ -523,9 +691,16 @@ public class Logger extends AbstractLogger implements Supplier<LoggerConfig> {
             return level != null && intLevel >= level.intLevel();
         }
 
-        boolean filter(final Level level, final Marker marker, final String msg, final Object p0,
-                final Object p1, final Object p2, final Object p3,
-                final Object p4, final Object p5) {
+        boolean filter(
+                final Level level,
+                final Marker marker,
+                final String msg,
+                final Object p0,
+                final Object p1,
+                final Object p2,
+                final Object p3,
+                final Object p4,
+                final Object p5) {
             final Filter filter = config.getFilter();
             if (filter != null) {
                 final Filter.Result r = filter.filter(logger, level, marker, msg, p0, p1, p2, p3, p4, p5);
@@ -536,9 +711,17 @@ public class Logger extends AbstractLogger implements Supplier<LoggerConfig> {
             return level != null && intLevel >= level.intLevel();
         }
 
-        boolean filter(final Level level, final Marker marker, final String msg, final Object p0,
-                final Object p1, final Object p2, final Object p3,
-                final Object p4, final Object p5, final Object p6) {
+        boolean filter(
+                final Level level,
+                final Marker marker,
+                final String msg,
+                final Object p0,
+                final Object p1,
+                final Object p2,
+                final Object p3,
+                final Object p4,
+                final Object p5,
+                final Object p6) {
             final Filter filter = config.getFilter();
             if (filter != null) {
                 final Filter.Result r = filter.filter(logger, level, marker, msg, p0, p1, p2, p3, p4, p5, p6);
@@ -549,9 +732,17 @@ public class Logger extends AbstractLogger implements Supplier<LoggerConfig> {
             return level != null && intLevel >= level.intLevel();
         }
 
-        boolean filter(final Level level, final Marker marker, final String msg, final Object p0,
-                final Object p1, final Object p2, final Object p3,
-                final Object p4, final Object p5, final Object p6,
+        boolean filter(
+                final Level level,
+                final Marker marker,
+                final String msg,
+                final Object p0,
+                final Object p1,
+                final Object p2,
+                final Object p3,
+                final Object p4,
+                final Object p5,
+                final Object p6,
                 final Object p7) {
             final Filter filter = config.getFilter();
             if (filter != null) {
@@ -563,10 +754,19 @@ public class Logger extends AbstractLogger implements Supplier<LoggerConfig> {
             return level != null && intLevel >= level.intLevel();
         }
 
-        boolean filter(final Level level, final Marker marker, final String msg, final Object p0,
-                final Object p1, final Object p2, final Object p3,
-                final Object p4, final Object p5, final Object p6,
-                final Object p7, final Object p8) {
+        boolean filter(
+                final Level level,
+                final Marker marker,
+                final String msg,
+                final Object p0,
+                final Object p1,
+                final Object p2,
+                final Object p3,
+                final Object p4,
+                final Object p5,
+                final Object p6,
+                final Object p7,
+                final Object p8) {
             final Filter filter = config.getFilter();
             if (filter != null) {
                 final Filter.Result r = filter.filter(logger, level, marker, msg, p0, p1, p2, p3, p4, p5, p6, p7, p8);
@@ -577,14 +777,24 @@ public class Logger extends AbstractLogger implements Supplier<LoggerConfig> {
             return level != null && intLevel >= level.intLevel();
         }
 
-        boolean filter(final Level level, final Marker marker, final String msg, final Object p0,
-                final Object p1, final Object p2, final Object p3,
-                final Object p4, final Object p5, final Object p6,
-                final Object p7, final Object p8, final Object p9) {
+        boolean filter(
+                final Level level,
+                final Marker marker,
+                final String msg,
+                final Object p0,
+                final Object p1,
+                final Object p2,
+                final Object p3,
+                final Object p4,
+                final Object p5,
+                final Object p6,
+                final Object p7,
+                final Object p8,
+                final Object p9) {
             final Filter filter = config.getFilter();
             if (filter != null) {
-                final Filter.Result r = filter.filter(logger, level, marker, msg, p0, p1, p2, p3, p4, p5, p6, p7, p8,
-                        p9);
+                final Filter.Result r =
+                        filter.filter(logger, level, marker, msg, p0, p1, p2, p3, p4, p5, p6, p7, p8, p9);
                 if (r != Filter.Result.NEUTRAL) {
                     return r == Filter.Result.ACCEPT;
                 }

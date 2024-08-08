@@ -1,26 +1,24 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package org.apache.logging.log4j.core.appender.db.jdbc;
 
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-
 import org.apache.commons.dbcp2.PoolableConnectionFactory;
 import org.apache.commons.pool2.impl.GenericKeyedObjectPoolConfig;
 import org.apache.logging.log4j.core.Core;
@@ -75,11 +73,13 @@ public class PoolableConnectionFactoryConfig {
 
         // TODO
         @PluginElement("DisconnectionSqlCodes")
-        private String[] disconnectionSqlCodes = (String[]) (DEFAULT.getDisconnectionSqlCodes() == null ? null
-                : DEFAULT.getDisconnectionSqlCodes().toArray());
+        private String[] disconnectionSqlCodes = (String[])
+                (DEFAULT.getDisconnectionSqlCodes() == null
+                        ? null
+                        : DEFAULT.getDisconnectionSqlCodes().toArray());
 
         @PluginBuilderAttribute
-        private boolean autoCommitOnReturn = DEFAULT.isEnableAutoCommitOnReturn();
+        private boolean autoCommitOnReturn = DEFAULT.isAutoCommitOnReturn();
 
         @PluginBuilderAttribute
         private boolean fastFailValidation = DEFAULT.isFastFailValidation();
@@ -108,10 +108,22 @@ public class PoolableConnectionFactoryConfig {
 
         @Override
         public PoolableConnectionFactoryConfig build() {
-            return new PoolableConnectionFactoryConfig(cacheState, asList(connectionInitSqls), defaultAutoCommit,
-                    defaultCatalog, defaultQueryTimeoutSeconds, defaultReadOnly, defaultTransactionIsolation,
-                    asList(disconnectionSqlCodes), autoCommitOnReturn, fastFailValidation, maxConnLifetimeMillis,
-                    maxOpenPreparedStatements, poolStatements, rollbackOnReturn, validationQuery,
+            return new PoolableConnectionFactoryConfig(
+                    cacheState,
+                    asList(connectionInitSqls),
+                    defaultAutoCommit,
+                    defaultCatalog,
+                    defaultQueryTimeoutSeconds,
+                    defaultReadOnly,
+                    defaultTransactionIsolation,
+                    asList(disconnectionSqlCodes),
+                    autoCommitOnReturn,
+                    fastFailValidation,
+                    maxConnLifetimeMillis,
+                    maxOpenPreparedStatements,
+                    poolStatements,
+                    rollbackOnReturn,
+                    validationQuery,
                     validationQueryTimeoutSeconds);
         }
 
@@ -221,12 +233,22 @@ public class PoolableConnectionFactoryConfig {
 
     private final int validationQueryTimeoutSeconds;
 
-    private PoolableConnectionFactoryConfig(final boolean cacheState, final Collection<String> connectionInitSqls,
-            final Boolean defaultAutoCommit, final String defaultCatalog, final Integer defaultQueryTimeoutSeconds,
-            final Boolean defaultReadOnly, final int defaultTransactionIsolation,
-            final Collection<String> disconnectionSqlCodes, final boolean enableAutoCommitOnReturn,
-            final boolean fastFailValidation, final long maxConnLifetimeMillis, final int maxOpenPreparedStatements,
-            final boolean poolStatements, final boolean rollbackOnReturn, final String validationQuery,
+    private PoolableConnectionFactoryConfig(
+            final boolean cacheState,
+            final Collection<String> connectionInitSqls,
+            final Boolean defaultAutoCommit,
+            final String defaultCatalog,
+            final Integer defaultQueryTimeoutSeconds,
+            final Boolean defaultReadOnly,
+            final int defaultTransactionIsolation,
+            final Collection<String> disconnectionSqlCodes,
+            final boolean enableAutoCommitOnReturn,
+            final boolean fastFailValidation,
+            final long maxConnLifetimeMillis,
+            final int maxOpenPreparedStatements,
+            final boolean poolStatements,
+            final boolean rollbackOnReturn,
+            final String validationQuery,
             final int validationQueryTimeoutSeconds) {
         this.cacheState = cacheState;
         this.connectionInitSqls = connectionInitSqls;
@@ -248,8 +270,8 @@ public class PoolableConnectionFactoryConfig {
 
     public void init(final PoolableConnectionFactory poolableConnectionFactory) {
         if (poolableConnectionFactory != null) {
-            StatusLogger.getLogger().debug("Initializing PoolableConnectionFactory {} with {}",
-                    poolableConnectionFactory, this);
+            StatusLogger.getLogger()
+                    .debug("Initializing PoolableConnectionFactory {} with {}", poolableConnectionFactory, this);
             poolableConnectionFactory.setCacheState(cacheState);
             poolableConnectionFactory.setConnectionInitSql(connectionInitSqls);
             poolableConnectionFactory.setDefaultAutoCommit(defaultAutoCommit);
@@ -258,7 +280,7 @@ public class PoolableConnectionFactoryConfig {
             poolableConnectionFactory.setDefaultReadOnly(defaultReadOnly);
             poolableConnectionFactory.setDefaultTransactionIsolation(defaultTransactionIsolation);
             poolableConnectionFactory.setDisconnectionSqlCodes(disconnectionSqlCodes);
-            poolableConnectionFactory.setEnableAutoCommitOnReturn(autoCommitOnReturn);
+            poolableConnectionFactory.setAutoCommitOnReturn(autoCommitOnReturn);
             poolableConnectionFactory.setFastFailValidation(fastFailValidation);
             poolableConnectionFactory.setMaxConnLifetimeMillis(maxConnLifetimeMillis);
             poolableConnectionFactory.setMaxOpenPreparedStatements(maxOpenPreparedStatements);
@@ -267,17 +289,27 @@ public class PoolableConnectionFactoryConfig {
             poolableConnectionFactory.setValidationQuery(validationQuery);
             poolableConnectionFactory.setValidationQueryTimeout(validationQueryTimeoutSeconds);
         }
-
     }
 
     @Override
     public String toString() {
         return String.format(
                 "PoolableConnectionFactoryConfig [cacheState=%s, connectionInitSqls=%s, defaultAutoCommit=%s, defaultCatalog=%s, defaultQueryTimeoutSeconds=%s, defaultReadOnly=%s, defaultTransactionIsolation=%s, disconnectionSqlCodes=%s, enableAutoCommitOnReturn=%s, fastFailValidation=%s, maxConnLifetimeMillis=%s, maxOpenPreparedStatements=%s, poolStatements=%s, rollbackOnReturn=%s, validationQuery=%s, validationQueryTimeoutSeconds=%s]",
-                cacheState, connectionInitSqls, defaultAutoCommit, defaultCatalog, defaultQueryTimeoutSeconds,
-                defaultReadOnly, defaultTransactionIsolation, disconnectionSqlCodes, autoCommitOnReturn,
-                fastFailValidation, maxConnLifetimeMillis, maxOpenPreparedStatements, poolStatements, rollbackOnReturn,
-                validationQuery, validationQueryTimeoutSeconds);
+                cacheState,
+                connectionInitSqls,
+                defaultAutoCommit,
+                defaultCatalog,
+                defaultQueryTimeoutSeconds,
+                defaultReadOnly,
+                defaultTransactionIsolation,
+                disconnectionSqlCodes,
+                autoCommitOnReturn,
+                fastFailValidation,
+                maxConnLifetimeMillis,
+                maxOpenPreparedStatements,
+                poolStatements,
+                rollbackOnReturn,
+                validationQuery,
+                validationQueryTimeoutSeconds);
     }
-
 }

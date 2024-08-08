@@ -1,27 +1,28 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.layout;
 
-import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.StringLayout;
+import org.apache.logging.log4j.core.config.AbstractConfiguration;
 import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.apache.logging.log4j.core.config.plugins.PluginBuilderAttribute;
@@ -41,10 +42,6 @@ import org.apache.logging.log4j.util.Strings;
  * Since 2.4.1, this class has custom logic to convert ISO-8859-1 or US-ASCII Strings to byte[] arrays to improve
  * performance: all characters are simply cast to bytes.
  * </p>
- */
-/*
- * Implementation note: prefer String.getBytes(String) to String.getBytes(Charset) for performance reasons. See
- * https://issues.apache.org/jira/browse/LOG4J2-935 for details.
  */
 public abstract class AbstractStringLayout extends AbstractLayout<String> implements StringLayout, LocationAware {
 
@@ -85,7 +82,6 @@ public abstract class AbstractStringLayout extends AbstractLayout<String> implem
             this.headerSerializer = headerSerializer;
             return asBuilder();
         }
-
     }
 
     @Override
@@ -93,9 +89,10 @@ public abstract class AbstractStringLayout extends AbstractLayout<String> implem
         return false;
     }
 
-    public interface Serializer {
+    public interface Serializer extends Serializer2 {
         String toSerializable(final LogEvent event);
 
+        @Override
         default StringBuilder toSerializable(final LogEvent event, final StringBuilder builder) {
             builder.append(toSerializable(event));
             return builder;
@@ -116,8 +113,8 @@ public abstract class AbstractStringLayout extends AbstractLayout<String> implem
      */
     protected static final int DEFAULT_STRING_BUILDER_SIZE = 1024;
 
-    protected static final int MAX_STRING_BUILDER_SIZE = Math.max(DEFAULT_STRING_BUILDER_SIZE,
-            size("log4j.layoutStringBuilder.maxSize", 2 * 1024));
+    protected static final int MAX_STRING_BUILDER_SIZE =
+            Math.max(DEFAULT_STRING_BUILDER_SIZE, size("log4j.layoutStringBuilder.maxSize", 2 * 1024));
 
     private static final ThreadLocal<StringBuilder> threadLocal = new ThreadLocal<>();
 
@@ -141,11 +138,6 @@ public abstract class AbstractStringLayout extends AbstractLayout<String> implem
         return result;
     }
 
-    // LOG4J2-1151: If the built-in JDK 8 encoders are available we should use them.
-    private static boolean isPreJava8() {
-        return org.apache.logging.log4j.util.Constants.JAVA_MAJOR_VERSION < 8;
-    }
-
     private static int size(final String property, final int defaultValue) {
         return PropertiesUtil.getProperties().getIntegerProperty(property, defaultValue);
     }
@@ -158,16 +150,11 @@ public abstract class AbstractStringLayout extends AbstractLayout<String> implem
     /**
      * The charset for the formatted message.
      */
-    // LOG4J2-1099: Charset cannot be final due to serialization needs, so we serialize as Charset name instead
-    private transient Charset charset;
-
-    private final String charsetName;
+    private final Charset charset;
 
     private final Serializer footerSerializer;
 
     private final Serializer headerSerializer;
-
-    private final boolean useCustomEncoding;
 
     protected AbstractStringLayout(final Charset charset) {
         this(charset, (byte[]) null, (byte[]) null);
@@ -185,41 +172,31 @@ public abstract class AbstractStringLayout extends AbstractLayout<String> implem
         this.headerSerializer = null;
         this.footerSerializer = null;
         this.charset = aCharset == null ? StandardCharsets.UTF_8 : aCharset;
-        this.charsetName = this.charset.name();
-        useCustomEncoding = isPreJava8()
-                && (StandardCharsets.ISO_8859_1.equals(aCharset) || StandardCharsets.US_ASCII.equals(aCharset));
         textEncoder = Constants.ENABLE_DIRECT_ENCODERS ? new StringBuilderEncoder(charset) : null;
     }
 
     /**
      * Builds a new layout.
-     * @param config the configuration
+     * @param config the configuration. May be null.
      * @param aCharset the charset used to encode the header bytes, footer bytes and anything else that needs to be
      *      converted from strings to bytes.
      * @param headerSerializer the header bytes serializer
      * @param footerSerializer the footer bytes serializer
      */
-    protected AbstractStringLayout(final Configuration config, final Charset aCharset,
-            final Serializer headerSerializer, final Serializer footerSerializer) {
+    protected AbstractStringLayout(
+            final Configuration config,
+            final Charset aCharset,
+            final Serializer headerSerializer,
+            final Serializer footerSerializer) {
         super(config, null, null);
         this.headerSerializer = headerSerializer;
         this.footerSerializer = footerSerializer;
         this.charset = aCharset == null ? StandardCharsets.UTF_8 : aCharset;
-        this.charsetName = this.charset.name();
-        useCustomEncoding = isPreJava8()
-                && (StandardCharsets.ISO_8859_1.equals(aCharset) || StandardCharsets.US_ASCII.equals(aCharset));
         textEncoder = Constants.ENABLE_DIRECT_ENCODERS ? new StringBuilderEncoder(charset) : null;
     }
 
     protected byte[] getBytes(final String s) {
-        if (useCustomEncoding) { // rely on branch prediction to eliminate this check if false
-            return StringEncoder.encodeSingleByteChars(s);
-        }
-        try { // LOG4J2-935: String.getBytes(String) gives better performance
-            return s.getBytes(charsetName);
-        } catch (final UnsupportedEncodingException e) {
-            return s.getBytes(charset);
-        }
+        return s.getBytes(charset);
     }
 
     @Override
@@ -291,10 +268,19 @@ public abstract class AbstractStringLayout extends AbstractLayout<String> implem
         if (serializer == null) {
             return null;
         }
-        final LoggerConfig rootLogger = getConfiguration().getRootLogger();
+        final String loggerName;
+        final Level level;
+        if (configuration != null) {
+            final LoggerConfig rootLogger = configuration.getRootLogger();
+            loggerName = rootLogger.getName();
+            level = rootLogger.getLevel();
+        } else {
+            loggerName = LogManager.ROOT_LOGGER_NAME;
+            level = AbstractConfiguration.getDefaultLevel();
+        }
         // Using "" for the FQCN, does it matter?
-        final LogEvent logEvent = getLogEventFactory().createEvent(rootLogger.getName(), null, Strings.EMPTY,
-                rootLogger.getLevel(), null, null, null);
+        final LogEvent logEvent =
+                getLogEventFactory().createEvent(loggerName, null, Strings.EMPTY, level, null, null, null);
         return serializer.toSerializable(logEvent);
     }
 
@@ -308,5 +294,4 @@ public abstract class AbstractStringLayout extends AbstractLayout<String> implem
     public byte[] toByteArray(final LogEvent event) {
         return getBytes(toSerializable(event));
     }
-
 }

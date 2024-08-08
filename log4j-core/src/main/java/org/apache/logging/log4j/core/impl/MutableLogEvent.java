@@ -1,18 +1,18 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.impl;
 
@@ -20,16 +20,22 @@ import java.io.InvalidObjectException;
 import java.io.ObjectInputStream;
 import java.util.Arrays;
 import java.util.Map;
-
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.ThreadContext;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.async.InternalAsyncUtil;
-import org.apache.logging.log4j.core.util.*;
 import org.apache.logging.log4j.core.time.Instant;
 import org.apache.logging.log4j.core.time.MutableInstant;
-import org.apache.logging.log4j.message.*;
+import org.apache.logging.log4j.core.util.Clock;
+import org.apache.logging.log4j.core.util.Constants;
+import org.apache.logging.log4j.core.util.NanoClock;
+import org.apache.logging.log4j.message.Message;
+import org.apache.logging.log4j.message.ParameterConsumer;
+import org.apache.logging.log4j.message.ParameterVisitable;
+import org.apache.logging.log4j.message.ReusableMessage;
+import org.apache.logging.log4j.message.SimpleMessage;
+import org.apache.logging.log4j.message.TimestampMessage;
 import org.apache.logging.log4j.util.ReadOnlyStringMap;
 import org.apache.logging.log4j.util.StackLocatorUtil;
 import org.apache.logging.log4j.util.StringBuilders;
@@ -62,7 +68,7 @@ public class MutableLogEvent implements LogEvent, ReusableMessage, ParameterVisi
     private StringMap contextData = ContextDataFactory.createContextData();
     private Marker marker;
     private String loggerFqcn;
-    private StackTraceElement source;
+    StackTraceElement source;
     private ThreadContext.ContextStack contextStack;
     transient boolean reserved = false;
 
@@ -151,12 +157,12 @@ public class MutableLogEvent implements LogEvent, ReusableMessage, ParameterVisi
         }
 
         // primitive fields that cannot be cleared:
-        //timeMillis;
-        //threadId;
-        //threadPriority;
-        //includeLocation;
-        //endOfBatch;
-        //nanoTime;
+        // timeMillis;
+        // threadId;
+        // threadPriority;
+        // includeLocation;
+        // endOfBatch;
+        // nanoTime;
     }
 
     @Override

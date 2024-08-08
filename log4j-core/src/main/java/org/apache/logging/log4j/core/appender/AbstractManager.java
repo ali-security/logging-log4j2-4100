@@ -1,32 +1,34 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.appender;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.AbstractLifeCycle;
 import org.apache.logging.log4j.core.LoggerContext;
+import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.ConfigurationException;
+import org.apache.logging.log4j.core.lookup.StrSubstitutor;
 import org.apache.logging.log4j.message.Message;
 import org.apache.logging.log4j.status.StatusLogger;
 
@@ -40,6 +42,33 @@ import org.apache.logging.log4j.status.StatusLogger;
  * </p>
  */
 public abstract class AbstractManager implements AutoCloseable {
+
+    /**
+     * Implementations should extend this class for passing data between the getManager method and the manager factory
+     * class.
+     */
+    protected abstract static class AbstractFactoryData {
+
+        private final Configuration configuration;
+
+        /**
+         * Constructs the base factory data.
+         *
+         * @param configuration Configuration creating this instance.
+         */
+        protected AbstractFactoryData(final Configuration configuration) {
+            this.configuration = configuration;
+        }
+
+        /**
+         * Gets my configuration.
+         *
+         * @return my configuration.
+         */
+        public Configuration getConfiguration() {
+            return configuration;
+        }
+    }
 
     /**
      * Allow subclasses access to the status logger without creating another instance.
@@ -84,7 +113,11 @@ public abstract class AbstractManager implements AutoCloseable {
                 MAP.remove(name);
                 LOGGER.debug("Shutting down {} {}", this.getClass().getSimpleName(), getName());
                 stopped = releaseSub(timeout, timeUnit);
-                LOGGER.debug("Shut down {} {}, all resources released: {}", this.getClass().getSimpleName(), getName(), stopped);
+                LOGGER.debug(
+                        "Shut down {} {}, all resources released: {}",
+                        this.getClass().getSimpleName(),
+                        getName(),
+                        stopped);
             }
         } finally {
             LOCK.unlock();
@@ -103,14 +136,14 @@ public abstract class AbstractManager implements AutoCloseable {
      */
     // @SuppressWarnings("resource"): this is a factory method, the resource is allocated and released elsewhere.
     @SuppressWarnings("resource")
-    public static <M extends AbstractManager, T> M getManager(final String name, final ManagerFactory<M, T> factory,
-                                                              final T data) {
+    public static <M extends AbstractManager, T> M getManager(
+            final String name, final ManagerFactory<M, T> factory, final T data) {
         LOCK.lock();
         try {
             @SuppressWarnings("unchecked")
             M manager = (M) MAP.get(name);
             if (manager == null) {
-                manager = factory.createManager(name, data);
+                manager = Objects.requireNonNull(factory, "factory").createManager(name, data);
                 if (manager == null) {
                     throw new IllegalStateException("ManagerFactory [" + factory + "] unable to create manager for ["
                             + name + "] with data [" + data + "]");
@@ -165,12 +198,19 @@ public abstract class AbstractManager implements AutoCloseable {
             return (M) manager;
         }
         throw new ConfigurationException(
-                "Configuration has multiple incompatible Appenders pointing to the same resource '" +
-                        manager.getName() + "'");
+                "Configuration has multiple incompatible Appenders pointing to the same resource '" + manager.getName()
+                        + "'");
     }
 
     protected static StatusLogger logger() {
         return StatusLogger.getLogger();
+    }
+
+    /**
+     * For testing purposes.
+     */
+    static int getManagerCount() {
+        return MAP.size();
     }
 
     /**
@@ -228,9 +268,25 @@ public abstract class AbstractManager implements AutoCloseable {
         return new HashMap<>();
     }
 
+    /**
+     * Gets my configuration's StrSubstitutor or null.
+     *
+     * @return my configuration's StrSubstitutor or null.
+     */
+    protected StrSubstitutor getStrSubstitutor() {
+        if (loggerContext == null) {
+            return null;
+        }
+        final Configuration configuration = loggerContext.getConfiguration();
+        if (configuration == null) {
+            return null;
+        }
+        return configuration.getStrSubstitutor();
+    }
+
     protected void log(final Level level, final String message, final Throwable throwable) {
-        final Message m = LOGGER.getMessageFactory().newMessage("{} {} {}: {}",
-                getClass().getSimpleName(), getName(), message, throwable);
+        final Message m = LOGGER.getMessageFactory()
+                .newMessage("{} {} {}: {}", getClass().getSimpleName(), getName(), message, throwable);
         LOGGER.log(level, m, throwable);
     }
 
@@ -245,5 +301,4 @@ public abstract class AbstractManager implements AutoCloseable {
     protected void logWarn(final String message, final Throwable throwable) {
         log(Level.WARN, message, throwable);
     }
-
 }

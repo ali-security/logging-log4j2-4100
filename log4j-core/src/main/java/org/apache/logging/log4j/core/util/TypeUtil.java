@@ -1,18 +1,18 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.util;
 
@@ -28,8 +28,8 @@ import java.util.Objects;
 
 /**
  * Utility class for working with Java {@link Type}s and derivatives. This class is adapted heavily from the
- * <a href="http://projects.spring.io/spring-framework/">Spring Framework</a>, specifically the
- * <a href="http://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/util/TypeUtils.html">TypeUtils</a>
+ * <a href="https://spring.io/projects/spring-framework/">Spring Framework</a>, specifically the
+ * <a href="https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/util/TypeUtils.html">TypeUtils</a>
  * class.
  *
  * @see java.lang.reflect.Type
@@ -41,8 +41,7 @@ import java.util.Objects;
  */
 public final class TypeUtil {
 
-    private TypeUtil() {
-    }
+    private TypeUtil() {}
 
     /**
      * Gets all declared fields for the given class (including superclasses).
@@ -147,9 +146,9 @@ public final class TypeUtil {
             // verify all type arguments are assignable
             final Type lhsArgument = lhsTypeArguments[i];
             final Type rhsArgument = rhsTypeArguments[i];
-            if (!lhsArgument.equals(rhsArgument) &&
-                !(lhsArgument instanceof WildcardType &&
-                    isWildcardAssignable((WildcardType) lhsArgument, rhsArgument))) {
+            if (!lhsArgument.equals(rhsArgument)
+                    && !(lhsArgument instanceof WildcardType
+                            && isWildcardAssignable((WildcardType) lhsArgument, rhsArgument))) {
                 return false;
             }
         }
@@ -206,12 +205,12 @@ public final class TypeUtil {
 
     private static Type[] getEffectiveUpperBounds(final WildcardType type) {
         final Type[] upperBounds = type.getUpperBounds();
-        return upperBounds.length == 0 ? new Type[]{Object.class} : upperBounds;
+        return upperBounds.length == 0 ? new Type[] {Object.class} : upperBounds;
     }
 
     private static Type[] getEffectiveLowerBounds(final WildcardType type) {
         final Type[] lowerBounds = type.getLowerBounds();
-        return lowerBounds.length == 0 ? new Type[]{null} : lowerBounds;
+        return lowerBounds.length == 0 ? new Type[] {null} : lowerBounds;
     }
 
     private static boolean isBoundAssignable(final Type lhs, final Type rhs) {

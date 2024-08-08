@@ -1,18 +1,18 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.layout.template.json.resolver;
 
@@ -71,7 +71,7 @@ import org.apache.logging.log4j.message.ParameterVisitable;
  * }
  * </pre>
  */
-final class MessageParameterResolver implements EventResolver {
+public final class MessageParameterResolver implements EventResolver {
 
     private final Recycler<ParameterConsumerState> parameterConsumerStateRecycler;
 
@@ -79,12 +79,8 @@ final class MessageParameterResolver implements EventResolver {
 
     private final int index;
 
-    MessageParameterResolver(
-            final EventResolverContext context,
-            final TemplateResolverConfig config) {
-        this.parameterConsumerStateRecycler = context
-                .getRecyclerFactory()
-                .create(ParameterConsumerState::new);
+    MessageParameterResolver(final EventResolverContext context, final TemplateResolverConfig config) {
+        this.parameterConsumerStateRecycler = context.getRecyclerFactory().create(ParameterConsumerState::new);
         this.stringified = config.getBoolean("stringified", false);
         final Integer index = config.getInteger("index");
         if (index != null && index < 0) {
@@ -148,17 +144,13 @@ final class MessageParameterResolver implements EventResolver {
                 jsonWriter.writeValue(parameter);
             }
         }
-
     }
 
     /**
      * Perform a garbage-free resolution via {@link ParameterVisitable} interface.
      */
-    private void resolve(
-            final ParameterVisitable parameterVisitable,
-            final JsonWriter jsonWriter) {
-        final ParameterConsumerState parameterConsumerState =
-                parameterConsumerStateRecycler.acquire();
+    private void resolve(final ParameterVisitable parameterVisitable, final JsonWriter jsonWriter) {
+        final ParameterConsumerState parameterConsumerState = parameterConsumerStateRecycler.acquire();
         try {
             final boolean arrayNeeded = index < 0;
             if (arrayNeeded) {
@@ -168,8 +160,7 @@ final class MessageParameterResolver implements EventResolver {
             final int startIndex = buf.length();
             parameterConsumerState.resolver = this;
             parameterConsumerState.jsonWriter = jsonWriter;
-            parameterVisitable.forEachParameter(
-                    PARAMETER_CONSUMER, parameterConsumerState);
+            parameterVisitable.forEachParameter(PARAMETER_CONSUMER, parameterConsumerState);
             if (arrayNeeded) {
                 jsonWriter.writeArrayEnd();
             } else if (startIndex == buf.length()) {
@@ -188,7 +179,6 @@ final class MessageParameterResolver implements EventResolver {
         private JsonWriter jsonWriter;
 
         private ParameterConsumerState() {}
-
     }
 
     private static final ParameterConsumer<ParameterConsumerState> PARAMETER_CONSUMER =
@@ -209,7 +199,5 @@ final class MessageParameterResolver implements EventResolver {
                         state.jsonWriter.writeValue(parameter);
                     }
                 }
-
             };
-
 }

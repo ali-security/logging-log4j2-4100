@@ -19,4 +19,9 @@
  * Internal utility classes for the Log4j 2 API. Note that the use of any classes in this package is not supported.
  * There are no guarantees for binary or logical compatibility in this package.
  */
+@Export
+@Version("2.24.0")
 package org.apache.logging.log4j.util;
+
+import org.osgi.annotation.bundle.Export;
+import org.osgi.annotation.versioning.Version;

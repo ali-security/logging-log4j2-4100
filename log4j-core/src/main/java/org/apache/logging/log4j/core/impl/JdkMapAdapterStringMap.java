@@ -1,18 +1,18 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.impl;
 
@@ -21,10 +21,11 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-
+import java.util.WeakHashMap;
 import org.apache.logging.log4j.util.BiConsumer;
 import org.apache.logging.log4j.util.ReadOnlyStringMap;
 import org.apache.logging.log4j.util.StringMap;
+import org.apache.logging.log4j.util.Strings;
 import org.apache.logging.log4j.util.TriConsumer;
 
 /**
@@ -42,22 +43,60 @@ public class JdkMapAdapterStringMap implements StringMap {
         }
         return left.compareTo(right);
     };
+    // Cache of known unmodifiable map implementations.
+    // It is a cache, no need to synchronise it between threads.
+    private static Map<Class<?>, Void> UNMODIFIABLE_MAPS_CACHE = new WeakHashMap<>();
 
-    private final Map<String, String> map;
+    protected final Map<String, String> map;
     private boolean immutable = false;
     private transient String[] sortedKeys;
 
     public JdkMapAdapterStringMap() {
-        this(new HashMap<String, String>());
+        this(new HashMap<>(), false);
     }
 
+    /**
+     * @deprecated for performance reasons since 2.23.
+     *             Use {@link #JdkMapAdapterStringMap(Map, boolean)} instead.
+     */
+    @Deprecated
     public JdkMapAdapterStringMap(final Map<String, String> map) {
         this.map = Objects.requireNonNull(map, "map");
+        // Known immutable implementations
+        if (UNMODIFIABLE_MAPS_CACHE.containsKey(map.getClass())) {
+            immutable = true;
+        } else {
+            // Check with a NO-OP replacement
+            try {
+                map.replace(Strings.EMPTY, Strings.EMPTY, Strings.EMPTY);
+            } catch (final UnsupportedOperationException ignored) {
+                final WeakHashMap<Class<?>, Void> cache = new WeakHashMap<>(UNMODIFIABLE_MAPS_CACHE);
+                cache.put(map.getClass(), null);
+                UNMODIFIABLE_MAPS_CACHE = cache;
+                immutable = true;
+            }
+        }
+    }
+
+    /**
+     * Constructs a new {@link StringMap}, based on a JDK map.
+     * <p>
+     *     The underlying map should not be modified after this call.
+     * </p>
+     * <p>
+     *     If the {@link Map} implementation does not allow modifications, {@code frozen} should be set to {@code true}.
+     * </p>
+     * @param map a JDK map,
+     * @param frozen if {@code true} this collection will be immutable.
+     */
+    public JdkMapAdapterStringMap(final Map<String, String> map, final boolean frozen) {
+        this.map = Objects.requireNonNull(map, "map");
+        this.immutable = frozen;
     }
 
     @Override
     public Map<String, String> toMap() {
-        return map;
+        return new HashMap<>(map);
     }
 
     private void assertNotFrozen() {
@@ -91,7 +130,7 @@ public class JdkMapAdapterStringMap implements StringMap {
 
     private String[] getSortedKeys() {
         if (sortedKeys == null) {
-            sortedKeys = map.keySet().toArray(new String[map.size()]);
+            sortedKeys = map.keySet().toArray(Strings.EMPTY_ARRAY);
             Arrays.sort(sortedKeys, NULL_FIRST_COMPARATOR);
         }
         return sortedKeys;
@@ -140,7 +179,8 @@ public class JdkMapAdapterStringMap implements StringMap {
         sortedKeys = null;
     }
 
-    private static TriConsumer<String, String, Map<String, String>> PUT_ALL = (key, value, stringStringMap) -> stringStringMap.put(key, value);
+    private static TriConsumer<String, String, Map<String, String>> PUT_ALL =
+            (key, value, stringStringMap) -> stringStringMap.put(key, value);
 
     @Override
     public void putValue(final String key, final Object value) {

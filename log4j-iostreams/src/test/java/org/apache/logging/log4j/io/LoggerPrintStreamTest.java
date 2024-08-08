@@ -2,11 +2,11 @@
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,13 +16,13 @@
  */
 package org.apache.logging.log4j.io;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertSame;
+
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
-
 import org.junit.Test;
-
-import static org.junit.Assert.*;
 
 public class LoggerPrintStreamTest extends AbstractLoggerOutputStreamTest {
     private PrintStream print;
@@ -35,9 +35,9 @@ public class LoggerPrintStreamTest extends AbstractLoggerOutputStreamTest {
     @Override
     protected OutputStream createOutputStreamWrapper() {
         return this.print = IoBuilder.forLogger(getExtendedLogger())
-            .filter(this.wrapped)
-            .setLevel(LEVEL)
-            .buildPrintStream();
+                .filter(this.wrapped)
+                .setLevel(LEVEL)
+                .buildPrintStream();
     }
 
     @Test
@@ -116,7 +116,7 @@ public class LoggerPrintStreamTest extends AbstractLoggerOutputStreamTest {
 
     @Test
     public void testPrintf() throws Exception {
-        assertSame(this.print,  this.print.printf("<<<%s>>>", FIRST));
+        assertSame(this.print, this.print.printf("<<<%s>>>", FIRST));
         assertMessages();
         this.print.println();
         assertMessages("<<<" + FIRST + ">>>");

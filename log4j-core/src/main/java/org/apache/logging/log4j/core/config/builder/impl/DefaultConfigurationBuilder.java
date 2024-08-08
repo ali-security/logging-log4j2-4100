@@ -1,21 +1,22 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.config.builder.impl;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.StringReader;
@@ -24,7 +25,6 @@ import java.lang.reflect.Constructor;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
@@ -38,7 +38,6 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.TransformerFactoryConfigurationError;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
-
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.core.Filter;
 import org.apache.logging.log4j.core.LoggerContext;
@@ -60,6 +59,7 @@ import org.apache.logging.log4j.core.config.builder.api.PropertyComponentBuilder
 import org.apache.logging.log4j.core.config.builder.api.RootLoggerComponentBuilder;
 import org.apache.logging.log4j.core.config.builder.api.ScriptComponentBuilder;
 import org.apache.logging.log4j.core.config.builder.api.ScriptFileComponentBuilder;
+import org.apache.logging.log4j.core.util.Integers;
 import org.apache.logging.log4j.core.util.Throwables;
 
 /**
@@ -81,7 +81,6 @@ public class DefaultConfigurationBuilder<T extends BuiltConfiguration> implement
     private ConfigurationSource source;
     private int monitorInterval;
     private Level level;
-    private String verbosity;
     private String destination;
     private String packages;
     private String shutdownFlag;
@@ -90,8 +89,11 @@ public class DefaultConfigurationBuilder<T extends BuiltConfiguration> implement
     private LoggerContext loggerContext;
     private String name;
 
+    @SuppressFBWarnings(
+            value = {"XXE_DTD_TRANSFORM_FACTORY", "XXE_XSLT_TRANSFORM_FACTORY"},
+            justification = "This method only uses internally generated data.")
     public static void formatXml(final Source source, final Result result)
-        throws TransformerConfigurationException, TransformerFactoryConfigurationError, TransformerException {
+            throws TransformerConfigurationException, TransformerFactoryConfigurationError, TransformerException {
         final Transformer transformer = TransformerFactory.newInstance().newTransformer();
         transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", Integer.toString(INDENT.length()));
         transformer.setOutputProperty(OutputKeys.INDENT, "yes");
@@ -187,7 +189,8 @@ public class DefaultConfigurationBuilder<T extends BuiltConfiguration> implement
             if (source == null) {
                 source = ConfigurationSource.NULL_SOURCE;
             }
-            final Constructor<T> constructor = clazz.getConstructor(LoggerContext.class, ConfigurationSource.class, Component.class);
+            final Constructor<T> constructor =
+                    clazz.getConstructor(LoggerContext.class, ConfigurationSource.class, Component.class);
             configuration = constructor.newInstance(loggerContext, source, root);
             configuration.getRootNode().getAttributes().putAll(root.getAttributes());
             if (name != null) {
@@ -195,9 +198,6 @@ public class DefaultConfigurationBuilder<T extends BuiltConfiguration> implement
             }
             if (level != null) {
                 configuration.getStatusConfiguration().withStatus(level);
-            }
-            if (verbosity != null) {
-                configuration.getStatusConfiguration().withVerbosity(verbosity);
             }
             if (destination != null) {
                 configuration.getStatusConfiguration().withDestination(destination);
@@ -225,8 +225,8 @@ public class DefaultConfigurationBuilder<T extends BuiltConfiguration> implement
         return configuration;
     }
 
-    private String formatXml(String xml)
-        throws TransformerConfigurationException, TransformerException, TransformerFactoryConfigurationError {
+    private String formatXml(final String xml)
+            throws TransformerConfigurationException, TransformerException, TransformerFactoryConfigurationError {
         final StringWriter writer = new StringWriter();
         formatXml(new StreamSource(new StringReader(xml)), new StreamResult(writer));
         return writer.toString();
@@ -269,9 +269,6 @@ public class DefaultConfigurationBuilder<T extends BuiltConfiguration> implement
         if (level != null) {
             xmlWriter.writeAttribute("status", level.name());
         }
-        if (verbosity != null) {
-            xmlWriter.writeAttribute("verbose", verbosity);
-        }
         if (destination != null) {
             xmlWriter.writeAttribute("dest", destination);
         }
@@ -307,12 +304,15 @@ public class DefaultConfigurationBuilder<T extends BuiltConfiguration> implement
     }
 
     private void writeXmlSection(final XMLStreamWriter xmlWriter, final Component component) throws XMLStreamException {
-        if (!component.getAttributes().isEmpty() || !component.getComponents().isEmpty() || component.getValue() != null) {
+        if (!component.getAttributes().isEmpty()
+                || !component.getComponents().isEmpty()
+                || component.getValue() != null) {
             writeXmlComponent(xmlWriter, component);
         }
     }
 
-    private void writeXmlComponent(final XMLStreamWriter xmlWriter, final Component component) throws XMLStreamException {
+    private void writeXmlComponent(final XMLStreamWriter xmlWriter, final Component component)
+            throws XMLStreamException {
         if (!component.getComponents().isEmpty() || component.getValue() != null) {
             xmlWriter.writeStartElement(component.getPluginType());
             writeXmlAttributes(xmlWriter, component);
@@ -329,8 +329,10 @@ public class DefaultConfigurationBuilder<T extends BuiltConfiguration> implement
         }
     }
 
-    private void writeXmlAttributes(final XMLStreamWriter xmlWriter, final Component component) throws XMLStreamException {
-        for (final Map.Entry<String, String> attribute : component.getAttributes().entrySet()) {
+    private void writeXmlAttributes(final XMLStreamWriter xmlWriter, final Component component)
+            throws XMLStreamException {
+        for (final Map.Entry<String, String> attribute :
+                component.getAttributes().entrySet()) {
             xmlWriter.writeAttribute(attribute.getKey(), attribute.getValue());
         }
     }
@@ -339,7 +341,6 @@ public class DefaultConfigurationBuilder<T extends BuiltConfiguration> implement
     public ScriptComponentBuilder newScript(final String name, final String language, final String text) {
         return new DefaultScriptComponentBuilder(this, name, language, text);
     }
-
 
     @Override
     public ScriptFileComponentBuilder newScriptFile(final String path) {
@@ -421,7 +422,6 @@ public class DefaultConfigurationBuilder<T extends BuiltConfiguration> implement
         return new DefaultRootLoggerComponentBuilder(this, level, "AsyncRoot", includeLocation);
     }
 
-
     @Override
     public <B extends ComponentBuilder<B>> ComponentBuilder<B> newComponent(final String type) {
         return new DefaultComponentBuilder<>(this, type);
@@ -433,8 +433,8 @@ public class DefaultConfigurationBuilder<T extends BuiltConfiguration> implement
     }
 
     @Override
-    public <B extends ComponentBuilder<B>> ComponentBuilder<B> newComponent(final String name, final String type,
-                                                                            final String value) {
+    public <B extends ComponentBuilder<B>> ComponentBuilder<B> newComponent(
+            final String name, final String type, final String value) {
         return new DefaultComponentBuilder<>(this, name, type, value);
     }
 
@@ -454,8 +454,8 @@ public class DefaultConfigurationBuilder<T extends BuiltConfiguration> implement
     }
 
     @Override
-    public FilterComponentBuilder newFilter(final String type, final Filter.Result onMatch,
-                                            final Filter.Result onMismatch) {
+    public FilterComponentBuilder newFilter(
+            final String type, final Filter.Result onMatch, final Filter.Result onMismatch) {
         return new DefaultFilterComponentBuilder(this, type, onMatch.name(), onMismatch.name());
     }
 
@@ -561,7 +561,7 @@ public class DefaultConfigurationBuilder<T extends BuiltConfiguration> implement
 
     @Override
     public ConfigurationBuilder<T> setMonitorInterval(final String intervalSeconds) {
-        monitorInterval = Integer.parseInt(intervalSeconds);
+        monitorInterval = Integers.parseInt(intervalSeconds);
         return this;
     }
 
@@ -589,9 +589,12 @@ public class DefaultConfigurationBuilder<T extends BuiltConfiguration> implement
         return this;
     }
 
+    /**
+     * @deprecated This method is ineffective and only kept for binary backward compatibility.
+     */
     @Override
+    @Deprecated
     public ConfigurationBuilder<T> setVerbosity(final String verbosity) {
-        this.verbosity = verbosity;
         return this;
     }
 
@@ -611,5 +614,4 @@ public class DefaultConfigurationBuilder<T extends BuiltConfiguration> implement
         root.getAttributes().put(key, value);
         return this;
     }
-
 }

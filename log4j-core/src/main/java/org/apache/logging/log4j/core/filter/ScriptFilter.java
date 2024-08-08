@@ -1,23 +1,22 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.filter;
 
 import javax.script.SimpleBindings;
-
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.core.Filter;
@@ -48,19 +47,19 @@ public final class ScriptFilter extends AbstractFilter {
     private final AbstractScript script;
     private final Configuration configuration;
 
-    private ScriptFilter(final AbstractScript script, final Configuration configuration, final Result onMatch,
-                         final Result onMismatch) {
+    private ScriptFilter(
+            final AbstractScript script,
+            final Configuration configuration,
+            final Result onMatch,
+            final Result onMismatch) {
         super(onMatch, onMismatch);
         this.script = script;
         this.configuration = configuration;
-        if (!(script instanceof ScriptRef)) {
-            configuration.getScriptManager().addScript(script);
-        }
     }
 
     @Override
-    public Result filter(final Logger logger, final Level level, final Marker marker, final String msg,
-                         final Object... params) {
+    public Result filter(
+            final Logger logger, final Level level, final Marker marker, final String msg, final Object... params) {
         final SimpleBindings bindings = new SimpleBindings();
         bindings.put("logger", logger);
         bindings.put("level", level);
@@ -75,13 +74,13 @@ public final class ScriptFilter extends AbstractFilter {
     }
 
     @Override
-    public Result filter(final Logger logger, final Level level, final Marker marker, final Object msg,
-                         final Throwable t) {
+    public Result filter(
+            final Logger logger, final Level level, final Marker marker, final Object msg, final Throwable t) {
         final SimpleBindings bindings = new SimpleBindings();
         bindings.put("logger", logger);
         bindings.put("level", level);
         bindings.put("marker", marker);
-        bindings.put("message", msg instanceof String ? new SimpleMessage((String)msg) : new ObjectMessage(msg));
+        bindings.put("message", msg instanceof String ? new SimpleMessage((String) msg) : new ObjectMessage(msg));
         bindings.put("parameters", null);
         bindings.put("throwable", t);
         bindings.putAll(configuration.getProperties());
@@ -91,8 +90,8 @@ public final class ScriptFilter extends AbstractFilter {
     }
 
     @Override
-    public Result filter(final Logger logger, final Level level, final Marker marker, final Message msg,
-                         final Throwable t) {
+    public Result filter(
+            final Logger logger, final Level level, final Marker marker, final Message msg, final Throwable t) {
         final SimpleBindings bindings = new SimpleBindings();
         bindings.put("logger", logger);
         bindings.put("level", level);
@@ -142,14 +141,21 @@ public final class ScriptFilter extends AbstractFilter {
             LOGGER.error("A Script, ScriptFile or ScriptRef element must be provided for this ScriptFilter");
             return null;
         }
+        if (configuration.getScriptManager() == null) {
+            LOGGER.error("Script support is not enabled");
+            return null;
+        }
         if (script instanceof ScriptRef) {
             if (configuration.getScriptManager().getScript(script.getName()) == null) {
                 logger.error("No script with name {} has been declared.", script.getName());
+                return null;
+            }
+        } else {
+            if (!configuration.getScriptManager().addScript(script)) {
                 return null;
             }
         }
 
         return new ScriptFilter(script, configuration, match, mismatch);
     }
-
 }

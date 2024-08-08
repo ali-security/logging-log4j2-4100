@@ -1,21 +1,22 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.appender.db.jdbc;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.Serializable;
 import java.io.StringReader;
 import java.sql.Clob;
@@ -37,7 +38,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
-
 import org.apache.logging.log4j.core.Layout;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.StringLayout;
@@ -66,19 +66,25 @@ public final class JdbcDatabaseManager extends AbstractDatabaseManager {
     /**
      * Encapsulates data that {@link JdbcDatabaseManagerFactory} uses to create managers.
      */
-    private static final class FactoryData extends AbstractDatabaseManager.AbstractFactoryData {
+    static final class FactoryData extends AbstractDatabaseManager.AbstractFactoryData {
         private final ConnectionSource connectionSource;
         private final String tableName;
         private final ColumnConfig[] columnConfigs;
-        private final ColumnMapping[] columnMappings;
+        final ColumnMapping[] columnMappings;
         private final boolean immediateFail;
         private final boolean retry;
         private final long reconnectIntervalMillis;
         private final boolean truncateStrings;
 
-        protected FactoryData(final int bufferSize, final Layout<? extends Serializable> layout,
-                final ConnectionSource connectionSource, final String tableName, final ColumnConfig[] columnConfigs,
-                final ColumnMapping[] columnMappings, final boolean immediateFail, final long reconnectIntervalMillis,
+        protected FactoryData(
+                final int bufferSize,
+                final Layout<? extends Serializable> layout,
+                final ConnectionSource connectionSource,
+                final String tableName,
+                final ColumnConfig[] columnConfigs,
+                final ColumnMapping[] columnMappings,
+                final boolean immediateFail,
+                final long reconnectIntervalMillis,
                 final boolean truncateStrings) {
             super(bufferSize, layout);
             this.connectionSource = connectionSource;
@@ -95,8 +101,14 @@ public final class JdbcDatabaseManager extends AbstractDatabaseManager {
         public String toString() {
             return String.format(
                     "FactoryData [connectionSource=%s, tableName=%s, columnConfigs=%s, columnMappings=%s, immediateFail=%s, retry=%s, reconnectIntervalMillis=%s, truncateStrings=%s]",
-                    connectionSource, tableName, Arrays.toString(columnConfigs), Arrays.toString(columnMappings),
-                    immediateFail, retry, reconnectIntervalMillis, truncateStrings);
+                    connectionSource,
+                    tableName,
+                    Arrays.toString(columnConfigs),
+                    Arrays.toString(columnMappings),
+                    immediateFail,
+                    retry,
+                    reconnectIntervalMillis,
+                    truncateStrings);
         }
     }
 
@@ -109,7 +121,8 @@ public final class JdbcDatabaseManager extends AbstractDatabaseManager {
 
         @Override
         public JdbcDatabaseManager createManager(final String name, final FactoryData data) {
-            final StringBuilder sb = new StringBuilder("insert into ").append(data.tableName).append(" (");
+            final StringBuilder sb =
+                    new StringBuilder("insert into ").append(data.tableName).append(" (");
             // so this gets a little more complicated now that there are two ways to configure column mappings, but
             // both mappings follow the same exact pattern for the prepared statement
             appendColumnNames("INSERT", data, sb);
@@ -119,16 +132,25 @@ public final class JdbcDatabaseManager extends AbstractDatabaseManager {
                 for (final ColumnMapping mapping : data.columnMappings) {
                     final String mappingName = mapping.getName();
                     if (Strings.isNotEmpty(mapping.getLiteralValue())) {
-                        logger().trace("Adding INSERT VALUES literal for ColumnMapping[{}]: {}={} ", i, mappingName,
-                                mapping.getLiteralValue());
+                        logger().trace(
+                                        "Adding INSERT VALUES literal for ColumnMapping[{}]: {}={} ",
+                                        i,
+                                        mappingName,
+                                        mapping.getLiteralValue());
                         sb.append(mapping.getLiteralValue());
                     } else if (Strings.isNotEmpty(mapping.getParameter())) {
-                        logger().trace("Adding INSERT VALUES parameter for ColumnMapping[{}]: {}={} ", i, mappingName,
-                                mapping.getParameter());
+                        logger().trace(
+                                        "Adding INSERT VALUES parameter for ColumnMapping[{}]: {}={} ",
+                                        i,
+                                        mappingName,
+                                        mapping.getParameter());
                         sb.append(mapping.getParameter());
                     } else {
-                        logger().trace("Adding INSERT VALUES parameter marker for ColumnMapping[{}]: {}={} ", i,
-                                mappingName, PARAMETER_MARKER);
+                        logger().trace(
+                                        "Adding INSERT VALUES parameter marker for ColumnMapping[{}]: {}={} ",
+                                        i,
+                                        mappingName,
+                                        PARAMETER_MARKER);
                         sb.append(PARAMETER_MARKER);
                     }
                     sb.append(',');
@@ -191,8 +213,11 @@ public final class JdbcDatabaseManager extends AbstractDatabaseManager {
                     sleep(factoryData.reconnectIntervalMillis);
                     reconnect();
                 } catch (final InterruptedException | SQLException e) {
-                    logger().debug("Cannot reestablish JDBC connection to {}: {}", factoryData, e.getLocalizedMessage(),
-                            e);
+                    logger().debug(
+                                    "Cannot reestablish JDBC connection to {}: {}",
+                                    factoryData,
+                                    e.getLocalizedMessage(),
+                                    e);
                 } finally {
                     latch.countDown();
                 }
@@ -207,7 +232,6 @@ public final class JdbcDatabaseManager extends AbstractDatabaseManager {
         public String toString() {
             return String.format("Reconnector [latch=%s, shutdown=%s]", latch, shutdown);
         }
-
     }
 
     private static final class ResultSetColumnMetaData {
@@ -228,23 +252,33 @@ public final class JdbcDatabaseManager extends AbstractDatabaseManager {
 
         public ResultSetColumnMetaData(final ResultSetMetaData rsMetaData, final int j) throws SQLException {
             // @formatter:off
-            this(rsMetaData.getSchemaName(j),
-                 rsMetaData.getCatalogName(j),
-                 rsMetaData.getTableName(j),
-                 rsMetaData.getColumnName(j),
-                 rsMetaData.getColumnLabel(j),
-                 rsMetaData.getColumnDisplaySize(j),
-                 rsMetaData.getColumnType(j),
-                 rsMetaData.getColumnTypeName(j),
-                 rsMetaData.getColumnClassName(j),
-                 rsMetaData.getPrecision(j),
-                 rsMetaData.getScale(j));
+            this(
+                    rsMetaData.getSchemaName(j),
+                    rsMetaData.getCatalogName(j),
+                    rsMetaData.getTableName(j),
+                    rsMetaData.getColumnName(j),
+                    rsMetaData.getColumnLabel(j),
+                    rsMetaData.getColumnDisplaySize(j),
+                    rsMetaData.getColumnType(j),
+                    rsMetaData.getColumnTypeName(j),
+                    rsMetaData.getColumnClassName(j),
+                    rsMetaData.getPrecision(j),
+                    rsMetaData.getScale(j));
             // @formatter:on
         }
 
-        private ResultSetColumnMetaData(final String schemaName, final String catalogName, final String tableName,
-                final String name, final String label, final int displaySize, final int type, final String typeName,
-                final String className, final int precision, final int scale) {
+        private ResultSetColumnMetaData(
+                final String schemaName,
+                final String catalogName,
+                final String tableName,
+                final String name,
+                final String label,
+                final int displaySize,
+                final int type,
+                final String typeName,
+                final String className,
+                final int precision,
+                final int scale) {
             this.schemaName = schemaName;
             this.catalogName = catalogName;
             this.tableName = tableName;
@@ -259,12 +293,11 @@ public final class JdbcDatabaseManager extends AbstractDatabaseManager {
             this.scale = scale;
             // TODO How about also using the className?
             // @formatter:off
-            this.isStringType =
-                    type == Types.CHAR ||
-                    type == Types.LONGNVARCHAR ||
-                    type == Types.LONGVARCHAR ||
-                    type == Types.NVARCHAR ||
-                    type == Types.VARCHAR;
+            this.isStringType = type == Types.CHAR
+                    || type == Types.LONGNVARCHAR
+                    || type == Types.LONGVARCHAR
+                    || type == Types.NVARCHAR
+                    || type == Types.VARCHAR;
             // @formatter:on
         }
 
@@ -324,8 +357,19 @@ public final class JdbcDatabaseManager extends AbstractDatabaseManager {
         public String toString() {
             return String.format(
                     "ColumnMetaData [schemaName=%s, catalogName=%s, tableName=%s, name=%s, nameKey=%s, label=%s, displaySize=%s, type=%s, typeName=%s, className=%s, precision=%s, scale=%s, isStringType=%s]",
-                    schemaName, catalogName, tableName, name, nameKey, label, displaySize, type, typeName, className,
-                    precision, scale, isStringType);
+                    schemaName,
+                    catalogName,
+                    tableName,
+                    name,
+                    nameKey,
+                    label,
+                    displaySize,
+                    type,
+                    typeName,
+                    className,
+                    precision,
+                    scale,
+                    isStringType);
         }
 
         public String truncate(final String string) {
@@ -355,8 +399,13 @@ public final class JdbcDatabaseManager extends AbstractDatabaseManager {
             for (final ColumnMapping colMapping : data.columnMappings) {
                 final String columnName = colMapping.getName();
                 appendColumnName(i, columnName, sb);
-                logger().trace(messagePattern, sqlVerb, colMapping.getClass().getSimpleName(), i, columnName,
-                        colMapping);
+                logger().trace(
+                                messagePattern,
+                                sqlVerb,
+                                colMapping.getClass().getSimpleName(),
+                                i,
+                                columnName,
+                                colMapping);
                 i++;
             }
         }
@@ -364,8 +413,7 @@ public final class JdbcDatabaseManager extends AbstractDatabaseManager {
             for (final ColumnConfig colConfig : data.columnConfigs) {
                 final String columnName = colConfig.getColumnName();
                 appendColumnName(i, columnName, sb);
-                logger().trace(messagePattern, sqlVerb, colConfig.getClass().getSimpleName(), i, columnName,
-                        colConfig);
+                logger().trace(messagePattern, sqlVerb, colConfig.getClass().getSimpleName(), i, columnName, colConfig);
                 i++;
             }
         }
@@ -388,11 +436,24 @@ public final class JdbcDatabaseManager extends AbstractDatabaseManager {
      * {@link #getManager(String, int, Layout, ConnectionSource, String, ColumnConfig[], ColumnMapping[], boolean, long)}
      */
     @Deprecated
-    public static JdbcDatabaseManager getJDBCDatabaseManager(final String name, final int bufferSize,
-            final ConnectionSource connectionSource, final String tableName, final ColumnConfig[] columnConfigs) {
+    public static JdbcDatabaseManager getJDBCDatabaseManager(
+            final String name,
+            final int bufferSize,
+            final ConnectionSource connectionSource,
+            final String tableName,
+            final ColumnConfig[] columnConfigs) {
         return getManager(
-                name, new FactoryData(bufferSize, null, connectionSource, tableName, columnConfigs,
-                        new ColumnMapping[0], false, AbstractDatabaseAppender.DEFAULT_RECONNECT_INTERVAL_MILLIS, true),
+                name,
+                new FactoryData(
+                        bufferSize,
+                        null,
+                        connectionSource,
+                        tableName,
+                        columnConfigs,
+                        ColumnMapping.EMPTY_ARRAY,
+                        false,
+                        AbstractDatabaseAppender.DEFAULT_RECONNECT_INTERVAL_MILLIS,
+                        true),
                 getFactory());
     }
 
@@ -409,11 +470,27 @@ public final class JdbcDatabaseManager extends AbstractDatabaseManager {
      * @return a new or existing JDBC manager as applicable.
      */
     @Deprecated
-    public static JdbcDatabaseManager getManager(final String name, final int bufferSize,
-            final Layout<? extends Serializable> layout, final ConnectionSource connectionSource,
-            final String tableName, final ColumnConfig[] columnConfigs, final ColumnMapping[] columnMappings) {
-        return getManager(name, new FactoryData(bufferSize, layout, connectionSource, tableName, columnConfigs,
-                columnMappings, false, AbstractDatabaseAppender.DEFAULT_RECONNECT_INTERVAL_MILLIS, true), getFactory());
+    public static JdbcDatabaseManager getManager(
+            final String name,
+            final int bufferSize,
+            final Layout<? extends Serializable> layout,
+            final ConnectionSource connectionSource,
+            final String tableName,
+            final ColumnConfig[] columnConfigs,
+            final ColumnMapping[] columnMappings) {
+        return getManager(
+                name,
+                new FactoryData(
+                        bufferSize,
+                        layout,
+                        connectionSource,
+                        tableName,
+                        columnConfigs,
+                        columnMappings,
+                        false,
+                        AbstractDatabaseAppender.DEFAULT_RECONNECT_INTERVAL_MILLIS,
+                        true),
+                getFactory());
     }
 
     /**
@@ -421,24 +498,42 @@ public final class JdbcDatabaseManager extends AbstractDatabaseManager {
      *
      * @param name The name of the manager, which should include connection details and hashed passwords where possible.
      * @param bufferSize The size of the log event buffer.
-     * @param layout
+     * @param layout the Appender-level layout
      * @param connectionSource The source for connections to the database.
      * @param tableName The name of the database table to insert log events into.
      * @param columnConfigs Configuration information about the log table columns.
      * @param columnMappings column mapping configuration (including type conversion).
-     * @param reconnectIntervalMillis
-     * @param immediateFail
+     * @param reconnectIntervalMillis How often to reconnect to the database when a SQL exception is detected.
+     * @param immediateFail Whether to fail immediately with a {@link AppenderLoggingException} when connecting
+     * to JDBC fails.
      * @return a new or existing JDBC manager as applicable.
      * @deprecated use
      * {@link #getManager(String, int, Layout, ConnectionSource, String, ColumnConfig[], ColumnMapping[], boolean, long)}
      */
     @Deprecated
-    public static JdbcDatabaseManager getManager(final String name, final int bufferSize,
-            final Layout<? extends Serializable> layout, final ConnectionSource connectionSource,
-            final String tableName, final ColumnConfig[] columnConfigs, final ColumnMapping[] columnMappings,
-            final boolean immediateFail, final long reconnectIntervalMillis) {
-        return getManager(name, new FactoryData(bufferSize, null, connectionSource, tableName, columnConfigs,
-                columnMappings, false, AbstractDatabaseAppender.DEFAULT_RECONNECT_INTERVAL_MILLIS, true), getFactory());
+    public static JdbcDatabaseManager getManager(
+            final String name,
+            final int bufferSize,
+            final Layout<? extends Serializable> layout,
+            final ConnectionSource connectionSource,
+            final String tableName,
+            final ColumnConfig[] columnConfigs,
+            final ColumnMapping[] columnMappings,
+            final boolean immediateFail,
+            final long reconnectIntervalMillis) {
+        return getManager(
+                name,
+                new FactoryData(
+                        bufferSize,
+                        null,
+                        connectionSource,
+                        tableName,
+                        columnConfigs,
+                        columnMappings,
+                        false,
+                        AbstractDatabaseAppender.DEFAULT_RECONNECT_INTERVAL_MILLIS,
+                        true),
+                getFactory());
     }
 
     /**
@@ -457,25 +552,47 @@ public final class JdbcDatabaseManager extends AbstractDatabaseManager {
      * @param truncateStrings Whether or not to truncate strings to match column metadata.
      * @return a new or existing JDBC manager as applicable.
      */
-    public static JdbcDatabaseManager getManager(final String name, final int bufferSize,
-            final Layout<? extends Serializable> layout, final ConnectionSource connectionSource,
-            final String tableName, final ColumnConfig[] columnConfigs, final ColumnMapping[] columnMappings,
-            final boolean immediateFail, final long reconnectIntervalMillis, final boolean truncateStrings) {
-        return getManager(name, new FactoryData(bufferSize, layout, connectionSource, tableName, columnConfigs,
-                columnMappings, immediateFail, reconnectIntervalMillis, truncateStrings), getFactory());
+    public static JdbcDatabaseManager getManager(
+            final String name,
+            final int bufferSize,
+            final Layout<? extends Serializable> layout,
+            final ConnectionSource connectionSource,
+            final String tableName,
+            final ColumnConfig[] columnConfigs,
+            final ColumnMapping[] columnMappings,
+            final boolean immediateFail,
+            final long reconnectIntervalMillis,
+            final boolean truncateStrings) {
+        return getManager(
+                name,
+                new FactoryData(
+                        bufferSize,
+                        layout,
+                        connectionSource,
+                        tableName,
+                        columnConfigs,
+                        columnMappings,
+                        immediateFail,
+                        reconnectIntervalMillis,
+                        truncateStrings),
+                getFactory());
     }
 
     // NOTE: prepared statements are prepared in this order: column mappings, then column configs
     private final List<ColumnConfig> columnConfigs;
     private final String sqlStatement;
-    private final FactoryData factoryData;
+    // Used in tests
+    final FactoryData factoryData;
     private volatile Connection connection;
     private volatile PreparedStatement statement;
     private volatile Reconnector reconnector;
     private volatile boolean isBatchSupported;
     private volatile Map<String, ResultSetColumnMetaData> columnMetaData;
 
-    private JdbcDatabaseManager(final String name, final String sqlStatement, final List<ColumnConfig> columnConfigs,
+    private JdbcDatabaseManager(
+            final String name,
+            final String sqlStatement,
+            final List<ColumnConfig> columnConfigs,
             final FactoryData factoryData) {
         super(name, factoryData.getBufferSize());
         this.sqlStatement = sqlStatement;
@@ -504,11 +621,13 @@ public final class JdbcDatabaseManager extends AbstractDatabaseManager {
                 reconnector.latch();
                 if (connection == null) {
                     throw new AppenderLoggingException(
-                            "Error writing to JDBC Manager '%s': JDBC connection not available [%s]", getName(), fieldsToString());
+                            "Error writing to JDBC Manager '%s': JDBC connection not available [%s]",
+                            getName(), fieldsToString());
                 }
                 if (statement == null) {
                     throw new AppenderLoggingException(
-                            "Error writing to JDBC Manager '%s': JDBC statement not available [%s].", getName(), connection, fieldsToString());
+                            "Error writing to JDBC Manager '%s': JDBC statement not available [%s].",
+                            getName(), connection, fieldsToString());
                 }
             }
         }
@@ -560,8 +679,8 @@ public final class JdbcDatabaseManager extends AbstractDatabaseManager {
                 this.connection.commit();
             }
         } catch (final SQLException e) {
-            throw new DbAppenderLoggingException(e, "Failed to commit transaction logging event or flushing buffer [%s]",
-                    fieldsToString());
+            throw new DbAppenderLoggingException(
+                    e, "Failed to commit transaction logging event or flushing buffer [%s]", fieldsToString());
         } finally {
             closeResources(true);
         }
@@ -577,8 +696,12 @@ public final class JdbcDatabaseManager extends AbstractDatabaseManager {
                 // Database connection has likely gone stale.
                 final Throwable cause = e.getCause();
                 final Throwable actual = cause == null ? e : cause;
-                logger().debug("{} committing and closing connection: {}", actual, actual.getClass().getSimpleName(),
-                        e.toString(), e);
+                logger().debug(
+                                "{} committing and closing connection: {}",
+                                actual,
+                                actual.getClass().getSimpleName(),
+                                e.toString(),
+                                e);
             }
         }
         if (factoryData.connectionSource != null) {
@@ -587,6 +710,9 @@ public final class JdbcDatabaseManager extends AbstractDatabaseManager {
         return true;
     }
 
+    @SuppressFBWarnings(
+            value = "SQL_INJECTION_JDBC",
+            justification = "The SQL statement is generated based on the configuration file.")
     private void connectAndPrepare() throws SQLException {
         logger().debug("Acquiring JDBC connection from {}", this.getConnectionSource());
         this.connection = getConnectionSource().getConnection();
@@ -636,7 +762,13 @@ public final class JdbcDatabaseManager extends AbstractDatabaseManager {
     private String fieldsToString() {
         return String.format(
                 "columnConfigs=%s, sqlStatement=%s, factoryData=%s, connection=%s, statement=%s, reconnector=%s, isBatchSupported=%s, columnMetaData=%s",
-                columnConfigs, sqlStatement, factoryData, connection, statement, reconnector, isBatchSupported,
+                columnConfigs,
+                sqlStatement,
+                factoryData,
+                connection,
+                statement,
+                reconnector,
+                isBatchSupported,
                 columnMetaData);
     }
 
@@ -652,6 +784,9 @@ public final class JdbcDatabaseManager extends AbstractDatabaseManager {
         return factoryData.tableName;
     }
 
+    @SuppressFBWarnings(
+            value = "SQL_INJECTION_JDBC",
+            justification = "The SQL statement is generated based on the configuration file.")
     private void initColumnMetaData() throws SQLException {
         // Could use:
         // this.connection.getMetaData().getColumns(catalog, schemaPattern, tableNamePattern, columnNamePattern);
@@ -670,8 +805,9 @@ public final class JdbcDatabaseManager extends AbstractDatabaseManager {
                 }
             } else {
                 logger().warn(
-                        "{}: truncateStrings is true and ResultSetMetaData is null for statement: {}; manager will not perform truncation.",
-                        getClass().getSimpleName(), mdStatement);
+                                "{}: truncateStrings is true and ResultSetMetaData is null for statement: {}; manager will not perform truncation.",
+                                getClass().getSimpleName(),
+                                mdStatement);
             }
         }
     }
@@ -707,13 +843,17 @@ public final class JdbcDatabaseManager extends AbstractDatabaseManager {
             try {
                 reconnector.reconnect();
             } catch (final SQLException reconnectEx) {
-                logger().debug("Cannot reestablish JDBC connection to {}: {}; starting reconnector thread {}",
-                        factoryData, reconnectEx, reconnector.getName(), reconnectEx);
+                logger().debug(
+                                "Cannot reestablish JDBC connection to {}: {}; starting reconnector thread {}",
+                                factoryData,
+                                reconnectEx,
+                                reconnector.getName(),
+                                reconnectEx);
                 reconnector.start();
                 reconnector.latch();
                 if (connection == null || statement == null) {
-                    throw new AppenderLoggingException(exception, "Error sending to %s for %s [%s]", getName(),
-                            factoryData, fieldsToString());
+                    throw new AppenderLoggingException(
+                            exception, "Error sending to %s for %s [%s]", getName(), factoryData, fieldsToString());
                 }
             }
         }
@@ -730,10 +870,15 @@ public final class JdbcDatabaseManager extends AbstractDatabaseManager {
                     final String key = Strings.isEmpty(source) ? mapping.getName() : source;
                     final Object value = map.getValue(key);
                     if (logger().isTraceEnabled()) {
-                        final String valueStr = value instanceof String ? "\"" + value + "\""
-                                : Objects.toString(value, null);
-                        logger().trace("{} setObject({}, {}) for key '{}' and mapping '{}'", simpleName, j, valueStr,
-                                key, mapping.getName());
+                        final String valueStr =
+                                value instanceof String ? "\"" + value + "\"" : Objects.toString(value, null);
+                        logger().trace(
+                                        "{} setObject({}, {}) for key '{}' and mapping '{}'",
+                                        simpleName,
+                                        j,
+                                        valueStr,
+                                        key,
+                                        mapping.getName());
                     }
                     setStatementObject(j, mapping.getNameKey(), value);
                     j++;
@@ -788,8 +933,11 @@ public final class JdbcDatabaseManager extends AbstractDatabaseManager {
                     value = resultSetColumnMetaData.truncate(value.toString());
                 }
             } else {
-                logger().error("Missing ResultSetColumnMetaData for {}, connection={}, statement={}", nameKey,
-                        connection, statement);
+                logger().error(
+                                "Missing ResultSetColumnMetaData for {}, connection={}, statement={}",
+                                nameKey,
+                                connection,
+                                statement);
             }
         }
         return value;
@@ -818,8 +966,10 @@ public final class JdbcDatabaseManager extends AbstractDatabaseManager {
                     } else if (ThreadContextStack.class.isAssignableFrom(mapping.getType())) {
                         this.statement.setObject(j++, event.getContextStack().asList());
                     } else if (Date.class.isAssignableFrom(mapping.getType())) {
-                        this.statement.setObject(j++, DateTypeConverter.fromMillis(event.getTimeMillis(),
-                                mapping.getType().asSubclass(Date.class)));
+                        this.statement.setObject(
+                                j++,
+                                DateTypeConverter.fromMillis(
+                                        event.getTimeMillis(), mapping.getType().asSubclass(Date.class)));
                     } else {
                         final StringLayout layout = mapping.getLayout();
                         if (layout != null) {
@@ -828,8 +978,8 @@ public final class JdbcDatabaseManager extends AbstractDatabaseManager {
                             } else if (NClob.class.isAssignableFrom(mapping.getType())) {
                                 this.statement.setNClob(j++, new StringReader(layout.toSerializable(event)));
                             } else {
-                                final Object value = TypeConverters.convert(layout.toSerializable(event),
-                                        mapping.getType(), null);
+                                final Object value =
+                                        TypeConverters.convert(layout.toSerializable(event), mapping.getType(), null);
                                 setStatementObject(j++, mapping.getNameKey(), value);
                             }
                         }
@@ -847,11 +997,21 @@ public final class JdbcDatabaseManager extends AbstractDatabaseManager {
                         this.statement.setClob(j++, reader);
                     }
                 } else if (column.isUnicode()) {
-                    this.statement.setNString(j++, Objects.toString(
-                            truncate(column.getColumnNameKey(), column.getLayout().toSerializable(event)), null));
+                    this.statement.setNString(
+                            j++,
+                            Objects.toString(
+                                    truncate(
+                                            column.getColumnNameKey(),
+                                            column.getLayout().toSerializable(event)),
+                                    null));
                 } else {
-                    this.statement.setString(j++, Objects.toString(
-                            truncate(column.getColumnNameKey(), column.getLayout().toSerializable(event)), null));
+                    this.statement.setString(
+                            j++,
+                            Objects.toString(
+                                    truncate(
+                                            column.getColumnNameKey(),
+                                            column.getLayout().toSerializable(event)),
+                                    null));
                 }
             }
 
@@ -863,12 +1023,13 @@ public final class JdbcDatabaseManager extends AbstractDatabaseManager {
                 logger().debug("executeUpdate = {} for {}", executeUpdate, this.statement);
                 if (executeUpdate == 0) {
                     throw new AppenderLoggingException(
-                            "No records inserted in database table for log event in JDBC manager [%s].", fieldsToString());
+                            "No records inserted in database table for log event in JDBC manager [%s].",
+                            fieldsToString());
                 }
             }
         } catch (final SQLException e) {
-            throw new DbAppenderLoggingException(e, "Failed to insert record for log event in JDBC manager: %s [%s]", e,
-                    fieldsToString());
+            throw new DbAppenderLoggingException(
+                    e, "Failed to insert record for log event in JDBC manager: %s [%s]", e, fieldsToString());
         } finally {
             // Release ASAP
             try {
@@ -901,5 +1062,4 @@ public final class JdbcDatabaseManager extends AbstractDatabaseManager {
             }
         }
     }
-
 }

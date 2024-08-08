@@ -1,18 +1,18 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.spi;
 
@@ -20,10 +20,9 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-
 import org.apache.logging.log4j.util.BiConsumer;
-import org.apache.logging.log4j.util.ReadOnlyStringMap;
 import org.apache.logging.log4j.util.PropertiesUtil;
+import org.apache.logging.log4j.util.ReadOnlyStringMap;
 import org.apache.logging.log4j.util.TriConsumer;
 
 /**
@@ -44,40 +43,30 @@ public class DefaultThreadContextMap implements ThreadContextMap, ReadOnlyString
     private final boolean useMap;
     private final ThreadLocal<Map<String, String>> localMap;
 
-    private static boolean inheritableMap;
-    
-    static {
-        init();
-    }
-
-    // LOG4J2-479: by default, use a plain ThreadLocal, only use InheritableThreadLocal if configured.
-    // (This method is package protected for JUnit tests.)
-    static ThreadLocal<Map<String, String>> createThreadLocalMap(final boolean isMapEnabled) {
-        if (inheritableMap) {
-            return new InheritableThreadLocal<Map<String, String>>() {
-                @Override
-                protected Map<String, String> childValue(final Map<String, String> parentValue) {
-                    return parentValue != null && isMapEnabled //
-                    ? Collections.unmodifiableMap(new HashMap<>(parentValue)) //
-                            : null;
-                }
-            };
-        }
-        // if not inheritable, return plain ThreadLocal with null as initial value
-        return new ThreadLocal<>();
-    }
-
-    static void init() {
-        inheritableMap = PropertiesUtil.getProperties().getBooleanProperty(INHERITABLE_MAP);
-    }
-    
     public DefaultThreadContextMap() {
         this(true);
     }
 
+    /**
+     * @deprecated Since 2.24.0. See {@link Provider#getThreadContextMap()} on how to obtain a no-op map.
+     */
+    @Deprecated
     public DefaultThreadContextMap(final boolean useMap) {
+        this(useMap, PropertiesUtil.getProperties());
+    }
+
+    DefaultThreadContextMap(final boolean useMap, final PropertiesUtil properties) {
         this.useMap = useMap;
-        this.localMap = createThreadLocalMap(useMap);
+        localMap = properties.getBooleanProperty(INHERITABLE_MAP)
+                ? new InheritableThreadLocal<Map<String, String>>() {
+                    @Override
+                    protected Map<String, String> childValue(final Map<String, String> parentValue) {
+                        return parentValue != null && useMap
+                                ? Collections.unmodifiableMap(new HashMap<>(parentValue))
+                                : null;
+                    }
+                }
+                : new ThreadLocal<Map<String, String>>();
     }
 
     @Override
@@ -153,10 +142,9 @@ public class DefaultThreadContextMap implements ThreadContextMap, ReadOnlyString
             return;
         }
         for (final Map.Entry<String, String> entry : map.entrySet()) {
-            //BiConsumer should be able to handle values of any type V. In our case the values are of type String.
+            // BiConsumer should be able to handle values of any type V. In our case the values are of type String.
             @SuppressWarnings("unchecked")
-            final
-            V value = (V) entry.getValue();
+            final V value = (V) entry.getValue();
             action.accept(entry.getKey(), value);
         }
     }
@@ -168,10 +156,9 @@ public class DefaultThreadContextMap implements ThreadContextMap, ReadOnlyString
             return;
         }
         for (final Map.Entry<String, String> entry : map.entrySet()) {
-            //TriConsumer should be able to handle values of any type V. In our case the values are of type String.
+            // TriConsumer should be able to handle values of any type V. In our case the values are of type String.
             @SuppressWarnings("unchecked")
-            final
-            V value = (V) entry.getValue();
+            final V value = (V) entry.getValue();
             action.accept(entry.getKey(), value, state);
         }
     }

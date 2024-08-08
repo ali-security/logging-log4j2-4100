@@ -1,18 +1,18 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.flume.appender;
 
@@ -23,7 +23,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.zip.GZIPOutputStream;
-
 import org.apache.flume.event.SimpleEvent;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LoggingException;
@@ -39,6 +38,7 @@ import org.apache.logging.log4j.message.MapMessage;
 import org.apache.logging.log4j.message.Message;
 import org.apache.logging.log4j.message.StructuredDataId;
 import org.apache.logging.log4j.message.StructuredDataMessage;
+import org.apache.logging.log4j.util.Constants;
 import org.apache.logging.log4j.util.ReadOnlyStringMap;
 import org.apache.logging.log4j.util.Strings;
 
@@ -79,8 +79,14 @@ public class FlumeEvent extends SimpleEvent implements LogEvent {
      * @param eventPrefix The value to prefix to event keys.
      * @param compress If true the event body should be compressed.
      */
-    public FlumeEvent(final LogEvent event, final String includes, final String excludes, final String required,
-                      String mdcPrefix, String eventPrefix, final boolean compress) {
+    public FlumeEvent(
+            final LogEvent event,
+            final String includes,
+            final String excludes,
+            final String required,
+            String mdcPrefix,
+            String eventPrefix,
+            final boolean compress) {
         this.event = event;
         this.compress = compress;
         final Map<String, String> headers = getHeaders();
@@ -130,14 +136,13 @@ public class FlumeEvent extends SimpleEvent implements LogEvent {
                 }
             }
         }
-        final String guid =  UuidUtil.getTimeBasedUuid().toString();
+        final String guid = UuidUtil.getTimeBasedUuid().toString();
         final Message message = event.getMessage();
         if (message instanceof MapMessage) {
             // Add the guid to the Map so that it can be included in the Layout.
-        	@SuppressWarnings("unchecked")
-            final
-			MapMessage<?, String> stringMapMessage = (MapMessage<?, String>) message;
-        	stringMapMessage.put(GUID, guid);
+            @SuppressWarnings("unchecked")
+            final MapMessage<?, String> stringMapMessage = (MapMessage<?, String>) message;
+            stringMapMessage.put(GUID, guid);
             if (message instanceof StructuredDataMessage) {
                 addStructuredData(eventPrefix, headers, (StructuredDataMessage) message);
             }
@@ -149,8 +154,8 @@ public class FlumeEvent extends SimpleEvent implements LogEvent {
         addContextData(mdcPrefix, headers, contextMap);
     }
 
-    protected void addStructuredData(final String prefix, final Map<String, String> fields,
-                                     final StructuredDataMessage msg) {
+    protected void addStructuredData(
+            final String prefix, final Map<String, String> fields, final StructuredDataMessage msg) {
         fields.put(prefix + EVENT_TYPE, msg.getType());
         final StructuredDataId id = msg.getId();
         fields.put(prefix + EVENT_ID, id.getName());
@@ -163,8 +168,8 @@ public class FlumeEvent extends SimpleEvent implements LogEvent {
         }
     }
 
-    protected void addContextData(final String prefix, final Map<String, String> fields,
-                                  final Map<String, String> context) {
+    protected void addContextData(
+            final String prefix, final Map<String, String> fields, final Map<String, String> context) {
         final Map<String, String> map = new HashMap<>();
         for (final Map.Entry<String, String> entry : context.entrySet()) {
             if (entry.getKey() != null && entry.getValue() != null) {
@@ -176,10 +181,10 @@ public class FlumeEvent extends SimpleEvent implements LogEvent {
         context.putAll(map);
     }
 
-	@Override
-	public LogEvent toImmutable() {
-		return Log4jLogEvent.createMemento(this);
-	}
+    @Override
+    public LogEvent toImmutable() {
+        return Log4jLogEvent.createMemento(this);
+    }
 
     /**
      * Set the body in the event.
@@ -188,12 +193,12 @@ public class FlumeEvent extends SimpleEvent implements LogEvent {
     @Override
     public void setBody(final byte[] body) {
         if (body == null || body.length == 0) {
-            super.setBody(new byte[0]);
+            super.setBody(Constants.EMPTY_BYTE_ARRAY);
             return;
         }
         if (compress) {
             final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            try (GZIPOutputStream os = new GZIPOutputStream(baos)) {
+            try (final GZIPOutputStream os = new GZIPOutputStream(baos)) {
                 os.write(body);
             } catch (final IOException ioe) {
                 throw new LoggingException("Unable to compress message", ioe);
@@ -377,5 +382,4 @@ public class FlumeEvent extends SimpleEvent implements LogEvent {
     public void setEndOfBatch(final boolean endOfBatch) {
         event.setEndOfBatch(endOfBatch);
     }
-
 }

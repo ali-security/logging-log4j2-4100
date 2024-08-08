@@ -1,18 +1,18 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core;
 
@@ -45,6 +45,11 @@ public interface Appender extends LifeCycle {
     String ELEMENT_TYPE = "appender";
 
     /**
+     * Empty array.
+     */
+    Appender[] EMPTY_ARRAY = {};
+
+    /**
      * Logs a LogEvent using whatever logic this Appender wishes to use. It is typically recommended to use a
      * bridge pattern not only for the benefits from decoupling an Appender from its implementation, but it is also
      * handy for sharing resources which may require some form of locking.
@@ -52,7 +57,6 @@ public interface Appender extends LifeCycle {
      * @param event The LogEvent.
      */
     void append(LogEvent event);
-
 
     /**
      * Gets the name of this Appender.

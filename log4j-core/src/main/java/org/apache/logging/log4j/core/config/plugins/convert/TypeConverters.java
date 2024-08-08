@@ -1,22 +1,24 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package org.apache.logging.log4j.core.config.plugins.convert;
 
+import static org.apache.logging.log4j.util.Strings.toRootLowerCase;
+
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.File;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -32,13 +34,12 @@ import java.security.Provider;
 import java.security.Security;
 import java.util.UUID;
 import java.util.regex.Pattern;
-
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.core.appender.rolling.action.Duration;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
 import org.apache.logging.log4j.core.util.CronExpression;
 import org.apache.logging.log4j.status.StatusLogger;
+import org.apache.logging.log4j.util.Constants;
 import org.apache.logging.log4j.util.LoaderUtil;
 
 /**
@@ -109,7 +110,7 @@ public final class TypeConverters {
         public byte[] convert(final String value) {
             byte[] bytes;
             if (value == null || value.isEmpty()) {
-                bytes = new byte[0];
+                bytes = Constants.EMPTY_BYTE_ARRAY;
             } else if (value.startsWith(PREFIX_BASE64)) {
                 final String lexicalXSDBase64Binary = value.substring(PREFIX_BASE64.length());
                 bytes = Base64Converter.parseBase64Binary(lexicalXSDBase64Binary);
@@ -177,7 +178,7 @@ public final class TypeConverters {
     public static class ClassConverter implements TypeConverter<Class<?>> {
         @Override
         public Class<?> convert(final String s) throws ClassNotFoundException {
-            switch (s.toLowerCase()) {
+            switch (toRootLowerCase(s)) {
                 case "boolean":
                     return boolean.class;
                 case "byte":
@@ -199,7 +200,6 @@ public final class TypeConverters {
                 default:
                     return LoaderUtil.loadClass(s);
             }
-
         }
     }
 
@@ -223,14 +223,17 @@ public final class TypeConverters {
     }
 
     /**
-     * Converts a {@link String} into a {@link Duration}.
+     * Converts a {@link String} into a {@link org.apache.logging.log4j.core.appender.rolling.action.Duration}.
      * @since 2.5
+     * @deprecated since 2.24.0. A {@link java.time.Duration} converter will be available in 3.0.0.
      */
     @Plugin(name = "Duration", category = CATEGORY)
-    public static class DurationConverter implements TypeConverter<Duration> {
+    @Deprecated
+    public static class DurationConverter
+            implements TypeConverter<org.apache.logging.log4j.core.appender.rolling.action.Duration> {
         @Override
-        public Duration convert(final String s) {
-            return Duration.parse(s);
+        public org.apache.logging.log4j.core.appender.rolling.action.Duration convert(final String s) {
+            return org.apache.logging.log4j.core.appender.rolling.action.Duration.parse(s);
         }
     }
 
@@ -240,6 +243,9 @@ public final class TypeConverters {
     @Plugin(name = "File", category = CATEGORY)
     public static class FileConverter implements TypeConverter<File> {
         @Override
+        @SuppressFBWarnings(
+                value = "PATH_TRAVERSAL_IN",
+                justification = "The name of the accessed file is based on a configuration value.")
         public File convert(final String s) {
             return new File(s);
         }
@@ -307,6 +313,9 @@ public final class TypeConverters {
     @Plugin(name = "Path", category = CATEGORY)
     public static class PathConverter implements TypeConverter<Path> {
         @Override
+        @SuppressFBWarnings(
+                value = "PATH_TRAVERSAL_IN",
+                justification = "The name of the accessed file is based on a configuration value.")
         public Path convert(final String s) throws Exception {
             return Paths.get(s);
         }
@@ -409,7 +418,8 @@ public final class TypeConverters {
      */
     public static <T> T convert(final String s, final Class<? extends T> clazz, final Object defaultValue) {
         @SuppressWarnings("unchecked")
-        final TypeConverter<T> converter = (TypeConverter<T>) TypeConverterRegistry.getInstance().findCompatibleConverter(clazz);
+        final TypeConverter<T> converter =
+                (TypeConverter<T>) TypeConverterRegistry.getInstance().findCompatibleConverter(clazz);
         if (s == null) {
             // don't debug print here, resulting output is hard to understand
             // LOGGER.debug("Null string given to convert. Using default [{}].", defaultValue);
@@ -418,8 +428,12 @@ public final class TypeConverters {
         try {
             return converter.convert(s);
         } catch (final Exception e) {
-            LOGGER.warn("Error while converting string [{}] to type [{}]. Using default value [{}].", s, clazz,
-                    defaultValue, e);
+            LOGGER.warn(
+                    "Error while converting string [{}] to type [{}]. Using default value [{}].",
+                    s,
+                    clazz,
+                    defaultValue,
+                    e);
             return parseDefaultValue(converter, defaultValue);
         }
     }
@@ -441,5 +455,4 @@ public final class TypeConverters {
     }
 
     private static final Logger LOGGER = StatusLogger.getLogger();
-
 }

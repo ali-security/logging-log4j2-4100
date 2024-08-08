@@ -1,20 +1,19 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package org.apache.logging.log4j.jpl;
 
 import static org.hamcrest.Matchers.equalTo;
@@ -22,15 +21,15 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertThat;
 
 import java.lang.System.Logger;
 import java.util.List;
-
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.impl.Log4jLogEvent;
-import org.apache.logging.log4j.test.appender.ListAppender;
+import org.apache.logging.log4j.core.test.appender.ListAppender;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -83,6 +82,34 @@ public class Log4jSystemLoggerTest {
         assertEquals(LOGGER_NAME, event.getLoggerName());
         assertEquals("Informative message here.", event.getMessage().getFormattedMessage());
         assertEquals(Log4jSystemLogger.class.getName(), event.getLoggerFqcn());
+    }
+
+    @Test
+    public void testParameterizedLogging() {
+        logger.log(Logger.Level.INFO, "Hello, {0}!", "World");
+        final List<LogEvent> events = eventAppender.getEvents();
+        assertThat(events, hasSize(1));
+        final LogEvent event = events.get(0);
+        assertThat(event, instanceOf(Log4jLogEvent.class));
+        assertEquals(Level.INFO, event.getLevel());
+        assertEquals(LOGGER_NAME, event.getLoggerName());
+        assertEquals("Hello, World!", event.getMessage().getFormattedMessage());
+        assertEquals(Log4jSystemLogger.class.getName(), event.getLoggerFqcn());
+    }
+
+    @Test
+    public void testParameterizedLoggingWithThrowable() {
+        final Throwable throwable = new RuntimeException();
+        logger.log(Logger.Level.INFO, "Hello, {0}!", "World", throwable);
+        final List<LogEvent> events = eventAppender.getEvents();
+        assertThat(events, hasSize(1));
+        final LogEvent event = events.get(0);
+        assertThat(event, instanceOf(Log4jLogEvent.class));
+        assertEquals(Level.INFO, event.getLevel());
+        assertEquals(LOGGER_NAME, event.getLoggerName());
+        assertEquals("Hello, World!", event.getMessage().getFormattedMessage());
+        assertEquals(Log4jSystemLogger.class.getName(), event.getLoggerFqcn());
+        assertSame(throwable, event.getThrown());
     }
 
     @Test

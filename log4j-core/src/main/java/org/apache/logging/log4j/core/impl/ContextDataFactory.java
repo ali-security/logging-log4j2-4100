@@ -1,25 +1,24 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.impl;
 
 import java.lang.reflect.Constructor;
 import java.util.Map;
 import java.util.Map.Entry;
-
 import org.apache.logging.log4j.core.ContextDataInjector;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.util.Loader;
@@ -55,8 +54,10 @@ public class ContextDataFactory {
      * In graalvm doc (https://github.com/oracle/graal/blob/master/substratevm/LIMITATIONS.md),
      * graalvm is not support MethodHandle now, so the Constructor need not to return MethodHandle.
      */
-    private static final Constructor<?> DEFAULT_CONSTRUCTOR = createDefaultConstructor(CACHED_CLASS);
-    private static final Constructor<?> INITIAL_CAPACITY_CONSTRUCTOR = createInitialCapacityConstructor(CACHED_CLASS);
+    private static final Constructor<? extends StringMap> DEFAULT_CONSTRUCTOR = createDefaultConstructor(CACHED_CLASS);
+
+    private static final Constructor<? extends StringMap> INITIAL_CAPACITY_CONSTRUCTOR =
+            createInitialCapacityConstructor(CACHED_CLASS);
 
     private static final StringMap EMPTY_STRING_MAP = createContextData(0);
 
@@ -75,7 +76,8 @@ public class ContextDataFactory {
         }
     }
 
-    private static Constructor<?> createDefaultConstructor(final Class<? extends StringMap> cachedClass){
+    private static Constructor<? extends StringMap> createDefaultConstructor(
+            final Class<? extends StringMap> cachedClass) {
         if (cachedClass == null) {
             return null;
         }
@@ -86,7 +88,8 @@ public class ContextDataFactory {
         }
     }
 
-    private static Constructor<?> createInitialCapacityConstructor(final Class<? extends StringMap> cachedClass){
+    private static Constructor<? extends StringMap> createInitialCapacityConstructor(
+            final Class<? extends StringMap> cachedClass) {
         if (cachedClass == null) {
             return null;
         }
@@ -102,7 +105,7 @@ public class ContextDataFactory {
             return new SortedArrayStringMap();
         }
         try {
-            return (IndexedStringMap) DEFAULT_CONSTRUCTOR.newInstance();
+            return DEFAULT_CONSTRUCTOR.newInstance();
         } catch (final Throwable ignored) {
             return new SortedArrayStringMap();
         }
@@ -113,7 +116,7 @@ public class ContextDataFactory {
             return new SortedArrayStringMap(initialCapacity);
         }
         try {
-            return (IndexedStringMap) INITIAL_CAPACITY_CONSTRUCTOR.newInstance(initialCapacity);
+            return INITIAL_CAPACITY_CONSTRUCTOR.newInstance(initialCapacity);
         } catch (final Throwable ignored) {
             return new SortedArrayStringMap(initialCapacity);
         }
@@ -141,5 +144,4 @@ public class ContextDataFactory {
     public static StringMap emptyFrozenContextData() {
         return EMPTY_STRING_MAP;
     }
-
 }

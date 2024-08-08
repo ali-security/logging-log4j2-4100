@@ -1,18 +1,18 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.appender.db.jdbc;
 
@@ -20,7 +20,6 @@ import java.io.Serializable;
 import java.sql.PreparedStatement;
 import java.util.Arrays;
 import java.util.Objects;
-
 import org.apache.logging.log4j.core.Appender;
 import org.apache.logging.log4j.core.Core;
 import org.apache.logging.log4j.core.Filter;
@@ -54,7 +53,7 @@ import org.apache.logging.log4j.core.util.Booleans;
 public final class JdbcAppender extends AbstractDatabaseAppender<JdbcDatabaseManager> {
 
     public static class Builder<B extends Builder<B>> extends AbstractDatabaseAppender.Builder<B>
-        implements org.apache.logging.log4j.core.util.Builder<JdbcAppender> {
+            implements org.apache.logging.log4j.core.util.Builder<JdbcAppender> {
 
         @PluginElement("ConnectionSource")
         @Required(message = "No ConnectionSource provided")
@@ -92,14 +91,22 @@ public final class JdbcAppender extends AbstractDatabaseAppender<JdbcDatabaseMan
             final String managerName = "JdbcManager{name=" + getName() + ", bufferSize=" + bufferSize + ", tableName="
                     + tableName + ", columnConfigs=" + Arrays.toString(columnConfigs) + ", columnMappings="
                     + Arrays.toString(columnMappings) + '}';
-            final JdbcDatabaseManager manager = JdbcDatabaseManager.getManager(managerName, bufferSize, getLayout(),
-                    connectionSource, tableName, columnConfigs, columnMappings, immediateFail, reconnectIntervalMillis,
+            final JdbcDatabaseManager manager = JdbcDatabaseManager.getManager(
+                    managerName,
+                    bufferSize,
+                    getLayout(),
+                    connectionSource,
+                    tableName,
+                    columnConfigs,
+                    columnMappings,
+                    immediateFail,
+                    reconnectIntervalMillis,
                     truncateStrings);
             if (manager == null) {
                 return null;
             }
-            return new JdbcAppender(getName(), getFilter(), getLayout(), isIgnoreExceptions(), getPropertyArray(),
-                    manager);
+            return new JdbcAppender(
+                    getName(), getFilter(), getLayout(), isIgnoreExceptions(), getPropertyArray(), manager);
         }
 
         public long getReconnectIntervalMillis() {
@@ -176,7 +183,6 @@ public final class JdbcAppender extends AbstractDatabaseAppender<JdbcDatabaseMan
             this.truncateStrings = truncateStrings;
             return asBuilder();
         }
-
     }
 
     /**
@@ -186,11 +192,14 @@ public final class JdbcAppender extends AbstractDatabaseAppender<JdbcDatabaseMan
      * @deprecated use {@link #newBuilder()}
      */
     @Deprecated
-    public static <B extends Builder<B>> JdbcAppender createAppender(final String name, final String ignore,
-                                                                     final Filter filter,
-                                                                     final ConnectionSource connectionSource,
-                                                                     final String bufferSize, final String tableName,
-                                                                     final ColumnConfig[] columnConfigs) {
+    public static <B extends Builder<B>> JdbcAppender createAppender(
+            final String name,
+            final String ignore,
+            final Filter filter,
+            final ConnectionSource connectionSource,
+            final String bufferSize,
+            final String tableName,
+            final ColumnConfig[] columnConfigs) {
         Assert.requireNonEmpty(name, "Name cannot be empty");
         Objects.requireNonNull(connectionSource, "ConnectionSource cannot be null");
         Assert.requireNonEmpty(tableName, "Table name cannot be empty");
@@ -200,11 +209,14 @@ public final class JdbcAppender extends AbstractDatabaseAppender<JdbcDatabaseMan
         final boolean ignoreExceptions = Booleans.parseBoolean(ignore, true);
 
         return JdbcAppender.<B>newBuilder()
-        .setBufferSize(bufferSizeInt)
-        .setColumnConfigs(columnConfigs)
-        .setConnectionSource(connectionSource)
-        .setTableName(tableName).setName(name).setIgnoreExceptions(ignoreExceptions).setFilter(filter)
-            .build();
+                .setBufferSize(bufferSizeInt)
+                .setColumnConfigs(columnConfigs)
+                .setConnectionSource(connectionSource)
+                .setTableName(tableName)
+                .setName(name)
+                .setIgnoreExceptions(ignoreExceptions)
+                .setFilter(filter)
+                .build();
     }
 
     @PluginBuilderFactory
@@ -214,8 +226,13 @@ public final class JdbcAppender extends AbstractDatabaseAppender<JdbcDatabaseMan
 
     private final String description;
 
-    private JdbcAppender(final String name, final Filter filter, final Layout<? extends Serializable> layout,
-            final boolean ignoreExceptions, final Property[] properties, final JdbcDatabaseManager manager) {
+    private JdbcAppender(
+            final String name,
+            final Filter filter,
+            final Layout<? extends Serializable> layout,
+            final boolean ignoreExceptions,
+            final Property[] properties,
+            final JdbcDatabaseManager manager) {
         super(name, filter, layout, ignoreExceptions, properties, manager);
         this.description = this.getName() + "{ manager=" + this.getManager() + " }";
     }

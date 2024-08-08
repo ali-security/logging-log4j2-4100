@@ -1,39 +1,30 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.util;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InvalidObjectException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.StreamCorruptedException;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
+import java.io.Serializable;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-
-import org.apache.logging.log4j.status.StatusLogger;
+import org.apache.logging.log4j.util.internal.SerializationUtil;
 
 /**
  * <em>Consider this class private.</em>
@@ -58,21 +49,25 @@ import org.apache.logging.log4j.status.StatusLogger;
  *
  * @since 2.7
  */
+@InternalApi
 public class SortedArrayStringMap implements IndexedStringMap {
 
     /**
      * The default initial capacity.
      */
     private static final int DEFAULT_INITIAL_CAPACITY = 4;
+
     private static final long serialVersionUID = -5748905872274478116L;
     private static final int HASHVAL = 31;
 
-    private static final TriConsumer<String, Object, StringMap> PUT_ALL = (key, value, contextData) -> contextData.putValue(key, value);
+    private static final TriConsumer<String, Object, StringMap> PUT_ALL =
+            (key, value, contextData) -> contextData.putValue(key, value);
 
     /**
      * An empty array instance to share when the table is not inflated.
      */
-    private static final String[] EMPTY = {};
+    private static final String[] EMPTY = Strings.EMPTY_ARRAY;
+
     private static final String FROZEN = "Frozen collection cannot be modified";
 
     private transient String[] keys = EMPTY;
@@ -83,41 +78,6 @@ public class SortedArrayStringMap implements IndexedStringMap {
      */
     private transient int size;
 
-    private static final Method setObjectInputFilter;
-    private static final Method getObjectInputFilter;
-    private static final Method newObjectInputFilter;
-
-    static {
-        Method[] methods = ObjectInputStream.class.getMethods();
-        Method setMethod = null;
-        Method getMethod = null;
-        for (final Method method : methods) {
-            if (method.getName().equals("setObjectInputFilter")) {
-                setMethod = method;
-            } else if (method.getName().equals("getObjectInputFilter")) {
-                getMethod = method;
-            }
-        }
-        Method newMethod = null;
-        try {
-            if (setMethod != null) {
-                final Class<?> clazz = Class.forName("org.apache.logging.log4j.util.internal.DefaultObjectInputFilter");
-                methods = clazz.getMethods();
-                for (final Method method : methods) {
-                    if (method.getName().equals("newInstance") && Modifier.isStatic(method.getModifiers())) {
-                        newMethod = method;
-                        break;
-                    }
-                }
-            }
-        } catch (final ClassNotFoundException ex) {
-            // Ignore the exception
-        }
-        newObjectInputFilter = newMethod;
-        setObjectInputFilter = setMethod;
-        getObjectInputFilter = getMethod;
-    }
-
     /**
      * The next size value at which to resize (capacity * load factor).
      * @serial
@@ -125,6 +85,7 @@ public class SortedArrayStringMap implements IndexedStringMap {
     // If table == EMPTY_TABLE then this is the initial capacity at which the
     // table will be created when inflated.
     private int threshold;
+
     private boolean immutable;
     private transient boolean iterating;
 
@@ -151,7 +112,8 @@ public class SortedArrayStringMap implements IndexedStringMap {
     public SortedArrayStringMap(final Map<String, ?> map) {
         resize(ceilingNextPowerOfTwo(map.size()));
         for (final Map.Entry<String, ?> entry : map.entrySet()) {
-            putValue(entry.getKey(), entry.getValue());
+            // The key might not actually be a String.
+            putValue(Objects.toString(entry.getKey(), null), entry.getValue());
         }
     }
 
@@ -522,50 +484,9 @@ public class SortedArrayStringMap implements IndexedStringMap {
         if (size > 0) {
             for (int i = 0; i < size; i++) {
                 s.writeObject(keys[i]);
-                try {
-                    s.writeObject(marshall(values[i]));
-                } catch (final Exception e) {
-                    handleSerializationException(e, i, keys[i]);
-                    s.writeObject(null);
-                }
+                SerializationUtil.writeWrappedObject(
+                        (values[i] instanceof Serializable) ? (Serializable) values[i] : null, s);
             }
-        }
-    }
-
-    private static byte[] marshall(final Object obj) throws IOException {
-        if (obj == null) {
-            return null;
-        }
-        final ByteArrayOutputStream bout = new ByteArrayOutputStream();
-        try (ObjectOutputStream oos = new ObjectOutputStream(bout)) {
-            oos.writeObject(obj);
-            oos.flush();
-            return bout.toByteArray();
-        }
-    }
-
-    private static Object unmarshall(final byte[] data, final ObjectInputStream inputStream)
-            throws IOException, ClassNotFoundException {
-        final ByteArrayInputStream bin = new ByteArrayInputStream(data);
-        Collection<String> allowedClasses = null;
-        ObjectInputStream ois;
-        if (inputStream instanceof FilteredObjectInputStream) {
-            allowedClasses = ((FilteredObjectInputStream) inputStream).getAllowedClasses();
-            ois = new FilteredObjectInputStream(bin, allowedClasses);
-        } else {
-            try {
-                final Object obj = getObjectInputFilter.invoke(inputStream);
-                final Object filter = newObjectInputFilter.invoke(null, obj);
-                ois = new ObjectInputStream(bin);
-                setObjectInputFilter.invoke(ois, filter);
-            } catch (IllegalAccessException | InvocationTargetException ex) {
-                throw new StreamCorruptedException("Unable to set ObjectInputFilter on stream");
-            }
-        }
-        try {
-            return ois.readObject();
-        } finally {
-            ois.close();
         }
     }
 
@@ -586,10 +507,8 @@ public class SortedArrayStringMap implements IndexedStringMap {
      * Reconstitute the {@code SortedArrayStringMap} instance from a stream (i.e.,
      * deserialize it).
      */
-    private void readObject(final java.io.ObjectInputStream s)  throws IOException, ClassNotFoundException {
-        if (!(s instanceof FilteredObjectInputStream) && setObjectInputFilter == null) {
-            throw new IllegalArgumentException("readObject requires a FilteredObjectInputStream or an ObjectInputStream that accepts an ObjectInputFilter");
-        }
+    private void readObject(final java.io.ObjectInputStream s) throws IOException, ClassNotFoundException {
+        SerializationUtil.assertFiltered(s);
         // Read in the threshold (ignored), and any hidden stuff
         s.defaultReadObject();
 
@@ -619,18 +538,8 @@ public class SortedArrayStringMap implements IndexedStringMap {
         // Read the keys and values, and put the mappings in the arrays
         for (int i = 0; i < mappings; i++) {
             keys[i] = (String) s.readObject();
-            try {
-                final byte[] marshalledObject = (byte[]) s.readObject();
-                values[i] = marshalledObject == null ? null : unmarshall(marshalledObject, s);
-            } catch (final Exception | LinkageError error) {
-                handleSerializationException(error, i, keys[i]);
-                values[i] = null;
-            }
+            values[i] = SerializationUtil.readWrappedObject(s);
         }
         size = mappings;
-    }
-
-    private void handleSerializationException(final Throwable t, final int i, final String key) {
-        StatusLogger.getLogger().warn("Ignoring {} for key[{}] ('{}')", String.valueOf(t), i, keys[i]);
     }
 }

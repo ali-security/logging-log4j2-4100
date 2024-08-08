@@ -1,26 +1,27 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.message;
 
-import java.util.Arrays;
+import static org.apache.logging.log4j.util.StringBuilders.trimToMaxSize;
 
+import java.util.Arrays;
+import org.apache.logging.log4j.message.ParameterFormatter.MessagePatternAnalysis;
 import org.apache.logging.log4j.util.Constants;
 import org.apache.logging.log4j.util.PerformanceSensitive;
-import org.apache.logging.log4j.util.StringBuilders;
 
 /**
  * Reusable parameterized message. This message is mutable and is not safe to be accessed or modified by multiple
@@ -32,25 +33,22 @@ import org.apache.logging.log4j.util.StringBuilders;
 @PerformanceSensitive("allocation")
 public class ReusableParameterizedMessage implements ReusableMessage, ParameterVisitable, Clearable {
 
-    private static final int MIN_BUILDER_SIZE = 512;
-    private static final int MAX_PARMS = 10;
+    private static final int MAX_PARAMS = 10;
     private static final long serialVersionUID = 7800075879295123856L;
-    private transient ThreadLocal<StringBuilder> buffer; // non-static: LOG4J2-1583
 
     private String messagePattern;
+    private final MessagePatternAnalysis patternAnalysis = new MessagePatternAnalysis();
+    private final StringBuilder formatBuffer = new StringBuilder(Constants.MAX_REUSABLE_MESSAGE_SIZE);
     private int argCount;
-    private int usedCount;
-    private final int[] indices = new int[256];
     private transient Object[] varargs;
-    private transient Object[] params = new Object[MAX_PARMS];
+    private transient Object[] params = new Object[MAX_PARAMS];
     private transient Throwable throwable;
     transient boolean reserved = false; // LOG4J2-1583 prevent scrambled logs with nested logging calls
 
     /**
      * Creates a reusable message.
      */
-    public ReusableParameterizedMessage() {
-    }
+    public ReusableParameterizedMessage() {}
 
     private Object[] getTrimmedParams() {
         return varargs == null ? Arrays.copyOf(params, argCount) : varargs;
@@ -66,7 +64,7 @@ public class ReusableParameterizedMessage implements ReusableMessage, ParameterV
         Object[] result;
         if (varargs == null) {
             result = params;
-            if (emptyReplacement.length >= MAX_PARMS) {
+            if (emptyReplacement.length >= MAX_PARAMS) {
                 params = emptyReplacement;
             } else if (argCount <= emptyReplacement.length) {
                 // Bad replacement! Too small, may blow up future 10-arg messages.
@@ -79,7 +77,7 @@ public class ReusableParameterizedMessage implements ReusableMessage, ParameterV
                 result = emptyReplacement;
             } else {
                 // replacement array is too small for current content and future content: discard it
-                params = new Object[MAX_PARMS];
+                params = new Object[MAX_PARAMS];
             }
         } else {
             // The returned array will be reused by the caller in future swapParameter() calls.
@@ -119,52 +117,45 @@ public class ReusableParameterizedMessage implements ReusableMessage, ParameterV
         return new ParameterizedMessage(messagePattern, getTrimmedParams());
     }
 
-    private void init(final String messagePattern, final int argCount, final Object[] paramArray) {
+    private void init(final String messagePattern, final int argCount, final Object[] args) {
         this.varargs = null;
         this.messagePattern = messagePattern;
         this.argCount = argCount;
-        final int placeholderCount = count(messagePattern, indices);
-        initThrowable(paramArray, argCount, placeholderCount);
-        this.usedCount = Math.min(placeholderCount, argCount);
+        ParameterFormatter.analyzePattern(messagePattern, argCount, patternAnalysis);
+        this.throwable = determineThrowable(args, argCount, patternAnalysis.placeholderCount);
     }
 
-    private static int count(final String messagePattern, final int[] indices) {
-        try {
-            // try the fast path first
-            return ParameterFormatter.countArgumentPlaceholders2(messagePattern, indices);
-        } catch (final Exception ex) { // fallback if more than int[] length (256) parameter placeholders
-            return ParameterFormatter.countArgumentPlaceholders(messagePattern);
+    private static Throwable determineThrowable(final Object[] args, final int argCount, final int placeholderCount) {
+        if (placeholderCount < argCount) {
+            final Object lastArg = args[argCount - 1];
+            if (lastArg instanceof Throwable) {
+                return (Throwable) lastArg;
+            }
         }
+        return null;
     }
 
-    private void initThrowable(final Object[] params, final int argCount, final int usedParams) {
-        if (usedParams < argCount && params[argCount - 1] instanceof Throwable) {
-            this.throwable = (Throwable) params[argCount - 1];
-        } else {
-            this.throwable = null;
-        }
-    }
-
-    ReusableParameterizedMessage set(final String messagePattern, final Object... arguments) {
+    public ReusableParameterizedMessage set(final String messagePattern, final Object... arguments) {
         init(messagePattern, arguments == null ? 0 : arguments.length, arguments);
         varargs = arguments;
         return this;
     }
 
-    ReusableParameterizedMessage set(final String messagePattern, final Object p0) {
+    public ReusableParameterizedMessage set(final String messagePattern, final Object p0) {
         params[0] = p0;
         init(messagePattern, 1, params);
         return this;
     }
 
-    ReusableParameterizedMessage set(final String messagePattern, final Object p0, final Object p1) {
+    public ReusableParameterizedMessage set(final String messagePattern, final Object p0, final Object p1) {
         params[0] = p0;
         params[1] = p1;
         init(messagePattern, 2, params);
         return this;
     }
 
-    ReusableParameterizedMessage set(final String messagePattern, final Object p0, final Object p1, final Object p2) {
+    public ReusableParameterizedMessage set(
+            final String messagePattern, final Object p0, final Object p1, final Object p2) {
         params[0] = p0;
         params[1] = p1;
         params[2] = p2;
@@ -172,7 +163,8 @@ public class ReusableParameterizedMessage implements ReusableMessage, ParameterV
         return this;
     }
 
-    ReusableParameterizedMessage set(final String messagePattern, final Object p0, final Object p1, final Object p2, final Object p3) {
+    public ReusableParameterizedMessage set(
+            final String messagePattern, final Object p0, final Object p1, final Object p2, final Object p3) {
         params[0] = p0;
         params[1] = p1;
         params[2] = p2;
@@ -181,7 +173,13 @@ public class ReusableParameterizedMessage implements ReusableMessage, ParameterV
         return this;
     }
 
-    ReusableParameterizedMessage set(final String messagePattern, final Object p0, final Object p1, final Object p2, final Object p3, final Object p4) {
+    public ReusableParameterizedMessage set(
+            final String messagePattern,
+            final Object p0,
+            final Object p1,
+            final Object p2,
+            final Object p3,
+            final Object p4) {
         params[0] = p0;
         params[1] = p1;
         params[2] = p2;
@@ -191,7 +189,14 @@ public class ReusableParameterizedMessage implements ReusableMessage, ParameterV
         return this;
     }
 
-    ReusableParameterizedMessage set(final String messagePattern, final Object p0, final Object p1, final Object p2, final Object p3, final Object p4, final Object p5) {
+    public ReusableParameterizedMessage set(
+            final String messagePattern,
+            final Object p0,
+            final Object p1,
+            final Object p2,
+            final Object p3,
+            final Object p4,
+            final Object p5) {
         params[0] = p0;
         params[1] = p1;
         params[2] = p2;
@@ -202,7 +207,14 @@ public class ReusableParameterizedMessage implements ReusableMessage, ParameterV
         return this;
     }
 
-    ReusableParameterizedMessage set(final String messagePattern, final Object p0, final Object p1, final Object p2, final Object p3, final Object p4, final Object p5,
+    public ReusableParameterizedMessage set(
+            final String messagePattern,
+            final Object p0,
+            final Object p1,
+            final Object p2,
+            final Object p3,
+            final Object p4,
+            final Object p5,
             final Object p6) {
         params[0] = p0;
         params[1] = p1;
@@ -215,8 +227,16 @@ public class ReusableParameterizedMessage implements ReusableMessage, ParameterV
         return this;
     }
 
-    ReusableParameterizedMessage set(final String messagePattern, final Object p0, final Object p1, final Object p2, final Object p3, final Object p4, final Object p5,
-            final Object p6, final Object p7) {
+    public ReusableParameterizedMessage set(
+            final String messagePattern,
+            final Object p0,
+            final Object p1,
+            final Object p2,
+            final Object p3,
+            final Object p4,
+            final Object p5,
+            final Object p6,
+            final Object p7) {
         params[0] = p0;
         params[1] = p1;
         params[2] = p2;
@@ -229,8 +249,17 @@ public class ReusableParameterizedMessage implements ReusableMessage, ParameterV
         return this;
     }
 
-    ReusableParameterizedMessage set(final String messagePattern, final Object p0, final Object p1, final Object p2, final Object p3, final Object p4, final Object p5,
-            final Object p6, final Object p7, final Object p8) {
+    public ReusableParameterizedMessage set(
+            final String messagePattern,
+            final Object p0,
+            final Object p1,
+            final Object p2,
+            final Object p3,
+            final Object p4,
+            final Object p5,
+            final Object p6,
+            final Object p7,
+            final Object p8) {
         params[0] = p0;
         params[1] = p1;
         params[2] = p2;
@@ -244,8 +273,18 @@ public class ReusableParameterizedMessage implements ReusableMessage, ParameterV
         return this;
     }
 
-    ReusableParameterizedMessage set(final String messagePattern, final Object p0, final Object p1, final Object p2, final Object p3, final Object p4, final Object p5,
-            final Object p6, final Object p7, final Object p8, final Object p9) {
+    public ReusableParameterizedMessage set(
+            final String messagePattern,
+            final Object p0,
+            final Object p1,
+            final Object p2,
+            final Object p3,
+            final Object p4,
+            final Object p5,
+            final Object p6,
+            final Object p7,
+            final Object p8,
+            final Object p9) {
         params[0] = p0;
         params[1] = p1;
         params[2] = p2;
@@ -298,34 +337,18 @@ public class ReusableParameterizedMessage implements ReusableMessage, ParameterV
      */
     @Override
     public String getFormattedMessage() {
-        final StringBuilder sb = getBuffer();
-        formatTo(sb);
-        final String result = sb.toString();
-        StringBuilders.trimToMaxSize(sb, Constants.MAX_REUSABLE_MESSAGE_SIZE);
-        return result;
-    }
-
-    private StringBuilder getBuffer() {
-        if (buffer == null) {
-            buffer = new ThreadLocal<>();
+        try {
+            formatTo(formatBuffer);
+            return formatBuffer.toString();
+        } finally {
+            trimToMaxSize(formatBuffer, Constants.MAX_REUSABLE_MESSAGE_SIZE);
+            formatBuffer.setLength(0);
         }
-        StringBuilder result = buffer.get();
-        if (result == null) {
-            final int currentPatternLength = messagePattern == null ? 0 : messagePattern.length();
-            result = new StringBuilder(Math.max(MIN_BUILDER_SIZE, currentPatternLength * 2));
-            buffer.set(result);
-        }
-        result.setLength(0);
-        return result;
     }
 
     @Override
     public void formatTo(final StringBuilder builder) {
-        if (indices[0] < 0) {
-            ParameterFormatter.formatMessage(builder, messagePattern, getParams(), argCount);
-        } else {
-            ParameterFormatter.formatMessage2(builder, messagePattern, getParams(), usedCount, indices);
-        }
+        ParameterFormatter.formatMessage(builder, messagePattern, getParams(), argCount, patternAnalysis);
     }
 
     /**
@@ -340,8 +363,10 @@ public class ReusableParameterizedMessage implements ReusableMessage, ParameterV
 
     @Override
     public String toString() {
-        return "ReusableParameterizedMessage[messagePattern=" + getFormat() + ", stringArgs=" +
-                Arrays.toString(getParameters()) + ", throwable=" + getThrowable() + ']';
+        // Avoid formatting arguments!
+        // It can cause recursion, which can become pretty unpleasant while troubleshooting.
+        return "ReusableParameterizedMessage[messagePattern=" + getFormat() + ", argCount=" + getParameterCount()
+                + ", throwableProvided=" + (getThrowable() != null) + ']';
     }
 
     @Override
@@ -352,5 +377,15 @@ public class ReusableParameterizedMessage implements ReusableMessage, ParameterV
         varargs = null;
         messagePattern = null;
         throwable = null;
+        // Cut down on the memory usage after an analysis with an excessive argument count
+        final int placeholderCharIndicesMaxLength = 16;
+        if (patternAnalysis.placeholderCharIndices != null
+                && patternAnalysis.placeholderCharIndices.length > placeholderCharIndicesMaxLength) {
+            patternAnalysis.placeholderCharIndices = new int[placeholderCharIndicesMaxLength];
+        }
+    }
+
+    private Object writeReplace() {
+        return memento();
     }
 }

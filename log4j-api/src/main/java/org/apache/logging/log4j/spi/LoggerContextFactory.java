@@ -1,18 +1,18 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.spi;
 
@@ -34,7 +34,7 @@ public interface LoggerContextFactory {
      */
     default void shutdown(String fqcn, ClassLoader loader, boolean currentContext, boolean allContexts) {
         if (hasContext(fqcn, loader, currentContext)) {
-            LoggerContext ctx = getContext(fqcn, loader, null, currentContext);
+            final LoggerContext ctx = getContext(fqcn, loader, null, currentContext);
             if (ctx instanceof Terminable) {
                 ((Terminable) ctx).terminate();
             }
@@ -78,8 +78,13 @@ public interface LoggerContextFactory {
      * @param name The name of the context or null.
      * @return The LoggerContext.
      */
-    LoggerContext getContext(String fqcn, ClassLoader loader, Object externalContext, boolean currentContext,
-                             URI configLocation, String name);
+    LoggerContext getContext(
+            String fqcn,
+            ClassLoader loader,
+            Object externalContext,
+            boolean currentContext,
+            URI configLocation,
+            String name);
 
     /**
      * Removes knowledge of a LoggerContext.
@@ -87,4 +92,17 @@ public interface LoggerContextFactory {
      * @param context The context to remove.
      */
     void removeContext(LoggerContext context);
+
+    /**
+     * Determines whether or not this factory and perhaps the underlying
+     * ContextSelector behavior depend on the callers classloader.
+     *
+     * This method should be overridden by implementations, however a default method is provided which always
+     * returns {@code true} to preserve the old behavior.
+     *
+     * @since 2.15.0
+     */
+    default boolean isClassLoaderDependent() {
+        return true;
+    }
 }

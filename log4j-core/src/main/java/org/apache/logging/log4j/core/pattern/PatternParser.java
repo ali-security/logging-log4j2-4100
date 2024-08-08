@@ -1,18 +1,18 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.pattern;
 
@@ -24,7 +24,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.plugins.util.PluginManager;
@@ -103,11 +102,11 @@ public final class PatternParser {
      * Constructor.
      *
      * @param config
-     *            The current Configuration.
+     *            The current Configuration or {@code null}.
      * @param converterKey
      *            The key to lookup the converters.
      * @param expected
-     *            The expected base Class of each Converter.
+     *            The expected base Class of each Converter or {@code null}.
      */
     public PatternParser(final Configuration config, final String converterKey, final Class<?> expected) {
         this(config, converterKey, expected, null);
@@ -117,15 +116,18 @@ public final class PatternParser {
      * Constructor.
      *
      * @param config
-     *            The current Configuration.
+     *            The current Configuration or {@code null}.
      * @param converterKey
      *            The key to lookup the converters.
      * @param expectedClass
-     *            The expected base Class of each Converter.
+     *            The expected base Class of each Converter or {@code null}.
      * @param filterClass
-     *            Filter the returned plugins after calling the plugin manager.
+     *            Filter the returned plugins after calling the plugin manager, can be {@code null}.
      */
-    public PatternParser(final Configuration config, final String converterKey, final Class<?> expectedClass,
+    public PatternParser(
+            final Configuration config,
+            final String converterKey,
+            final Class<?> expectedClass,
             final Class<?> filterClass) {
         this.config = config;
         final PluginManager manager = new PluginManager(converterKey);
@@ -144,9 +146,12 @@ public final class PatternParser {
                 if (keys != null) {
                     for (final String key : keys.value()) {
                         if (converters.containsKey(key)) {
-                            LOGGER.warn("Converter key '{}' is already mapped to '{}'. " +
-                                    "Sorry, Dave, I can't let you do that! Ignoring plugin [{}].",
-                                key, converters.get(key), clazz);
+                            LOGGER.warn(
+                                    "Converter key '{}' is already mapped to '{}'. "
+                                            + "Sorry, Dave, I can't let you do that! Ignoring plugin [{}].",
+                                    key,
+                                    converters.get(key),
+                                    clazz);
                         } else {
                             converters.put(key, clazz);
                         }
@@ -163,13 +168,16 @@ public final class PatternParser {
         return parse(pattern, false, false, false);
     }
 
-    public List<PatternFormatter> parse(final String pattern, final boolean alwaysWriteExceptions,
-                                        final boolean noConsoleNoAnsi) {
+    public List<PatternFormatter> parse(
+            final String pattern, final boolean alwaysWriteExceptions, final boolean noConsoleNoAnsi) {
         return parse(pattern, alwaysWriteExceptions, false, noConsoleNoAnsi);
     }
 
-    public List<PatternFormatter> parse(final String pattern, final boolean alwaysWriteExceptions,
-           final boolean disableAnsi, final boolean noConsoleNoAnsi) {
+    public List<PatternFormatter> parse(
+            final String pattern,
+            final boolean alwaysWriteExceptions,
+            final boolean disableAnsi,
+            final boolean noConsoleNoAnsi) {
         final List<PatternFormatter> list = new ArrayList<>();
         final List<PatternConverter> converters = new ArrayList<>();
         final List<FormattingInfo> fields = new ArrayList<>();
@@ -192,7 +200,7 @@ public final class PatternParser {
                 pc = (LogEventPatternConverter) converter;
                 handlesThrowable |= pc.handlesThrowable();
             } else {
-                pc = new LiteralPatternConverter(config, Strings.EMPTY, true);
+                pc = SimpleLiteralPatternConverter.of(Strings.EMPTY);
             }
 
             FormattingInfo field;
@@ -212,14 +220,6 @@ public final class PatternParser {
 
     /**
      * Extracts the converter identifier found at the given start position.
-     * <p>
-     * After this function returns, the variable i will point to the first char after the end of the converter
-     * identifier.
-     * </p>
-     * <p>
-     * If i points to a char which is not a character acceptable at the start of a unicode identifier, the value null is
-     * returned.
-     * </p>
      *
      * @param lastChar
      *        last processed character.
@@ -233,8 +233,12 @@ public final class PatternParser {
      *        literal to be output in case format specifier in unrecognized.
      * @return position in pattern after converter.
      */
-    private static int extractConverter(final char lastChar, final String pattern, final int start,
-            final StringBuilder convBuf, final StringBuilder currentLiteral) {
+    private static int extractConverter(
+            final char lastChar,
+            final String pattern,
+            final int start,
+            final StringBuilder convBuf,
+            final StringBuilder currentLiteral) {
         int i = start;
         convBuf.setLength(0);
 
@@ -316,9 +320,12 @@ public final class PatternParser {
      * @param convertBackslashes if {@code true}, backslash characters are treated as escape characters and character
      *            sequences like "\" followed by "t" (backslash+t) are converted to special characters like '\t' (tab).
      */
-    public void parse(final String pattern, final List<PatternConverter> patternConverters,
-                      final List<FormattingInfo> formattingInfos, final boolean noConsoleNoAnsi,
-                      final boolean convertBackslashes) {
+    public void parse(
+            final String pattern,
+            final List<PatternConverter> patternConverters,
+            final List<FormattingInfo> formattingInfos,
+            final boolean noConsoleNoAnsi,
+            final boolean convertBackslashes) {
         parse(pattern, patternConverters, formattingInfos, false, noConsoleNoAnsi, convertBackslashes);
     }
 
@@ -338,9 +345,13 @@ public final class PatternParser {
      * @param convertBackslashes if {@code true}, backslash characters are treated as escape characters and character
      *            sequences like "\" followed by "t" (backslash+t) are converted to special characters like '\t' (tab).
      */
-    public void parse(final String pattern, final List<PatternConverter> patternConverters,
-            final List<FormattingInfo> formattingInfos, final boolean disableAnsi,
-            final boolean noConsoleNoAnsi, final boolean convertBackslashes) {
+    public void parse(
+            final String pattern,
+            final List<PatternConverter> patternConverters,
+            final List<FormattingInfo> formattingInfos,
+            final boolean disableAnsi,
+            final boolean noConsoleNoAnsi,
+            final boolean convertBackslashes) {
         Objects.requireNonNull(pattern, "pattern");
 
         final StringBuilder currentLiteral = new StringBuilder(BUF_SIZE);
@@ -355,146 +366,201 @@ public final class PatternParser {
             c = pattern.charAt(i++);
 
             switch (state) {
-            case LITERAL_STATE:
+                case LITERAL_STATE:
 
-                // In literal state, the last char is always a literal.
-                if (i == patternLength) {
-                    currentLiteral.append(c);
-
-                    continue;
-                }
-
-                if (c == ESCAPE_CHAR) {
-                    // peek at the next char.
-                    switch (pattern.charAt(i)) {
-                    case ESCAPE_CHAR:
+                    // In literal state, the last char is always a literal.
+                    if (i == patternLength) {
                         currentLiteral.append(c);
-                        i++; // move pointer
 
-                        break;
-
-                    default:
-
-                        if (currentLiteral.length() != 0) {
-                            patternConverters.add(new LiteralPatternConverter(config, currentLiteral.toString(),
-                                    convertBackslashes));
-                            formattingInfos.add(FormattingInfo.getDefault());
-                        }
-
-                        currentLiteral.setLength(0);
-                        currentLiteral.append(c); // append %
-                        state = ParserState.CONVERTER_STATE;
-                        formattingInfo = FormattingInfo.getDefault();
+                        continue;
                     }
-                } else {
+
+                    if (c == ESCAPE_CHAR) {
+                        // peek at the next char.
+                        switch (pattern.charAt(i)) {
+                            case ESCAPE_CHAR:
+                                currentLiteral.append(c);
+                                i++; // move pointer
+
+                                break;
+
+                            default:
+                                if (currentLiteral.length() != 0) {
+                                    patternConverters.add(
+                                            literalPattern(currentLiteral.toString(), convertBackslashes));
+                                    formattingInfos.add(FormattingInfo.getDefault());
+                                }
+
+                                currentLiteral.setLength(0);
+                                currentLiteral.append(c); // append %
+                                state = ParserState.CONVERTER_STATE;
+                                formattingInfo = FormattingInfo.getDefault();
+                        }
+                    } else {
+                        currentLiteral.append(c);
+                    }
+
+                    break;
+
+                case CONVERTER_STATE:
                     currentLiteral.append(c);
-                }
 
-                break;
+                    switch (c) {
+                        case '0':
+                            // a '0' directly after the % sign indicates zero-padding
+                            formattingInfo = new FormattingInfo(
+                                    formattingInfo.isLeftAligned(),
+                                    formattingInfo.getMinLength(),
+                                    formattingInfo.getMaxLength(),
+                                    formattingInfo.isLeftTruncate(),
+                                    true);
+                            break;
 
-            case CONVERTER_STATE:
-                currentLiteral.append(c);
+                        case '-':
+                            formattingInfo = new FormattingInfo(
+                                    true,
+                                    formattingInfo.getMinLength(),
+                                    formattingInfo.getMaxLength(),
+                                    formattingInfo.isLeftTruncate(),
+                                    formattingInfo.isZeroPad());
+                            break;
 
-                switch (c) {
-                case '0':
-                    // a '0' directly after the % sign indicates zero-padding
-                    formattingInfo = new FormattingInfo(formattingInfo.isLeftAligned(), formattingInfo.getMinLength(),
-                            formattingInfo.getMaxLength(), formattingInfo.isLeftTruncate(), true);
+                        case '.':
+                            state = ParserState.DOT_STATE;
+                            break;
+
+                        default:
+                            if (c >= '0' && c <= '9') {
+                                formattingInfo = new FormattingInfo(
+                                        formattingInfo.isLeftAligned(),
+                                        c - '0',
+                                        formattingInfo.getMaxLength(),
+                                        formattingInfo.isLeftTruncate(),
+                                        formattingInfo.isZeroPad());
+                                state = ParserState.MIN_STATE;
+                            } else {
+                                i = finalizeConverter(
+                                        c,
+                                        pattern,
+                                        i,
+                                        currentLiteral,
+                                        formattingInfo,
+                                        converterRules,
+                                        patternConverters,
+                                        formattingInfos,
+                                        disableAnsi,
+                                        noConsoleNoAnsi,
+                                        convertBackslashes);
+
+                                // Next pattern is assumed to be a literal.
+                                state = ParserState.LITERAL_STATE;
+                                formattingInfo = FormattingInfo.getDefault();
+                                currentLiteral.setLength(0);
+                            }
+                    } // switch
+
                     break;
 
-                case '-':
-                    formattingInfo = new FormattingInfo(true, formattingInfo.getMinLength(),
-                            formattingInfo.getMaxLength(), formattingInfo.isLeftTruncate(), formattingInfo.isZeroPad());
-                    break;
-
-                case '.':
-                    state = ParserState.DOT_STATE;
-                    break;
-
-                default:
+                case MIN_STATE:
+                    currentLiteral.append(c);
 
                     if (c >= '0' && c <= '9') {
-                        formattingInfo = new FormattingInfo(formattingInfo.isLeftAligned(), c - '0',
-                                formattingInfo.getMaxLength(), formattingInfo.isLeftTruncate(), formattingInfo.isZeroPad());
-                        state = ParserState.MIN_STATE;
+                        // Multiply the existing value and add the value of the number just encountered.
+                        formattingInfo = new FormattingInfo(
+                                formattingInfo.isLeftAligned(),
+                                formattingInfo.getMinLength() * DECIMAL + c - '0',
+                                formattingInfo.getMaxLength(),
+                                formattingInfo.isLeftTruncate(),
+                                formattingInfo.isZeroPad());
+                    } else if (c == '.') {
+                        state = ParserState.DOT_STATE;
                     } else {
-                        i = finalizeConverter(c, pattern, i, currentLiteral, formattingInfo, converterRules,
-                                patternConverters, formattingInfos, disableAnsi, noConsoleNoAnsi, convertBackslashes);
-
-                        // Next pattern is assumed to be a literal.
+                        i = finalizeConverter(
+                                c,
+                                pattern,
+                                i,
+                                currentLiteral,
+                                formattingInfo,
+                                converterRules,
+                                patternConverters,
+                                formattingInfos,
+                                disableAnsi,
+                                noConsoleNoAnsi,
+                                convertBackslashes);
                         state = ParserState.LITERAL_STATE;
                         formattingInfo = FormattingInfo.getDefault();
                         currentLiteral.setLength(0);
                     }
-                } // switch
 
-                break;
-
-            case MIN_STATE:
-                currentLiteral.append(c);
-
-                if (c >= '0' && c <= '9') {
-                    // Multiply the existing value and add the value of the number just encountered.
-                    formattingInfo = new FormattingInfo(formattingInfo.isLeftAligned(), formattingInfo.getMinLength()
-                            * DECIMAL + c - '0', formattingInfo.getMaxLength(), formattingInfo.isLeftTruncate(), formattingInfo.isZeroPad());
-                } else if (c == '.') {
-                    state = ParserState.DOT_STATE;
-                } else {
-                    i = finalizeConverter(c, pattern, i, currentLiteral, formattingInfo, converterRules,
-                            patternConverters, formattingInfos, disableAnsi, noConsoleNoAnsi, convertBackslashes);
-                    state = ParserState.LITERAL_STATE;
-                    formattingInfo = FormattingInfo.getDefault();
-                    currentLiteral.setLength(0);
-                }
-
-                break;
-
-            case DOT_STATE:
-                currentLiteral.append(c);
-                switch (c) {
-                case '-':
-                    formattingInfo = new FormattingInfo(formattingInfo.isLeftAligned(), formattingInfo.getMinLength(),
-                            formattingInfo.getMaxLength(),false, formattingInfo.isZeroPad());
                     break;
 
-                default:
+                case DOT_STATE:
+                    currentLiteral.append(c);
+                    switch (c) {
+                        case '-':
+                            formattingInfo = new FormattingInfo(
+                                    formattingInfo.isLeftAligned(),
+                                    formattingInfo.getMinLength(),
+                                    formattingInfo.getMaxLength(),
+                                    false,
+                                    formattingInfo.isZeroPad());
+                            break;
 
-	                if (c >= '0' && c <= '9') {
-	                    formattingInfo = new FormattingInfo(formattingInfo.isLeftAligned(), formattingInfo.getMinLength(),
-	                            c - '0', formattingInfo.isLeftTruncate(), formattingInfo.isZeroPad());
-	                    state = ParserState.MAX_STATE;
-	                } else {
-	                    LOGGER.error("Error occurred in position " + i + ".\n Was expecting digit, instead got char \"" + c
-	                            + "\".");
+                        default:
+                            if (c >= '0' && c <= '9') {
+                                formattingInfo = new FormattingInfo(
+                                        formattingInfo.isLeftAligned(),
+                                        formattingInfo.getMinLength(),
+                                        c - '0',
+                                        formattingInfo.isLeftTruncate(),
+                                        formattingInfo.isZeroPad());
+                                state = ParserState.MAX_STATE;
+                            } else {
+                                LOGGER.error("Error occurred in position " + i
+                                        + ".\n Was expecting digit, instead got char \"" + c + "\".");
 
-	                    state = ParserState.LITERAL_STATE;
-	                }
-                }
+                                state = ParserState.LITERAL_STATE;
+                            }
+                    }
 
-                break;
+                    break;
 
-            case MAX_STATE:
-                currentLiteral.append(c);
+                case MAX_STATE:
+                    currentLiteral.append(c);
 
-                if (c >= '0' && c <= '9') {
-                    // Multiply the existing value and add the value of the number just encountered.
-                    formattingInfo = new FormattingInfo(formattingInfo.isLeftAligned(), formattingInfo.getMinLength(),
-                            formattingInfo.getMaxLength() * DECIMAL + c - '0', formattingInfo.isLeftTruncate(), formattingInfo.isZeroPad());
-                } else {
-                    i = finalizeConverter(c, pattern, i, currentLiteral, formattingInfo, converterRules,
-                            patternConverters, formattingInfos, disableAnsi, noConsoleNoAnsi, convertBackslashes);
-                    state = ParserState.LITERAL_STATE;
-                    formattingInfo = FormattingInfo.getDefault();
-                    currentLiteral.setLength(0);
-                }
+                    if (c >= '0' && c <= '9') {
+                        // Multiply the existing value and add the value of the number just encountered.
+                        formattingInfo = new FormattingInfo(
+                                formattingInfo.isLeftAligned(),
+                                formattingInfo.getMinLength(),
+                                formattingInfo.getMaxLength() * DECIMAL + c - '0',
+                                formattingInfo.isLeftTruncate(),
+                                formattingInfo.isZeroPad());
+                    } else {
+                        i = finalizeConverter(
+                                c,
+                                pattern,
+                                i,
+                                currentLiteral,
+                                formattingInfo,
+                                converterRules,
+                                patternConverters,
+                                formattingInfos,
+                                disableAnsi,
+                                noConsoleNoAnsi,
+                                convertBackslashes);
+                        state = ParserState.LITERAL_STATE;
+                        formattingInfo = FormattingInfo.getDefault();
+                        currentLiteral.setLength(0);
+                    }
 
-                break;
+                    break;
             } // switch
         }
 
         // while
         if (currentLiteral.length() != 0) {
-            patternConverters.add(new LiteralPatternConverter(config, currentLiteral.toString(), convertBackslashes));
+            patternConverters.add(literalPattern(currentLiteral.toString(), convertBackslashes));
             formattingInfos.add(FormattingInfo.getDefault());
         }
     }
@@ -517,8 +583,12 @@ public final class PatternParser {
      *            do not do not output ANSI escape codes if {@link System#console()}
      * @return converter or null.
      */
-    private PatternConverter createConverter(final String converterId, final StringBuilder currentLiteral,
-            final Map<String, Class<PatternConverter>> rules, final List<String> options, final boolean disableAnsi,
+    private PatternConverter createConverter(
+            final String converterId,
+            final StringBuilder currentLiteral,
+            final Map<String, Class<PatternConverter>> rules,
+            final List<String> options,
+            final boolean disableAnsi,
             final boolean noConsoleNoAnsi) {
         String converterName = converterId;
         Class<PatternConverter> converterClass = null;
@@ -571,7 +641,7 @@ public final class PatternParser {
             boolean errors = false;
             for (final Class<?> clazz : parmTypes) {
                 if (clazz.isArray() && clazz.getName().equals("[Ljava.lang.String;")) {
-                    final String[] optionsArray = options.toArray(new String[options.size()]);
+                    final String[] optionsArray = options.toArray(Strings.EMPTY_ARRAY);
                     parms[i] = optionsArray;
                 } else if (clazz.isAssignableFrom(Configuration.class)) {
                     parms[i] = config;
@@ -604,7 +674,7 @@ public final class PatternParser {
     }
 
     /** LOG4J2-2564: Returns true if all method parameters are valid for injection. */
-    private static boolean areValidNewInstanceParameters(Class<?>[] parameterTypes) {
+    private static boolean areValidNewInstanceParameters(final Class<?>[] parameterTypes) {
         for (Class<?> clazz : parameterTypes) {
             if (!clazz.isAssignableFrom(Configuration.class)
                     && !(clazz.isArray() && "[Ljava.lang.String;".equals(clazz.getName()))) {
@@ -641,10 +711,17 @@ public final class PatternParser {
      *            sequences like "\" followed by "t" (backslash+t) are converted to special characters like '\t' (tab).
      * @return position after format specifier sequence.
      */
-    private int finalizeConverter(final char c, final String pattern, final int start,
-            final StringBuilder currentLiteral, final FormattingInfo formattingInfo,
-            final Map<String, Class<PatternConverter>> rules, final List<PatternConverter> patternConverters,
-            final List<FormattingInfo> formattingInfos, final boolean disableAnsi, final boolean noConsoleNoAnsi,
+    private int finalizeConverter(
+            final char c,
+            final String pattern,
+            final int start,
+            final StringBuilder currentLiteral,
+            final FormattingInfo formattingInfo,
+            final Map<String, Class<PatternConverter>> rules,
+            final List<PatternConverter> patternConverters,
+            final List<FormattingInfo> formattingInfos,
+            final boolean disableAnsi,
+            final boolean noConsoleNoAnsi,
             final boolean convertBackslashes) {
         int i = start;
         final StringBuilder convBuf = new StringBuilder();
@@ -655,8 +732,8 @@ public final class PatternParser {
         final List<String> options = new ArrayList<>();
         i = extractOptions(pattern, i, options);
 
-        final PatternConverter pc = createConverter(converterId, currentLiteral, rules, options, disableAnsi,
-            noConsoleNoAnsi);
+        final PatternConverter pc =
+                createConverter(converterId, currentLiteral, rules, options, disableAnsi, noConsoleNoAnsi);
 
         if (pc == null) {
             StringBuilder msg;
@@ -669,20 +746,19 @@ public final class PatternParser {
                 msg.append("] starting at position ");
             }
 
-            msg.append(Integer.toString(i));
+            msg.append(i);
             msg.append(" in conversion pattern.");
 
             LOGGER.error(msg.toString());
 
-            patternConverters.add(new LiteralPatternConverter(config, currentLiteral.toString(), convertBackslashes));
+            patternConverters.add(literalPattern(currentLiteral.toString(), convertBackslashes));
             formattingInfos.add(FormattingInfo.getDefault());
         } else {
             patternConverters.add(pc);
             formattingInfos.add(formattingInfo);
 
             if (currentLiteral.length() > 0) {
-                patternConverters
-                        .add(new LiteralPatternConverter(config, currentLiteral.toString(), convertBackslashes));
+                patternConverters.add(literalPattern(currentLiteral.toString(), convertBackslashes));
                 formattingInfos.add(FormattingInfo.getDefault());
             }
         }
@@ -690,5 +766,13 @@ public final class PatternParser {
         currentLiteral.setLength(0);
 
         return i;
+    }
+
+    // Create a literal pattern converter with support for substitutions if necessary
+    private LogEventPatternConverter literalPattern(final String literal, final boolean convertBackslashes) {
+        if (config != null && LiteralPatternConverter.containsSubstitutionSequence(literal)) {
+            return new LiteralPatternConverter(config, literal, convertBackslashes);
+        }
+        return SimpleLiteralPatternConverter.of(literal, convertBackslashes);
     }
 }

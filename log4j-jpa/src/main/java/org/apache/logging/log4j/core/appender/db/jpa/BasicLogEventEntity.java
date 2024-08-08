@@ -1,18 +1,18 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.appender.db.jpa;
 
@@ -21,12 +21,18 @@ import javax.persistence.Basic;
 import javax.persistence.Convert;
 import javax.persistence.MappedSuperclass;
 import javax.persistence.Transient;
-
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.ThreadContext;
 import org.apache.logging.log4j.core.LogEvent;
-import org.apache.logging.log4j.core.appender.db.jpa.converter.*;
+import org.apache.logging.log4j.core.appender.db.jpa.converter.ContextMapAttributeConverter;
+import org.apache.logging.log4j.core.appender.db.jpa.converter.ContextStackAttributeConverter;
+import org.apache.logging.log4j.core.appender.db.jpa.converter.InstantAttributeConverter;
+import org.apache.logging.log4j.core.appender.db.jpa.converter.LevelAttributeConverter;
+import org.apache.logging.log4j.core.appender.db.jpa.converter.MarkerAttributeConverter;
+import org.apache.logging.log4j.core.appender.db.jpa.converter.MessageAttributeConverter;
+import org.apache.logging.log4j.core.appender.db.jpa.converter.StackTraceElementAttributeConverter;
+import org.apache.logging.log4j.core.appender.db.jpa.converter.ThrowableAttributeConverter;
 import org.apache.logging.log4j.core.impl.ThrowableProxy;
 import org.apache.logging.log4j.core.time.Instant;
 import org.apache.logging.log4j.message.Message;
@@ -67,8 +73,7 @@ public abstract class BasicLogEventEntity extends AbstractLogEventWrapperEntity 
      * signature. The no-argument constructor is required for a standards-compliant JPA provider to accept this as an
      * entity.
      */
-    public BasicLogEventEntity() {
-    }
+    public BasicLogEventEntity() {}
 
     /**
      * Instantiates this base class. All concrete implementations must have a constructor matching this constructor's

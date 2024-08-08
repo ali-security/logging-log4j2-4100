@@ -21,4 +21,9 @@
  * {@linkplain org.apache.logging.log4j.core.config.plugins.Plugin#elementType() element type}
  * {@link org.apache.logging.log4j.core.Layout#ELEMENT_TYPE layout}.
  */
+@Export
+@Version("2.20.1")
 package org.apache.logging.log4j.core.layout;
+
+import org.osgi.annotation.bundle.Export;
+import org.osgi.annotation.versioning.Version;

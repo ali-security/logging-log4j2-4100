@@ -1,18 +1,18 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.appender;
 
@@ -23,7 +23,6 @@ import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.logging.log4j.core.Layout;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.layout.ByteBufferDestination;
@@ -40,13 +39,17 @@ public class OutputStreamManager extends AbstractManager implements ByteBufferDe
     private volatile OutputStream outputStream;
     private boolean skipFooter;
 
-    protected OutputStreamManager(final OutputStream os, final String streamName, final Layout<?> layout,
-            final boolean writeHeader) {
+    protected OutputStreamManager(
+            final OutputStream os, final String streamName, final Layout<?> layout, final boolean writeHeader) {
         this(os, streamName, layout, writeHeader, Constants.ENCODER_BYTE_BUFFER_SIZE);
     }
 
-    protected OutputStreamManager(final OutputStream os, final String streamName, final Layout<?> layout,
-            final boolean writeHeader, final int bufferSize) {
+    protected OutputStreamManager(
+            final OutputStream os,
+            final String streamName,
+            final Layout<?> layout,
+            final boolean writeHeader,
+            final int bufferSize) {
         this(os, streamName, layout, writeHeader, ByteBuffer.wrap(new byte[bufferSize]));
     }
 
@@ -55,8 +58,12 @@ public class OutputStreamManager extends AbstractManager implements ByteBufferDe
      * @deprecated
      */
     @Deprecated
-    protected OutputStreamManager(final OutputStream os, final String streamName, final Layout<?> layout,
-            final boolean writeHeader, final ByteBuffer byteBuffer) {
+    protected OutputStreamManager(
+            final OutputStream os,
+            final String streamName,
+            final Layout<?> layout,
+            final boolean writeHeader,
+            final ByteBuffer byteBuffer) {
         super(null, streamName);
         this.outputStream = os;
         this.layout = layout;
@@ -69,8 +76,13 @@ public class OutputStreamManager extends AbstractManager implements ByteBufferDe
     /**
      * @since 2.7
      */
-    protected OutputStreamManager(final LoggerContext loggerContext, final OutputStream os, final String streamName,
-            final boolean createOnDemand, final Layout<? extends Serializable> layout, final boolean writeHeader,
+    protected OutputStreamManager(
+            final LoggerContext loggerContext,
+            final OutputStream os,
+            final String streamName,
+            final boolean createOnDemand,
+            final Layout<? extends Serializable> layout,
+            final boolean writeHeader,
             final ByteBuffer byteBuffer) {
         super(loggerContext, streamName);
         if (createOnDemand && os != null) {
@@ -95,8 +107,8 @@ public class OutputStreamManager extends AbstractManager implements ByteBufferDe
      * @param <T> The type of the OutputStreamManager.
      * @return An OutputStreamManager.
      */
-    public static <T> OutputStreamManager getManager(final String name, final T data,
-                                                 final ManagerFactory<? extends OutputStreamManager, T> factory) {
+    public static <T> OutputStreamManager getManager(
+            final String name, final T data, final ManagerFactory<? extends OutputStreamManager, T> factory) {
         return AbstractManager.getManager(name, factory, data);
     }
 
@@ -122,7 +134,7 @@ public class OutputStreamManager extends AbstractManager implements ByteBufferDe
         return closeOutputStream();
     }
 
-    protected void writeHeader(OutputStream os) {
+    protected void writeHeader(final OutputStream os) {
         if (layout != null && os != null) {
             final byte[] header = layout.getHeader();
             if (header != null) {
@@ -176,7 +188,7 @@ public class OutputStreamManager extends AbstractManager implements ByteBufferDe
      * @param bytes The serialized Log event.
      * @throws AppenderLoggingException if an error occurs.
      */
-    protected void write(final byte[] bytes)  {
+    protected void write(final byte[] bytes) {
         write(bytes, 0, bytes.length, false);
     }
 
@@ -186,7 +198,7 @@ public class OutputStreamManager extends AbstractManager implements ByteBufferDe
      * @param immediateFlush If true, flushes after writing.
      * @throws AppenderLoggingException if an error occurs.
      */
-    protected void write(final byte[] bytes, final boolean immediateFlush)  {
+    protected void write(final byte[] bytes, final boolean immediateFlush) {
         write(bytes, 0, bytes.length, immediateFlush);
     }
 
@@ -216,7 +228,8 @@ public class OutputStreamManager extends AbstractManager implements ByteBufferDe
      * @param immediateFlush flushes immediately after writing.
      * @throws AppenderLoggingException if an error occurs.
      */
-    protected synchronized void write(final byte[] bytes, final int offset, final int length, final boolean immediateFlush) {
+    protected synchronized void write(
+            final byte[] bytes, final int offset, final int length, final boolean immediateFlush) {
         if (immediateFlush && byteBuffer.position() == 0) {
             writeToDestination(bytes, offset, length);
             flushDestination();
@@ -347,10 +360,10 @@ public class OutputStreamManager extends AbstractManager implements ByteBufferDe
     @Override
     public void writeBytes(final ByteBuffer data) {
         if (data.remaining() == 0) {
-          return;
+            return;
         }
         synchronized (this) {
-          ByteBufferDestinationHelper.writeToUnsynchronized(data, this);
+            ByteBufferDestinationHelper.writeToUnsynchronized(data, this);
         }
     }
 }

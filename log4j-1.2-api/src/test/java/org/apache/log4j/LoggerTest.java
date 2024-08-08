@@ -2,7 +2,7 @@
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
@@ -14,27 +14,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.log4j;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.ResourceBundle;
-
 import org.apache.logging.log4j.core.Appender;
 import org.apache.logging.log4j.core.LogEvent;
-import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.appender.AbstractAppender;
 import org.apache.logging.log4j.core.config.ConfigurationFactory;
 import org.apache.logging.log4j.core.config.Property;
 import org.apache.logging.log4j.core.layout.PatternLayout;
-import org.apache.logging.log4j.test.appender.ListAppender;
-import org.junit.After;
+import org.apache.logging.log4j.core.test.appender.ListAppender;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import static org.junit.Assert.*;
 
 /**
  * Used for internal unit testing the Logger class.
@@ -72,9 +76,9 @@ public class LoggerTest {
         ConfigurationFactory.removeConfigurationFactory(configurationFactory);
     }
 
-    @After
-    public void tearDown() {
-        LoggerContext.getContext().reconfigure();
+    @Before
+    public void resetTest() {
+        Objects.requireNonNull(LogManager.getHierarchy()).resetConfiguration();
         a1 = null;
         a2 = null;
     }
@@ -82,35 +86,35 @@ public class LoggerTest {
     /**
      * Add an appender and see if it can be retrieved.
      *  Skipping this test as the Appender interface isn't compatible with legacy Log4j.
-    public void testAppender1() {
-        logger = Logger.getLogger("test");
-        a1 = new ListAppender("testAppender1");
-        logger.addAppender(a1);
-
-        Enumeration enumeration = logger.getAllAppenders();
-        Appender aHat = (Appender) enumeration.nextElement();
-        assertEquals(a1, aHat);
-    } */
+     * public void testAppender1() {
+     * logger = Logger.getLogger("test");
+     * a1 = new ListAppender("testAppender1");
+     * logger.addAppender(a1);
+     *
+     * Enumeration enumeration = logger.getAllAppenders();
+     * Appender aHat = (Appender) enumeration.nextElement();
+     * assertEquals(a1, aHat);
+     * } */
 
     /**
      * Add an appender X, Y, remove X and check if Y is the only
      * remaining appender.
      * Skipping this test as the Appender interface isn't compatible with legacy Log4j.
-    public void testAppender2() {
-        a1 = new FileAppender();
-        a1.setName("testAppender2.1");
-        a2 = new FileAppender();
-        a2.setName("testAppender2.2");
-
-        logger = Logger.getLogger("test");
-        logger.addAppender(a1);
-        logger.addAppender(a2);
-        logger.removeAppender("testAppender2.1");
-        Enumeration enumeration = logger.getAllAppenders();
-        Appender aHat = (Appender) enumeration.nextElement();
-        assertEquals(a2, aHat);
-        assertTrue(!enumeration.hasMoreElements());
-    }  */
+     * public void testAppender2() {
+     * a1 = new FileAppender();
+     * a1.setName("testAppender2.1");
+     * a2 = new FileAppender();
+     * a2.setName("testAppender2.2");
+     *
+     * logger = Logger.getLogger("test");
+     * logger.addAppender(a1);
+     * logger.addAppender(a2);
+     * logger.removeAppender("testAppender2.1");
+     * Enumeration enumeration = logger.getAllAppenders();
+     * Appender aHat = (Appender) enumeration.nextElement();
+     * assertEquals(a2, aHat);
+     * assertTrue(!enumeration.hasMoreElements());
+     * }  */
 
     /**
      * Test if logger a.b inherits its appender from a.
@@ -177,7 +181,8 @@ public class LoggerTest {
         } finally {
             ((org.apache.logging.log4j.core.Logger) a.getLogger()).removeAppender(ca1);
             ((org.apache.logging.log4j.core.Logger) abc.getLogger()).removeAppender(ca2);
-        }}
+        }
+    }
 
     /**
      * Test additivity flag.
@@ -228,7 +233,8 @@ public class LoggerTest {
             ((org.apache.logging.log4j.core.Logger) root.getLogger()).removeAppender(caRoot);
             ((org.apache.logging.log4j.core.Logger) a.getLogger()).removeAppender(caA);
             ((org.apache.logging.log4j.core.Logger) abc.getLogger()).removeAppender(caABC);
-        }}
+        }
+    }
 
     /* Don't support getLoggerRepository
     public void testDisable1() {
@@ -466,7 +472,8 @@ public class LoggerTest {
     @Test
     @SuppressWarnings("deprecation")
     public void testLog() {
-        final PatternLayout layout = PatternLayout.newBuilder().withPattern("%d %C %L %m").build();
+        final PatternLayout layout =
+                PatternLayout.newBuilder().withPattern("%d %C %L %m").build();
         final ListAppender appender = new ListAppender("List", null, layout, false, false);
         appender.start();
         final Logger root = Logger.getRootLogger();
@@ -484,6 +491,53 @@ public class LoggerTest {
             appender.stop();
         } finally {
             ((org.apache.logging.log4j.core.Logger) root.getLogger()).removeAppender(appender);
+        }
+    }
+
+    @Test
+    public void testSetLevel() {
+        final Logger a = Logger.getLogger("a");
+        final Logger a_b = Logger.getLogger("a.b");
+        final Logger a_b_c = Logger.getLogger("a.b.c");
+        // test default for this test
+        assertThat(a.getLevel()).isNull();
+        assertThat(a_b.getLevel()).isNull();
+        assertThat(a_b_c.getLevel()).isNull();
+        assertThat(a.getEffectiveLevel()).isEqualTo(Level.DEBUG);
+        assertThat(a_b.getEffectiveLevel()).isEqualTo(Level.DEBUG);
+        assertThat(a_b_c.getEffectiveLevel()).isEqualTo(Level.DEBUG);
+        // all
+        for (final Level level :
+                new Level[] {Level.DEBUG, Level.ERROR, Level.FATAL, Level.INFO, Level.TRACE, Level.WARN}) {
+            a.setLevel(level);
+            assertThat(a.getLevel()).isEqualTo(level);
+            assertThat(a_b.getLevel()).isNull();
+            assertThat(a_b.getEffectiveLevel()).isEqualTo(level);
+            assertThat(a_b.getLevel()).isNull();
+            assertThat(a_b_c.getEffectiveLevel()).isEqualTo(level);
+        }
+    }
+
+    @Test
+    public void testSetPriority() {
+        final Logger a = Logger.getLogger("a");
+        final Logger a_b = Logger.getLogger("a.b");
+        final Logger a_b_c = Logger.getLogger("a.b.c");
+        // test default for this test
+        assertThat(a.getPriority()).isNull();
+        assertThat(a_b.getPriority()).isNull();
+        assertThat(a_b_c.getPriority()).isNull();
+        assertThat(a.getEffectiveLevel()).isEqualTo(Level.DEBUG);
+        assertThat(a_b.getEffectiveLevel()).isEqualTo(Level.DEBUG);
+        assertThat(a_b_c.getEffectiveLevel()).isEqualTo(Level.DEBUG);
+        // all
+        for (final Priority level : Level.getAllPossiblePriorities()) {
+            a.setPriority(level);
+            assertThat(a.getPriority()).isEqualTo(level);
+            assertThat(a_b.getPriority()).isNull();
+            assertThat(a_b.getEffectiveLevel()).isEqualTo(level);
+            assertThat(a_b.getPriority()).isNull();
+            assertThat(a_b_c.getEffectiveLevel()).isEqualTo(level);
         }
     }
 
@@ -522,4 +576,3 @@ public class LoggerTest {
         }
     }
 }
-

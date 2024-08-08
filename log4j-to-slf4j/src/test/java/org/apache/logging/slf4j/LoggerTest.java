@@ -1,27 +1,41 @@
-
 /*
-* Licensed to the Apache Software Foundation (ASF) under one or more
-* contributor license agreements. See the NOTICE file distributed with
-* this work for additional information regarding copyright ownership.
-* The ASF licenses this file to You under the Apache license, Version 2.0
-* (the "License"); you may not use this file except in compliance with
-* the License. You may obtain a copy of the License at
-*
-*      http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the license for the specific language governing permissions and
-* limitations under the license.
-*/
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to you under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.logging.slf4j;
 
-import java.util.Date;
-import java.util.List;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.theInstance;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
+import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.testUtil.StringListAppender;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Proxy;
+import java.util.Date;
+import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
@@ -30,33 +44,28 @@ import org.apache.logging.log4j.message.ParameterizedMessageFactory;
 import org.apache.logging.log4j.message.StringFormatterMessageFactory;
 import org.apache.logging.log4j.spi.AbstractLogger;
 import org.apache.logging.log4j.spi.MessageFactory2Adapter;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.apache.logging.log4j.test.junit.UsingStatusListener;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.MDC;
 
-import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.*;
-
-/**
- *
- */
+@UsingStatusListener
+@LoggerContextSource
 public class LoggerTest {
 
-    private static final String CONFIG = "target/test-classes/logback-slf4j.xml";
-
-    @ClassRule
-    public static final LoggerContextRule CTX = new LoggerContextRule(CONFIG);
-
+    private static final Object OBJ = new Object();
+    // Log4j objects
     private Logger logger;
+    // Logback objects
+    private LoggerContext context;
     private StringListAppender<ILoggingEvent> list;
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
-        final org.slf4j.Logger slf4jLogger = CTX.getLogger();
+        final org.slf4j.Logger slf4jLogger = context.getLogger(getClass());
         logger = LogManager.getLogger();
         assertThat(slf4jLogger, is(theInstance(((SLF4JLogger) logger).getLogger())));
-        final ch.qos.logback.classic.Logger rootLogger = CTX.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
+        final ch.qos.logback.classic.Logger rootLogger = context.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
         rootLogger.detachAppender("console");
         list = TestUtil.getListAppender(rootLogger, "LIST");
         assertThat(list, is(notNullValue()));
@@ -80,14 +89,14 @@ public class LoggerTest {
 
     @Test
     public void simpleFlowDeprecated() {
-        logger.entry(CONFIG);
+        logger.entry(OBJ);
         logger.exit(0);
         assertThat(list.strList, hasSize(2));
     }
 
     @Test
     public void simpleFlow() {
-        logger.entry(CONFIG);
+        logger.entry(OBJ);
         logger.traceExit(0);
         assertThat(list.strList, hasSize(2));
     }
@@ -116,8 +125,10 @@ public class LoggerTest {
 
     @Test
     public void getLogger_String_MessageFactoryMismatch() {
-        final Logger testLogger = testMessageFactoryMismatch("getLogger_String_MessageFactoryMismatch",
-            StringFormatterMessageFactory.INSTANCE, ParameterizedMessageFactory.INSTANCE);
+        final Logger testLogger = testMessageFactoryMismatch(
+                "getLogger_String_MessageFactoryMismatch",
+                StringFormatterMessageFactory.INSTANCE,
+                ParameterizedMessageFactory.INSTANCE);
         testLogger.debug("%,d", Integer.MAX_VALUE);
         assertThat(list.strList, hasSize(1));
         assertThat(list.strList, hasItem(String.format("%,d", Integer.MAX_VALUE)));
@@ -125,25 +136,28 @@ public class LoggerTest {
 
     @Test
     public void getLogger_String_MessageFactoryMismatchNull() {
-        final Logger testLogger =  testMessageFactoryMismatch("getLogger_String_MessageFactoryMismatchNull",
-            StringFormatterMessageFactory.INSTANCE, null);
+        final Logger testLogger = testMessageFactoryMismatch(
+                "getLogger_String_MessageFactoryMismatchNull", StringFormatterMessageFactory.INSTANCE, null);
         testLogger.debug("%,d", Integer.MAX_VALUE);
         assertThat(list.strList, hasSize(1));
         assertThat(list.strList, hasItem(String.format("%,d", Integer.MAX_VALUE)));
     }
 
-    private Logger testMessageFactoryMismatch(final String name, final MessageFactory messageFactory1, final MessageFactory messageFactory2) {
+    private Logger testMessageFactoryMismatch(
+            final String name, final MessageFactory messageFactory1, final MessageFactory messageFactory2) {
         final Logger testLogger = LogManager.getLogger(name, messageFactory1);
         assertThat(testLogger, is(notNullValue()));
         checkMessageFactory(messageFactory1, testLogger);
         final Logger testLogger2 = LogManager.getLogger(name, messageFactory2);
-        checkMessageFactory(messageFactory1, testLogger2);
+        checkMessageFactory(messageFactory2, testLogger2);
         return testLogger;
     }
 
     private static void checkMessageFactory(final MessageFactory messageFactory1, final Logger testLogger1) {
         if (messageFactory1 == null) {
-            assertEquals(AbstractLogger.DEFAULT_MESSAGE_FACTORY_CLASS, testLogger1.getMessageFactory().getClass());
+            assertEquals(
+                    AbstractLogger.DEFAULT_MESSAGE_FACTORY_CLASS,
+                    testLogger1.getMessageFactory().getClass());
         } else {
             MessageFactory actual = testLogger1.getMessageFactory();
             if (actual instanceof MessageFactory2Adapter) {
@@ -163,6 +177,34 @@ public class LoggerTest {
     public void debugWithParms() {
         logger.debug("Hello, {}", "World");
         assertThat(list.strList, hasSize(1));
+        final String message = list.strList.get(0);
+        assertEquals("Hello, World", message);
+    }
+
+    @Test
+    public void paramIncludesSubstitutionMarker_locationAware() {
+        logger.info("Hello, {}", "foo {} bar");
+        assertThat(list.strList, hasSize(1));
+        final String message = list.strList.get(0);
+        assertEquals("Hello, foo {} bar", message);
+    }
+
+    @Test
+    public void paramIncludesSubstitutionMarker_nonLocationAware() {
+        final org.slf4j.Logger slf4jLogger = context.getLogger(getClass());
+        final Logger nonLocationAwareLogger =
+                new SLF4JLogger(slf4jLogger.getName(), (org.slf4j.Logger) Proxy.newProxyInstance(
+                        getClass().getClassLoader(), new Class<?>[] {org.slf4j.Logger.class}, (proxy, method, args) -> {
+                            try {
+                                return method.invoke(slf4jLogger, args);
+                            } catch (InvocationTargetException e) {
+                                throw e.getCause();
+                            }
+                        }));
+        nonLocationAwareLogger.info("Hello, {}", "foo {} bar");
+        assertThat(list.strList, hasSize(1));
+        final String message = list.strList.get(0);
+        assertEquals("Hello, foo {} bar", message);
     }
 
     @Test

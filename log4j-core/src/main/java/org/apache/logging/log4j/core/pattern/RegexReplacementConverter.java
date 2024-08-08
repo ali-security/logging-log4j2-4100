@@ -1,24 +1,23 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.pattern;
 
 import java.util.List;
 import java.util.regex.Pattern;
-
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
@@ -28,7 +27,7 @@ import org.apache.logging.log4j.core.layout.PatternLayout;
  * Replacement pattern converter.
  */
 @Plugin(name = "replace", category = PatternConverter.CATEGORY)
-@ConverterKeys({ "replace" })
+@ConverterKeys({"replace"})
 public final class RegexReplacementConverter extends LogEventPatternConverter {
 
     private final Pattern pattern;
@@ -43,8 +42,8 @@ public final class RegexReplacementConverter extends LogEventPatternConverter {
      * @param pattern The regular expression Pattern.
      * @param substitution The substitution string.
      */
-    private RegexReplacementConverter(final List<PatternFormatter> formatters,
-                                      final Pattern pattern, final String substitution) {
+    private RegexReplacementConverter(
+            final List<PatternFormatter> formatters, final Pattern pattern, final String substitution) {
         super("replace", "replace");
         this.pattern = pattern;
         this.substitution = substitution;
@@ -81,7 +80,6 @@ public final class RegexReplacementConverter extends LogEventPatternConverter {
         final List<PatternFormatter> formatters = parser.parse(options[0]);
         return new RegexReplacementConverter(formatters, p, options[2]);
     }
-
 
     /**
      * {@inheritDoc}

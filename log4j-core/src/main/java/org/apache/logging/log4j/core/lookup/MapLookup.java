@@ -1,28 +1,28 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.lookup;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
 import org.apache.logging.log4j.message.MapMessage;
+import org.apache.logging.log4j.util.Strings;
 
 /**
  * A map-based lookup.
@@ -43,7 +43,7 @@ public class MapLookup implements StrLookup {
     }
 
     /**
-     * Creates a new instance backed by a Map. Used by the default lookup.
+     * Creates a new instance backed by a Map.
      *
      * @param map
      *        the map of keys to values, may be null
@@ -102,7 +102,7 @@ public class MapLookup implements StrLookup {
             return null;
         }
         final int size = args.size();
-        return initMap(args.toArray(new String[size]), newMap(size));
+        return initMap(args.toArray(Strings.EMPTY_ARRAY), newMap(size));
     }
 
     static Map<String, String> toMap(final String[] args) {
@@ -119,17 +119,14 @@ public class MapLookup implements StrLookup {
     @Override
     public String lookup(final LogEvent event, final String key) {
         final boolean isMapMessage = event != null && event.getMessage() instanceof MapMessage;
-        if (map == null && !isMapMessage) {
-            return null;
-        }
-        if (map != null && map.containsKey(key)) {
-            final String obj = map.get(key);
+        if (isMapMessage) {
+            final String obj = ((MapMessage) event.getMessage()).get(key);
             if (obj != null) {
                 return obj;
             }
         }
-        if (isMapMessage) {
-            return ((MapMessage) event.getMessage()).get(key);
+        if (map != null) {
+            return map.get(key);
         }
         return null;
     }
@@ -146,10 +143,9 @@ public class MapLookup implements StrLookup {
      */
     @Override
     public String lookup(final String key) {
-        if (map == null) {
+        if (key == null || map == null) {
             return null;
         }
         return map.get(key);
     }
-
 }

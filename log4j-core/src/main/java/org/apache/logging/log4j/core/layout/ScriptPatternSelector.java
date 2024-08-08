@@ -1,27 +1,25 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.layout;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import javax.script.SimpleBindings;
-
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.config.Configuration;
@@ -43,7 +41,11 @@ import org.apache.logging.log4j.status.StatusLogger;
  * to choose between one of the configured patterns. If no key is returned or there is no match the default
  * pattern will be used.
  */
-@Plugin(name = "ScriptPatternSelector", category = Node.CATEGORY, elementType = PatternSelector.ELEMENT_TYPE, printObject = true)
+@Plugin(
+        name = "ScriptPatternSelector",
+        category = Node.CATEGORY,
+        elementType = PatternSelector.ELEMENT_TYPE,
+        printObject = true)
 public class ScriptPatternSelector implements PatternSelector, LocationAware {
 
     /**
@@ -82,9 +84,17 @@ public class ScriptPatternSelector implements PatternSelector, LocationAware {
                 LOGGER.error("A Script, ScriptFile or ScriptRef element must be provided for this ScriptFilter");
                 return null;
             }
+            if (configuration.getScriptManager() == null) {
+                LOGGER.error("Script support is not enabled");
+                return null;
+            }
             if (script instanceof ScriptRef) {
                 if (configuration.getScriptManager().getScript(script.getName()) == null) {
                     LOGGER.error("No script with name {} has been declared.", script.getName());
+                    return null;
+                }
+            } else {
+                if (!configuration.getScriptManager().addScript(script)) {
                     return null;
                 }
             }
@@ -95,8 +105,14 @@ public class ScriptPatternSelector implements PatternSelector, LocationAware {
                 LOGGER.warn("No marker patterns were provided");
                 return null;
             }
-            return new ScriptPatternSelector(script, properties, defaultPattern, alwaysWriteExceptions, disableAnsi,
-                    noConsoleNoAnsi, configuration);
+            return new ScriptPatternSelector(
+                    configuration,
+                    script,
+                    properties,
+                    defaultPattern,
+                    alwaysWriteExceptions,
+                    disableAnsi,
+                    noConsoleNoAnsi);
         }
 
         public Builder setScript(final AbstractScript script) {
@@ -148,24 +164,23 @@ public class ScriptPatternSelector implements PatternSelector, LocationAware {
     private final Configuration configuration;
     private final boolean requiresLocation;
 
-    /**
-     * @deprecated Use {@link #newBuilder()} instead. This will be private in a future version.
-     */
-    @Deprecated
-    public ScriptPatternSelector(final AbstractScript script, final PatternMatch[] properties, final String defaultPattern,
-                                 final boolean alwaysWriteExceptions, final boolean disableAnsi,
-                                 final boolean noConsoleNoAnsi, final Configuration config) {
+    private ScriptPatternSelector(
+            final Configuration config,
+            final AbstractScript script,
+            final PatternMatch[] properties,
+            final String defaultPattern,
+            final boolean alwaysWriteExceptions,
+            final boolean disableAnsi,
+            final boolean noConsoleNoAnsi) {
         this.script = script;
         this.configuration = config;
-        if (!(script instanceof ScriptRef)) {
-            config.getScriptManager().addScript(script);
-        }
         final PatternParser parser = PatternLayout.createPatternParser(config);
         boolean needsLocation = false;
         for (final PatternMatch property : properties) {
             try {
-                final List<PatternFormatter> list = parser.parse(property.getPattern(), alwaysWriteExceptions, disableAnsi, noConsoleNoAnsi);
-                PatternFormatter[] formatters = list.toArray(new PatternFormatter[0]);
+                final List<PatternFormatter> list =
+                        parser.parse(property.getPattern(), alwaysWriteExceptions, disableAnsi, noConsoleNoAnsi);
+                final PatternFormatter[] formatters = list.toArray(PatternFormatter.EMPTY_ARRAY);
                 formatterMap.put(property.getKey(), formatters);
                 patternMap.put(property.getKey(), property.getPattern());
                 for (int i = 0; !needsLocation && i < formatters.length; ++i) {
@@ -176,8 +191,56 @@ public class ScriptPatternSelector implements PatternSelector, LocationAware {
             }
         }
         try {
-            final List<PatternFormatter> list = parser.parse(defaultPattern, alwaysWriteExceptions, disableAnsi, noConsoleNoAnsi);
-            defaultFormatters = list.toArray(new PatternFormatter[0]);
+            final List<PatternFormatter> list =
+                    parser.parse(defaultPattern, alwaysWriteExceptions, disableAnsi, noConsoleNoAnsi);
+            defaultFormatters = list.toArray(PatternFormatter.EMPTY_ARRAY);
+            this.defaultPattern = defaultPattern;
+            for (int i = 0; !needsLocation && i < defaultFormatters.length; ++i) {
+                needsLocation = defaultFormatters[i].requiresLocation();
+            }
+        } catch (final RuntimeException ex) {
+            throw new IllegalArgumentException("Cannot parse pattern '" + defaultPattern + "'", ex);
+        }
+        this.requiresLocation = needsLocation;
+    }
+
+    /**
+     * @deprecated Use {@link #newBuilder()} instead. This will be private in a future version.
+     */
+    @Deprecated
+    public ScriptPatternSelector(
+            final AbstractScript script,
+            final PatternMatch[] properties,
+            final String defaultPattern,
+            final boolean alwaysWriteExceptions,
+            final boolean disableAnsi,
+            final boolean noConsoleNoAnsi,
+            final Configuration config) {
+        this.script = script;
+        this.configuration = config;
+        if (!(script instanceof ScriptRef)) {
+            config.getScriptManager().addScript(script);
+        }
+        final PatternParser parser = PatternLayout.createPatternParser(config);
+        boolean needsLocation = false;
+        for (final PatternMatch property : properties) {
+            try {
+                final List<PatternFormatter> list =
+                        parser.parse(property.getPattern(), alwaysWriteExceptions, disableAnsi, noConsoleNoAnsi);
+                final PatternFormatter[] formatters = list.toArray(PatternFormatter.EMPTY_ARRAY);
+                formatterMap.put(property.getKey(), formatters);
+                patternMap.put(property.getKey(), property.getPattern());
+                for (int i = 0; !needsLocation && i < formatters.length; ++i) {
+                    needsLocation = formatters[i].requiresLocation();
+                }
+            } catch (final RuntimeException ex) {
+                throw new IllegalArgumentException("Cannot parse pattern '" + property.getPattern() + "'", ex);
+            }
+        }
+        try {
+            final List<PatternFormatter> list =
+                    parser.parse(defaultPattern, alwaysWriteExceptions, disableAnsi, noConsoleNoAnsi);
+            defaultFormatters = list.toArray(PatternFormatter.EMPTY_ARRAY);
             this.defaultPattern = defaultPattern;
             for (int i = 0; !needsLocation && i < defaultFormatters.length; ++i) {
                 needsLocation = defaultFormatters[i].requiresLocation();
@@ -208,7 +271,6 @@ public class ScriptPatternSelector implements PatternSelector, LocationAware {
         return patternFormatter == null ? defaultFormatters : patternFormatter;
     }
 
-
     /**
      * Creates a builder for a custom ScriptPatternSelector.
      *
@@ -222,12 +284,12 @@ public class ScriptPatternSelector implements PatternSelector, LocationAware {
     /**
      * Deprecated, use {@link #newBuilder()} instead.
      *
-     * @param script
-     * @param properties
-     * @param defaultPattern
-     * @param alwaysWriteExceptions
-     * @param noConsoleNoAnsi
-     * @param configuration
+     * @param script the script
+     * @param properties the PatternMatch configuration items
+     * @param defaultPattern the default pattern
+     * @param alwaysWriteExceptions To always write exceptions even if the pattern contains no exception conversions.
+     * @param noConsoleNoAnsi Do not output ANSI escape codes if System.console() is null.
+     * @param configuration the configuration
      * @return a new ScriptPatternSelector
      * @deprecated Use {@link #newBuilder()} instead.
      */
@@ -257,7 +319,11 @@ public class ScriptPatternSelector implements PatternSelector, LocationAware {
             if (!first) {
                 sb.append(", ");
             }
-            sb.append("key=\"").append(entry.getKey()).append("\", pattern=\"").append(entry.getValue()).append("\"");
+            sb.append("key=\"")
+                    .append(entry.getKey())
+                    .append("\", pattern=\"")
+                    .append(entry.getValue())
+                    .append("\"");
             first = false;
         }
         if (!first) {

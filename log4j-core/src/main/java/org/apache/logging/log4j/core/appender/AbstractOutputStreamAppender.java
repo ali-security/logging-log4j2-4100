@@ -1,24 +1,23 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.appender;
 
 import java.io.Serializable;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.logging.log4j.core.Filter;
 import org.apache.logging.log4j.core.Layout;
 import org.apache.logging.log4j.core.LogEvent;
@@ -61,21 +60,38 @@ public abstract class AbstractOutputStreamAppender<M extends OutputStreamManager
             return immediateFlush;
         }
 
+        public B setImmediateFlush(final boolean immediateFlush) {
+            this.immediateFlush = immediateFlush;
+            return asBuilder();
+        }
+
+        public B setBufferedIo(final boolean bufferedIo) {
+            this.bufferedIo = bufferedIo;
+            return asBuilder();
+        }
+
+        public B setBufferSize(final int bufferSize) {
+            this.bufferSize = bufferSize;
+            return asBuilder();
+        }
+
+        @Deprecated
         public B withImmediateFlush(final boolean immediateFlush) {
             this.immediateFlush = immediateFlush;
             return asBuilder();
         }
 
+        @Deprecated
         public B withBufferedIo(final boolean bufferedIo) {
             this.bufferedIo = bufferedIo;
             return asBuilder();
         }
 
+        @Deprecated
         public B withBufferSize(final int bufferSize) {
             this.bufferSize = bufferSize;
             return asBuilder();
         }
-
     }
 
     /**
@@ -98,8 +114,13 @@ public abstract class AbstractOutputStreamAppender<M extends OutputStreamManager
      * @deprecated Use {@link #AbstractOutputStreamAppender(String, Layout, Filter, boolean, boolean, Property[], OutputStreamManager)}
      */
     @Deprecated
-    protected AbstractOutputStreamAppender(final String name, final Layout<? extends Serializable> layout,
-            final Filter filter, final boolean ignoreExceptions, final boolean immediateFlush, final M manager) {
+    protected AbstractOutputStreamAppender(
+            final String name,
+            final Layout<? extends Serializable> layout,
+            final Filter filter,
+            final boolean ignoreExceptions,
+            final boolean immediateFlush,
+            final M manager) {
         super(name, filter, layout, ignoreExceptions, Property.EMPTY_ARRAY);
         this.manager = manager;
         this.immediateFlush = immediateFlush;
@@ -111,12 +132,21 @@ public abstract class AbstractOutputStreamAppender<M extends OutputStreamManager
      *
      * @param name The name of the Appender.
      * @param layout The layout to format the message.
+     * @param filter The filter to associate with the Appender.
+     * @param ignoreExceptions If true, exceptions will be logged and suppressed.
+     *                         If false errors will be logged and then passed to the application.
+     * @param immediateFlush Underlying output stream will be flushed at the end of each append operation.
      * @param properties optional properties
      * @param manager The OutputStreamManager.
      */
-    protected AbstractOutputStreamAppender(final String name, final Layout<? extends Serializable> layout,
-            final Filter filter, final boolean ignoreExceptions, final boolean immediateFlush,
-            final Property[] properties, final M manager) {
+    protected AbstractOutputStreamAppender(
+            final String name,
+            final Layout<? extends Serializable> layout,
+            final Filter filter,
+            final boolean ignoreExceptions,
+            final boolean immediateFlush,
+            final Property[] properties,
+            final M manager) {
         super(name, filter, layout, ignoreExceptions, properties);
         this.manager = manager;
         this.immediateFlush = immediateFlush;

@@ -1,18 +1,18 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.spi;
 
@@ -20,7 +20,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-
 import org.apache.logging.log4j.ThreadContext.ContextStack;
 import org.apache.logging.log4j.util.StringBuilderFormattable;
 import org.apache.logging.log4j.util.StringBuilders;
@@ -32,12 +31,22 @@ import org.apache.logging.log4j.util.Strings;
  */
 public class DefaultThreadContextStack implements ThreadContextStack, StringBuilderFormattable {
 
+    private static final Object[] EMPTY_OBJECT_ARRAY = {};
+
     private static final long serialVersionUID = 5050501L;
 
     private static final ThreadLocal<MutableThreadContextStack> STACK = new ThreadLocal<>();
 
     private final boolean useStack;
 
+    public DefaultThreadContextStack() {
+        this(true);
+    }
+
+    /**
+     * @deprecated since 2.24.0 without a replacement.
+     */
+    @Deprecated
     public DefaultThreadContextStack(final boolean useStack) {
         this.useStack = useStack;
     }
@@ -95,7 +104,7 @@ public class DefaultThreadContextStack implements ThreadContextStack, StringBuil
     public boolean containsAll(final Collection<?> objects) {
         if (objects.isEmpty()) { // quick check before accessing the ThreadLocal
             return true; // looks counter-intuitive, but see
-                         // j.u.AbstractCollection
+            // j.u.AbstractCollection
         }
         final MutableThreadContextStack values = STACK.get();
         return values != null && values.containsAll(objects);
@@ -259,9 +268,9 @@ public class DefaultThreadContextStack implements ThreadContextStack, StringBuil
     public Object[] toArray() {
         final MutableThreadContextStack result = STACK.get();
         if (result == null) {
-            return new String[0];
+            return Strings.EMPTY_ARRAY;
         }
-        return result.toArray(new Object[result.size()]);
+        return result.toArray(EMPTY_OBJECT_ARRAY);
     }
 
     @Override

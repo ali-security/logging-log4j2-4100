@@ -1,24 +1,25 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.core.appender.db;
 
-import java.util.Date;
-import java.util.Locale;
+import static org.apache.logging.log4j.util.Strings.toRootUpperCase;
 
+import java.util.Date;
+import java.util.Objects;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.Core;
 import org.apache.logging.log4j.core.StringLayout;
@@ -42,6 +43,11 @@ import org.apache.logging.log4j.util.ReadOnlyStringMap;
  */
 @Plugin(name = "ColumnMapping", category = Core.CATEGORY_NAME, printObject = true)
 public class ColumnMapping {
+
+    /**
+     * The empty array.
+     */
+    public static final ColumnMapping[] EMPTY_ARRAY = {};
 
     /**
      * Builder for {@link ColumnMapping}.
@@ -71,32 +77,41 @@ public class ColumnMapping {
         private String source;
 
         @PluginBuilderAttribute
+        @Deprecated
+        private Class<?> type;
+
+        @PluginBuilderAttribute
         @Required(message = "No conversion type provided")
-        private Class<?> type = String.class;
+        private Class<?> columnType = String.class;
 
         @Override
         public ColumnMapping build() {
             if (pattern != null) {
                 layout = PatternLayout.newBuilder()
-                    .withPattern(pattern)
-                    .withConfiguration(configuration)
-                    .withAlwaysWriteExceptions(false)
-                    .build();
+                        .withPattern(pattern)
+                        .withConfiguration(configuration)
+                        .withAlwaysWriteExceptions(false)
+                        .build();
             }
+            final Class<?> columnType = type != null ? type : this.columnType;
             if (!(layout == null
-                || literal == null
-                || Date.class.isAssignableFrom(type)
-                || ReadOnlyStringMap.class.isAssignableFrom(type)
-                || ThreadContextMap.class.isAssignableFrom(type)
-                || ThreadContextStack.class.isAssignableFrom(type))) {
-                LOGGER.error("No 'layout' or 'literal' value specified and type ({}) is not compatible with ThreadContextMap, ThreadContextStack, or java.util.Date for the mapping", type, this);
+                    || literal == null
+                    || Date.class.isAssignableFrom(columnType)
+                    || ReadOnlyStringMap.class.isAssignableFrom(columnType)
+                    || ThreadContextMap.class.isAssignableFrom(columnType)
+                    || ThreadContextStack.class.isAssignableFrom(columnType))) {
+                LOGGER.error(
+                        "No 'layout' or 'literal' value specified and type ({}) is not compatible with "
+                                + "ThreadContextMap, ThreadContextStack, or java.util.Date for the mapping",
+                        columnType,
+                        this);
                 return null;
             }
             if (literal != null && parameter != null) {
                 LOGGER.error("Only one of 'literal' or 'parameter' can be set on the column mapping {}", this);
                 return null;
             }
-            return new ColumnMapping(name, source, layout, literal, parameter, type);
+            return new ColumnMapping(name, source, layout, literal, parameter, columnType);
         }
 
         public Builder setConfiguration(final Configuration configuration) {
@@ -143,7 +158,7 @@ public class ColumnMapping {
          * @return this.
          */
         public Builder setParameter(final String parameter) {
-            this.parameter= parameter;
+            this.parameter = parameter;
             return this;
         }
 
@@ -176,6 +191,15 @@ public class ColumnMapping {
          *
          * @return this.
          */
+        public Builder setColumnType(final Class<?> columnType) {
+            this.columnType = columnType;
+            return this;
+        }
+
+        /**
+         * @see Builder#setColumnType(Class)
+         */
+        @Deprecated
         public Builder setType(final Class<?> type) {
             this.type = type;
             return this;
@@ -184,7 +208,7 @@ public class ColumnMapping {
         @Override
         public String toString() {
             return "Builder [name=" + name + ", source=" + source + ", literal=" + literal + ", parameter=" + parameter
-                    + ", pattern=" + pattern + ", type=" + type + ", layout=" + layout + "]";
+                    + ", pattern=" + pattern + ", columnType=" + columnType + ", layout=" + layout + "]";
         }
     }
 
@@ -196,7 +220,7 @@ public class ColumnMapping {
     }
 
     public static String toKey(final String name) {
-        return name.toUpperCase(Locale.ROOT);
+        return toRootUpperCase(name);
     }
 
     private final StringLayout layout;
@@ -207,8 +231,14 @@ public class ColumnMapping {
     private final String source;
     private final Class<?> type;
 
-    private ColumnMapping(final String name, final String source, final StringLayout layout, final String literalValue, final String parameter, final Class<?> type) {
-        this.name = name;
+    private ColumnMapping(
+            final String name,
+            final String source,
+            final StringLayout layout,
+            final String literalValue,
+            final String parameter,
+            final Class<?> type) {
+        this.name = Objects.requireNonNull(name);
         this.nameKey = toKey(name);
         this.source = source;
         this.layout = layout;
@@ -251,4 +281,21 @@ public class ColumnMapping {
                 + parameter + ", type=" + type + ", layout=" + layout + "]";
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        ColumnMapping that = (ColumnMapping) o;
+        return Objects.equals(layout, that.layout)
+                && Objects.equals(literalValue, that.literalValue)
+                && name.equals(that.name)
+                && Objects.equals(parameter, that.parameter)
+                && Objects.equals(source, that.source)
+                && Objects.equals(type, that.type);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(layout, literalValue, name, parameter, source, type);
+    }
 }

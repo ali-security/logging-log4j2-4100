@@ -1,24 +1,28 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.taglib;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
 import javax.servlet.jsp.PageContext;
 import javax.servlet.jsp.tagext.Tag;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.message.MessageFactory;
@@ -28,8 +32,6 @@ import org.apache.logging.log4j.spi.MessageFactory2Adapter;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.mock.web.MockPageContext;
-
-import static org.junit.Assert.*;
 
 /**
  *
@@ -59,7 +61,7 @@ public class SetLoggerTagTest {
         assertNotNull("The attribute should not be null.", attribute);
         assertTrue("The attribute should be a Log4jTaglibLogger.", attribute instanceof Log4jTaglibLogger);
 
-        final Log4jTaglibLogger logger = (Log4jTaglibLogger)attribute;
+        final Log4jTaglibLogger logger = (Log4jTaglibLogger) attribute;
         assertEquals("The logger name is not correct.", "testDoEndTagLoggerVarPageScope", logger.getName());
     }
 
@@ -77,7 +79,7 @@ public class SetLoggerTagTest {
         assertNotNull("The attribute should not be null.", attribute);
         assertTrue("The attribute should be a Log4jTaglibLogger.", attribute instanceof Log4jTaglibLogger);
 
-        final Log4jTaglibLogger logger = (Log4jTaglibLogger)attribute;
+        final Log4jTaglibLogger logger = (Log4jTaglibLogger) attribute;
         assertEquals("The logger name is not correct.", "testDoEndTagStringVarPageScope", logger.getName());
     }
 
@@ -98,7 +100,7 @@ public class SetLoggerTagTest {
         assertNotNull("The attribute should not be null.", attribute);
         assertTrue("The attribute should be a Log4jTaglibLogger.", attribute instanceof Log4jTaglibLogger);
 
-        final Log4jTaglibLogger logger = (Log4jTaglibLogger)attribute;
+        final Log4jTaglibLogger logger = (Log4jTaglibLogger) attribute;
         assertEquals("The logger name is not correct.", "testDoEndTagStringFactoryVarPageScope", logger.getName());
         checkMessageFactory("The message factory is not correct.", factory, logger);
     }
@@ -118,7 +120,7 @@ public class SetLoggerTagTest {
         assertNotNull("The attribute should not be null.", attribute);
         assertTrue("The attribute should be a Log4jTaglibLogger.", attribute instanceof Log4jTaglibLogger);
 
-        final Log4jTaglibLogger logger = (Log4jTaglibLogger)attribute;
+        final Log4jTaglibLogger logger = (Log4jTaglibLogger) attribute;
         assertEquals("The logger name is not correct.", "testDoEndTagLoggerVarSessionScope", logger.getName());
     }
 
@@ -137,7 +139,7 @@ public class SetLoggerTagTest {
         assertNotNull("The attribute should not be null.", attribute);
         assertTrue("The attribute should be a Log4jTaglibLogger.", attribute instanceof Log4jTaglibLogger);
 
-        final Log4jTaglibLogger logger = (Log4jTaglibLogger)attribute;
+        final Log4jTaglibLogger logger = (Log4jTaglibLogger) attribute;
         assertEquals("The logger name is not correct.", "testDoEndTagStringVarRequestScope", logger.getName());
     }
 
@@ -159,16 +161,18 @@ public class SetLoggerTagTest {
         assertNotNull("The attribute should not be null.", attribute);
         assertTrue("The attribute should be a Log4jTaglibLogger.", attribute instanceof Log4jTaglibLogger);
 
-        final Log4jTaglibLogger logger = (Log4jTaglibLogger)attribute;
-        assertEquals("The logger name is not correct.", "testDoEndTagStringFactoryVarApplicationScope",
-                logger.getName());
+        final Log4jTaglibLogger logger = (Log4jTaglibLogger) attribute;
+        assertEquals(
+                "The logger name is not correct.", "testDoEndTagStringFactoryVarApplicationScope", logger.getName());
         checkMessageFactory("The message factory is not correct.", factory, logger);
     }
 
-    private static void checkMessageFactory(final String msg, final MessageFactory messageFactory1,
-            final Logger testLogger1) {
+    private static void checkMessageFactory(
+            final String msg, final MessageFactory messageFactory1, final Logger testLogger1) {
         if (messageFactory1 == null) {
-            assertEquals(msg, AbstractLogger.DEFAULT_MESSAGE_FACTORY_CLASS,
+            assertEquals(
+                    msg,
+                    AbstractLogger.DEFAULT_MESSAGE_FACTORY_CLASS,
                     testLogger1.getMessageFactory().getClass());
         } else {
             MessageFactory actual = testLogger1.getMessageFactory();

@@ -1,20 +1,19 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package org.apache.logging.log4j.core.appender.rolling.action;
 
 import java.io.Serializable;
@@ -31,7 +30,9 @@ import java.util.regex.Pattern;
  * This implementation does not support fractions or negative values.
  *
  * @see #parse(CharSequence)
+ * @deprecated since 2.24.0 use {@link java.time.Duration} instead.
  */
+@Deprecated
 public class Duration implements Serializable, Comparable<Duration> {
     private static final long serialVersionUID = -3756810052716342061L;
 
@@ -64,8 +65,15 @@ public class Duration implements Serializable, Comparable<Duration> {
     /**
      * The pattern for parsing.
      */
-    private static final Pattern PATTERN = Pattern.compile("P?(?:([0-9]+)D)?"
-            + "(T?(?:([0-9]+)H)?(?:([0-9]+)M)?(?:([0-9]+)?S)?)?", Pattern.CASE_INSENSITIVE);
+    private static final Pattern PATTERN = Pattern.compile(
+            "P?(?:([0-9]+)D)?" + "(T?(?:([0-9]+)H)?(?:([0-9]+)M)?(?:([0-9]+)?S)?)?", Pattern.CASE_INSENSITIVE);
+
+    /**
+     * @since 2.24.0
+     */
+    public static Duration ofMillis(final long millis) {
+        return new Duration(millis / 1000L);
+    }
 
     /**
      * The number of seconds in the duration.
@@ -131,7 +139,8 @@ public class Duration implements Serializable, Comparable<Duration> {
                     try {
                         return create(daysAsSecs, hoursAsSecs, minsAsSecs, seconds);
                     } catch (final ArithmeticException ex) {
-                        throw new IllegalArgumentException("Text cannot be parsed to a Duration (overflow) " + text, ex);
+                        throw new IllegalArgumentException(
+                                "Text cannot be parsed to a Duration (overflow) " + text, ex);
                     }
                 }
             }
@@ -139,8 +148,8 @@ public class Duration implements Serializable, Comparable<Duration> {
         throw new IllegalArgumentException("Text cannot be parsed to a Duration: " + text);
     }
 
-    private static long parseNumber(final CharSequence text, final String parsed, final int multiplier,
-            final String errorText) {
+    private static long parseNumber(
+            final CharSequence text, final String parsed, final int multiplier, final String errorText) {
         // regex limits to [0-9]+
         if (parsed == null) {
             return 0;
@@ -149,12 +158,13 @@ public class Duration implements Serializable, Comparable<Duration> {
             final long val = Long.parseLong(parsed);
             return val * multiplier;
         } catch (final Exception ex) {
-            throw new IllegalArgumentException("Text cannot be parsed to a Duration: " + errorText + " (in " + text
-                    + ")", ex);
+            throw new IllegalArgumentException(
+                    "Text cannot be parsed to a Duration: " + errorText + " (in " + text + ")", ex);
         }
     }
 
-    private static Duration create(final long daysAsSecs, final long hoursAsSecs, final long minsAsSecs, final long secs) {
+    private static Duration create(
+            final long daysAsSecs, final long hoursAsSecs, final long minsAsSecs, final long secs) {
         return create(daysAsSecs + hoursAsSecs + minsAsSecs + secs);
     }
 

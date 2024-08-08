@@ -1,22 +1,20 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.layout.template.json.util;
-
-import org.apache.logging.log4j.util.Strings;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -24,6 +22,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import org.apache.logging.log4j.util.Strings;
 
 public final class StringParameterParser {
 
@@ -41,11 +40,9 @@ public final class StringParameterParser {
             return new StringValue(string);
         }
 
-        static DoubleQuotedStringValue doubleQuotedStringValue(
-                final String doubleQuotedString) {
+        static DoubleQuotedStringValue doubleQuotedStringValue(final String doubleQuotedString) {
             return new DoubleQuotedStringValue(doubleQuotedString);
         }
-
     }
 
     public interface Value {}
@@ -60,14 +57,13 @@ public final class StringParameterParser {
         public String toString() {
             return "null";
         }
-
     }
 
     public static final class StringValue implements Value {
 
         private final String string;
 
-        private StringValue(String string) {
+        private StringValue(final String string) {
             this.string = string;
         }
 
@@ -76,14 +72,14 @@ public final class StringParameterParser {
         }
 
         @Override
-        public boolean equals(Object object) {
+        public boolean equals(final Object object) {
             if (this == object) {
                 return true;
             }
             if (object == null || getClass() != object.getClass()) {
                 return false;
             }
-            StringValue that = (StringValue) object;
+            final StringValue that = (StringValue) object;
             return string.equals(that.string);
         }
 
@@ -96,14 +92,13 @@ public final class StringParameterParser {
         public String toString() {
             return string;
         }
-
     }
 
     public static final class DoubleQuotedStringValue implements Value {
 
         private final String doubleQuotedString;
 
-        private DoubleQuotedStringValue(String doubleQuotedString) {
+        private DoubleQuotedStringValue(final String doubleQuotedString) {
             this.doubleQuotedString = doubleQuotedString;
         }
 
@@ -112,14 +107,14 @@ public final class StringParameterParser {
         }
 
         @Override
-        public boolean equals(Object object) {
+        public boolean equals(final Object object) {
             if (this == object) {
                 return true;
             }
             if (object == null || getClass() != object.getClass()) {
                 return false;
             }
-            DoubleQuotedStringValue that = (DoubleQuotedStringValue) object;
+            final DoubleQuotedStringValue that = (DoubleQuotedStringValue) object;
             return doubleQuotedString.equals(that.doubleQuotedString);
         }
 
@@ -132,10 +127,12 @@ public final class StringParameterParser {
         public String toString() {
             return doubleQuotedString.replaceAll("\\\\\"", "\"");
         }
-
     }
 
-    private enum State { READING_KEY, READING_VALUE }
+    private enum State {
+        READING_KEY,
+        READING_VALUE
+    }
 
     private static final class Parser implements Callable<Map<String, Value>> {
 
@@ -207,15 +204,11 @@ public final class StringParameterParser {
             }
             key = input.substring(i, j).trim();
             if (Strings.isEmpty(key)) {
-                final String message = String.format(
-                        "failed to locate key at index %d: %s",
-                        i, input);
+                final String message = String.format("failed to locate key at index %d: %s", i, input);
                 throw new IllegalArgumentException(message);
             }
             if (map.containsKey(key)) {
-                final String message = String.format(
-                        "conflicting key at index %d: %s",
-                        i, input);
+                final String message = String.format("conflicting key at index %d: %s", i, input);
                 throw new IllegalArgumentException(message);
             }
             state = State.READING_VALUE;
@@ -244,22 +237,17 @@ public final class StringParameterParser {
             }
             if (j >= input.length()) {
                 final String message = String.format(
-                        "failed to locate the end of double-quoted content starting at index %d: %s",
-                        i, input);
+                        "failed to locate the end of double-quoted content starting at index %d: %s", i, input);
                 throw new IllegalArgumentException(message);
             }
-            final String content = input
-                    .substring(i + 1, j)
-                    .replaceAll("\\\\\"", "\"");
+            final String content = input.substring(i + 1, j).replaceAll("\\\\\"", "\"");
             final Value value = Values.doubleQuotedStringValue(content);
             map.put(key, value);
             i = j + 1;
             skipWhitespace();
             if (i < input.length()) {
                 if (input.charAt(i) != ',') {
-                    final String message = String.format(
-                            "was expecting comma at index %d: %s",
-                            i, input);
+                    final String message = String.format("was expecting comma at index %d: %s", i, input);
                     throw new IllegalArgumentException(message);
                 }
                 i++;
@@ -278,28 +266,23 @@ public final class StringParameterParser {
         }
 
         private void readStringValue() {
-            int j = input.indexOf(',', i/* + 1*/);
+            int j = input.indexOf(',', i /* + 1*/);
             if (j < 0) {
                 j = input.length();
             }
             final String content = input.substring(i, j);
             final String trimmedContent = content.trim();
-            final Value value = trimmedContent.isEmpty()
-                    ? Values.nullValue()
-                    : Values.stringValue(trimmedContent);
+            final Value value = trimmedContent.isEmpty() ? Values.nullValue() : Values.stringValue(trimmedContent);
             map.put(key, value);
             i += content.length() + 1;
         }
-
     }
 
     public static Map<String, Value> parse(final String input) {
         return parse(input, null);
     }
 
-    public static Map<String, Value> parse(
-            final String input,
-            final Set<String> allowedKeys) {
+    public static Map<String, Value> parse(final String input, final Set<String> allowedKeys) {
         if (Strings.isBlank(input)) {
             return Collections.emptyMap();
         }
@@ -308,13 +291,10 @@ public final class StringParameterParser {
         for (final String actualKey : actualKeys) {
             final boolean allowed = allowedKeys == null || allowedKeys.contains(actualKey);
             if (!allowed) {
-                final String message = String.format(
-                        "unknown key \"%s\" is found in input: %s",
-                        actualKey, input);
+                final String message = String.format("unknown key \"%s\" is found in input: %s", actualKey, input);
                 throw new IllegalArgumentException(message);
             }
         }
         return map;
     }
-
 }

@@ -1,27 +1,26 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.layout.template.json.resolver;
 
+import java.util.Optional;
+import java.util.regex.Pattern;
 import org.apache.logging.log4j.ThreadContext;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.layout.template.json.util.JsonWriter;
-
-import java.util.Optional;
-import java.util.regex.Pattern;
 
 /**
  * Nested Diagnostic Context (NDC), aka. Thread Context Stack, resolver.
@@ -52,13 +51,12 @@ import java.util.regex.Pattern;
  * }
  * </pre>
  */
-final class ThreadContextStackResolver implements EventResolver {
+public final class ThreadContextStackResolver implements EventResolver {
 
     private final Pattern itemPattern;
 
     ThreadContextStackResolver(final TemplateResolverConfig config) {
-        this.itemPattern = Optional
-                .ofNullable(config.getString("pattern"))
+        this.itemPattern = Optional.ofNullable(config.getString("pattern"))
                 .map(Pattern::compile)
                 .orElse(null);
     }
@@ -74,9 +72,7 @@ final class ThreadContextStackResolver implements EventResolver {
     }
 
     @Override
-    public void resolve(
-            final LogEvent logEvent,
-            final JsonWriter jsonWriter) {
+    public void resolve(final LogEvent logEvent, final JsonWriter jsonWriter) {
         final ThreadContext.ContextStack contextStack = logEvent.getContextStack();
         if (contextStack.getDepth() == 0) {
             jsonWriter.writeNull();
@@ -85,8 +81,7 @@ final class ThreadContextStackResolver implements EventResolver {
         boolean arrayStarted = false;
         for (final String contextStackItem : contextStack.asList()) {
             final boolean matched =
-                    itemPattern == null ||
-                            itemPattern.matcher(contextStackItem).matches();
+                    itemPattern == null || itemPattern.matcher(contextStackItem).matches();
             if (matched) {
                 if (arrayStarted) {
                     jsonWriter.writeSeparator();
@@ -103,5 +98,4 @@ final class ThreadContextStackResolver implements EventResolver {
             jsonWriter.writeNull();
         }
     }
-
 }

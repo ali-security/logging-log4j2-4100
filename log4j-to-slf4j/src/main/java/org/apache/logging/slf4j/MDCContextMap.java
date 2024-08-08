@@ -1,24 +1,24 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.slf4j;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-
 import org.apache.logging.log4j.spi.CleanableThreadContextMap;
 import org.apache.logging.log4j.util.SortedArrayStringMap;
 import org.apache.logging.log4j.util.StringMap;
@@ -30,6 +30,7 @@ import org.slf4j.MDC;
 public class MDCContextMap implements CleanableThreadContextMap {
 
     private static final StringMap EMPTY_CONTEXT_DATA = new SortedArrayStringMap(1);
+
     static {
         EMPTY_CONTEXT_DATA.freeze();
     }
@@ -56,7 +57,6 @@ public class MDCContextMap implements CleanableThreadContextMap {
         MDC.remove(key);
     }
 
-
     @Override
     public void removeAll(final Iterable<String> keys) {
         for (final String key : keys) {
@@ -71,25 +71,24 @@ public class MDCContextMap implements CleanableThreadContextMap {
 
     @Override
     public boolean containsKey(final String key) {
-        Map<String, String> map = MDC.getCopyOfContextMap();
+        final Map<String, String> map = MDC.getCopyOfContextMap();
         return map != null && map.containsKey(key);
     }
 
     @Override
-    @SuppressWarnings("unchecked") // nothing we can do about this, restricted by SLF4J API
     public Map<String, String> getCopy() {
-        return MDC.getCopyOfContextMap();
+        final Map<String, String> contextMap = MDC.getCopyOfContextMap();
+        return contextMap != null ? contextMap : new HashMap<>();
     }
 
     @Override
-    @SuppressWarnings("unchecked") // nothing we can do about this, restricted by SLF4J API
     public Map<String, String> getImmutableMapOrNull() {
         return MDC.getCopyOfContextMap();
     }
 
     @Override
     public boolean isEmpty() {
-        Map<String, String> map = MDC.getCopyOfContextMap();
+        final Map<String, String> map = MDC.getCopyOfContextMap();
         return map == null || map.isEmpty();
     }
 

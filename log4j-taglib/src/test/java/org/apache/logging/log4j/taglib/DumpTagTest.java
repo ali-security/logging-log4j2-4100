@@ -1,37 +1,35 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.taglib;
+
+import static org.junit.Assert.assertEquals;
 
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-
 import javax.servlet.jsp.JspWriter;
 import javax.servlet.jsp.PageContext;
 import javax.servlet.jsp.tagext.Tag;
-
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.mock.web.MockJspWriter;
 import org.springframework.mock.web.MockPageContext;
-
-import static org.junit.Assert.*;
 
 /**
  *
@@ -50,6 +48,7 @@ public class DumpTagTest {
 
         this.context = new MockPageContext() {
             private final MockJspWriter jspWriter = new MockJspWriter(writer);
+
             @Override
             public JspWriter getOut() {
                 return this.jspWriter;
@@ -81,11 +80,12 @@ public class DumpTagTest {
 
         this.writer.flush();
         final String output = new String(this.output.toByteArray(), UTF8);
-        assertEquals("The output is not correct.",
-                "<dl>" +
-                        "<dt><code>testAttribute01</code></dt><dd><code>testValue01</code></dd>" +
-                        "<dt><code>anotherAttribute02</code></dt><dd><code>finalValue02</code></dd>" +
-                        "</dl>", output);
+        assertEquals(
+                "The output is not correct.",
+                "<dl>" + "<dt><code>testAttribute01</code></dt><dd><code>testValue01</code></dd>"
+                        + "<dt><code>anotherAttribute02</code></dt><dd><code>finalValue02</code></dd>"
+                        + "</dl>",
+                output);
     }
 
     @Test
@@ -113,10 +113,11 @@ public class DumpTagTest {
 
         this.writer.flush();
         final String output = new String(this.output.toByteArray(), UTF8);
-        assertEquals("The output is not correct.",
-                "<dl>" +
-                        "<dt><code>coolAttribute01</code></dt><dd><code>weirdValue01</code></dd>" +
-                        "<dt><code>testAttribute02</code></dt><dd><code>testValue02</code></dd>" +
-                        "</dl>", output);
+        assertEquals(
+                "The output is not correct.",
+                "<dl>" + "<dt><code>coolAttribute01</code></dt><dd><code>weirdValue01</code></dd>"
+                        + "<dt><code>testAttribute02</code></dt><dd><code>testValue02</code></dd>"
+                        + "</dl>",
+                output);
     }
 }

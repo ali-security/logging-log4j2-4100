@@ -2,11 +2,11 @@
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,14 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.logging.log4j.io;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.util.Locale;
-
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.io.internal.InternalPrintWriter;
@@ -49,14 +47,23 @@ public class LoggerPrintWriter extends PrintWriter {
     private static final String FQCN = LoggerPrintWriter.class.getName();
     private final InternalPrintWriter writer;
 
-    protected LoggerPrintWriter(final ExtendedLogger logger, final boolean autoFlush, final String fqcn,
-                                final Level level, final Marker marker) {
+    protected LoggerPrintWriter(
+            final ExtendedLogger logger,
+            final boolean autoFlush,
+            final String fqcn,
+            final Level level,
+            final Marker marker) {
         super(new StringWriter());
         writer = new InternalPrintWriter(logger, autoFlush, fqcn == null ? FQCN : fqcn, level, marker);
     }
 
-    protected LoggerPrintWriter(final Writer writer, final boolean autoFlush, final ExtendedLogger logger,
-                                final String fqcn, final Level level, final Marker marker) {
+    protected LoggerPrintWriter(
+            final Writer writer,
+            final boolean autoFlush,
+            final ExtendedLogger logger,
+            final String fqcn,
+            final Level level,
+            final Marker marker) {
         super(writer);
         this.writer = new InternalPrintWriter(writer, autoFlush, logger, fqcn == null ? FQCN : fqcn, level, marker);
     }

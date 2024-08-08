@@ -1,18 +1,18 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j;
 
@@ -24,10 +24,9 @@ import java.io.OutputStream;
 import java.io.Writer;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-
-import org.apache.logging.log4j.categories.PerformanceTests;
 import org.apache.logging.log4j.core.config.ConfigurationFactory;
-import org.apache.logging.log4j.core.util.Profiler;
+import org.apache.logging.log4j.core.test.categories.PerformanceTests;
+import org.apache.logging.log4j.core.test.util.Profiler;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -42,7 +41,6 @@ public class PerformanceComparison {
     private final Logger logger = LogManager.getLogger(PerformanceComparison.class.getName());
     private final org.slf4j.Logger logbacklogger = org.slf4j.LoggerFactory.getLogger(PerformanceComparison.class);
     private final org.apache.log4j.Logger log4jlogger = org.apache.log4j.Logger.getLogger(PerformanceComparison.class);
-
 
     // How many times should we try to log:
     private static final int COUNT = 500000;
@@ -109,8 +107,8 @@ public class PerformanceComparison {
         System.out.println("###############################################");
     }
 
-    //@Test
-    public void testRawPerformance() throws Exception {
+    // @Test
+    private void testRawPerformance() throws Exception {
         final OutputStream os = new FileOutputStream("target/testos.log", true);
         final long result1 = writeToStream(COUNT, os);
         os.close();
@@ -150,7 +148,6 @@ public class PerformanceComparison {
         return (System.nanoTime() - start) / loop;
     }
 
-
     private long log4j2(final int loop) {
         final Integer j = Integer.valueOf(2);
         final long start = System.nanoTime();
@@ -159,7 +156,6 @@ public class PerformanceComparison {
         }
         return (System.nanoTime() - start) / loop;
     }
-
 
     private long writeToWriter(final int loop, final Writer w) throws Exception {
         final Integer j = Integer.valueOf(2);
@@ -181,7 +177,7 @@ public class PerformanceComparison {
 
     private long writeToChannel(final int loop, final FileChannel channel) throws Exception {
         final Integer j = Integer.valueOf(2);
-        final ByteBuffer buf = ByteBuffer.allocateDirect(8*1024);
+        final ByteBuffer buf = ByteBuffer.allocateDirect(8 * 1024);
         final long start = System.nanoTime();
         for (int i = 0; i < loop; i++) {
             channel.write(getByteBuffer(buf, "SEE IF THIS IS LOGGED " + j + '.'));
@@ -199,5 +195,4 @@ public class PerformanceComparison {
     private byte[] getBytes(final String s) {
         return s.getBytes();
     }
-
 }

@@ -1,26 +1,27 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with
+ * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache license, Version 2.0
+ * The ASF licenses this file to you under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * the License.  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the license for the specific language governing permissions and
- * limitations under the license.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.logging.log4j.docker;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
@@ -31,11 +32,9 @@ import org.apache.logging.log4j.docker.model.Container;
 import org.apache.logging.log4j.docker.model.Network;
 import org.apache.logging.log4j.status.StatusLogger;
 import org.apache.logging.log4j.util.PropertiesUtil;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
- *
+ * Lookups up keys for a Docker container.
  */
 @Plugin(name = "docker", category = StrLookup.CATEGORY)
 public class DockerLookup extends AbstractLookup {
@@ -45,10 +44,13 @@ public class DockerLookup extends AbstractLookup {
     private static final String HTTP = "http";
     private final Container container;
 
+    /**
+     * Constructs a new instance.
+     */
     public DockerLookup() {
         String baseUri = System.getenv(DOCKER_URI);
         if (baseUri == null) {
-            PropertiesUtil props = PropertiesUtil.getProperties();
+            final PropertiesUtil props = PropertiesUtil.getProperties();
             baseUri = props.getStringProperty(DOCKER_URI);
         }
         if (baseUri == null) {
@@ -58,19 +60,19 @@ public class DockerLookup extends AbstractLookup {
         }
         Container current = null;
         try {
-            URL url= new URL(baseUri + "/containers/json");
-            String hostName = NetUtils.getLocalHostname();
-            String macAddr = NetUtils.getMacAddressString();
-
+            final URL url = new URL(baseUri + "/containers/json");
             if (url.getProtocol().equals(HTTP)) {
-                ObjectMapper objectMapper = new ObjectMapper();
-                List<Container> containerList = objectMapper.readValue(url, new TypeReference<List<Container>>(){});
+                final String macAddr = NetUtils.getMacAddressString();
+                final ObjectMapper objectMapper = new ObjectMapper();
+                final List<Container> containerList =
+                        objectMapper.readValue(url, new TypeReference<List<Container>>() {});
 
                 for (Container container : containerList) {
                     if (macAddr != null && container.getNetworkSettings() != null) {
-                        Map<String, Network> networks = container.getNetworkSettings().getNetworks();
+                        final Map<String, Network> networks =
+                                container.getNetworkSettings().getNetworks();
                         if (networks != null) {
-                            for (Network network: networks.values()) {
+                            for (Network network : networks.values()) {
                                 if (macAddr.equals(network.getMacAddress())) {
                                     current = container;
                                     break;
@@ -93,7 +95,7 @@ public class DockerLookup extends AbstractLookup {
     }
 
     @Override
-    public String lookup(LogEvent event, String key) {
+    public String lookup(final LogEvent ignored, final String key) {
         if (container == null) {
             return null;
         }
